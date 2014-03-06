@@ -1,0 +1,16 @@
+#$Vertices	11
+#$Faces	3
+Vertex		1		0 0 0
+Vertex		2		639 479 0
+Vertex		3		0 479 0
+Vertex		4		300.5 70.4 0 
+Vertex		5		500.8 50.5 0
+Vertex		6		400.8 450.1 0
+Vertex		7		630.5 77.8 0
+Vertex		8		350 165.5 0
+Vertex		9		550 220.6 0
+Vertex		10		450 300 0
+Vertex		11		600.4 420 0
+Face			1		0 0 255		3		 1 2 3
+Face			2		255 0 0		4		 4 5 6 1
+Face			3		0 255 0		5		 7 8 9 10 11
