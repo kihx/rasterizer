@@ -6,6 +6,7 @@
 
 #include "glut.h"
 
+#include "../kihx/kihx.h"
 
 
 // Constants Directive
@@ -34,6 +35,8 @@ static GLint g_iHeight;
 //-----------------------------------------------------------------------------------------------------------------------
 void makeCheckImage(void)
 {	
+	int kihx = fnkihx();
+
 	// Initializes a screen image.
 	memset(g_pppScreenImage, 0, sizeof(g_pppScreenImage));
 

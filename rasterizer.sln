@@ -1,6 +1,11 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "rasterizer", "rasterizer\rasterizer.vcxproj", "{E8E61192-B0A7-4356-A750-5C1C0AC6BB7E}"
+	ProjectSection(ProjectDependencies) = postProject
+		{2FAC940D-05C1-4C28-AE7B-F99A813F81E2} = {2FAC940D-05C1-4C28-AE7B-F99A813F81E2}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "kihx", "kihx\kihx.vcxproj", "{2FAC940D-05C1-4C28-AE7B-F99A813F81E2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -12,6 +17,10 @@ Global
 		{E8E61192-B0A7-4356-A750-5C1C0AC6BB7E}.Debug|Win32.Build.0 = Debug|Win32
 		{E8E61192-B0A7-4356-A750-5C1C0AC6BB7E}.Release|Win32.ActiveCfg = Release|Win32
 		{E8E61192-B0A7-4356-A750-5C1C0AC6BB7E}.Release|Win32.Build.0 = Release|Win32
+		{2FAC940D-05C1-4C28-AE7B-F99A813F81E2}.Debug|Win32.ActiveCfg = Debug|Win32
+		{2FAC940D-05C1-4C28-AE7B-F99A813F81E2}.Debug|Win32.Build.0 = Debug|Win32
+		{2FAC940D-05C1-4C28-AE7B-F99A813F81E2}.Release|Win32.ActiveCfg = Release|Win32
+		{2FAC940D-05C1-4C28-AE7B-F99A813F81E2}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
