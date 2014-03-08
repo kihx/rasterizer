@@ -5,18 +5,20 @@
 #include "kihx.h"
 
 
-// This is an example of an exported variable
-KIHX_API int nkihx=0;
 
-// This is an example of an exported function.
-KIHX_API int fnkihx(void)
+KIHX_API void kiLoadMeshFromFile( const char* filename )
 {
-	return 42;
+
 }
 
-// This is the constructor of a class that has been exported.
-// see kihx.h for the class definition
-Ckihx::Ckihx()
+KIHX_API void kiRenderToBuffer( void* buffer, int width, int height, int bpp )
 {
-	return;
+	if ( buffer == NULL )
+	{
+		return;
+	}
+
+	size_t bufferSize = width * height * (bpp / 8);
+		
+	::memset( buffer, 255, bufferSize );
 }

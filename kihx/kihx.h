@@ -10,13 +10,7 @@
 #define KIHX_API __declspec(dllimport)
 #endif
 
-// This class is exported from the kihx.dll
-class KIHX_API Ckihx {
-public:
-	Ckihx(void);
-	// TODO: add your methods here.
-};
 
-extern KIHX_API int nkihx;
+KIHX_API void kiLoadMeshFromFile( const char* filename );
 
-KIHX_API int fnkihx(void);
+KIHX_API void kiRenderToBuffer( void* buffer, int width, int height, int bpp );
