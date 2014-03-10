@@ -7,6 +7,7 @@
 #include "glut.h"
 
 #include "../kihx/kihx.h"
+#include "../woocom/WModule.h"
 
 
 // Constants Directive
@@ -15,12 +16,15 @@
 #define	SCREEN_HEIGHT 480
 #define COLOR_DEPTH 3
 
+#define KIHX 1
+#define WOOCOM 2
+
 
 // Global variables
 //
 typedef unsigned char ubyte;
 ubyte g_pppScreenImage[SCREEN_HEIGHT][SCREEN_WIDTH][COLOR_DEPTH];
-
+int g_selectModule = 0;
 
 // Static variables
 //
@@ -76,8 +80,16 @@ namespace
 //
 //-----------------------------------------------------------------------------------------------------------------------
 void makeCheckImage( void)
-{	
-	RenderToBuffer();
+{
+	switch( g_selectModule )
+	{
+	case KIHX:
+		RenderToBuffer();
+		break;
+	case WOOCOM:
+		Clear(255,255, 0);
+		break;
+	}
 	
 	// Initializes a screen image.
 	//memset( g_pppScreenImage, 0, sizeof( g_pppScreenImage) );
@@ -154,8 +166,14 @@ void keyboard( unsigned char key, int x, int y)
 		InstallFunctionLoadMeshFromFile( kiLoadMeshFromFile );
 		InstallFunctionRenderToBuffer( kiRenderToBuffer );
 		printf( "\n<kihx>\n\n" );
+		g_selectModule = KIHX;
 		break;
-
+	case '2':
+		Initialize( g_pppScreenImage, SCREEN_WIDTH, SCREEN_HEIGHT, COLOR_DEPTH);
+		glutPostRedisplay();
+		printf( "\n<woocom>\n\n");
+		g_selectModule = WOOCOM;
+		break;
 	case 'r':
 	case 'R':
 		g_dZoomFactor = 1.0;
