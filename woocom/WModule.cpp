@@ -2,6 +2,7 @@
 
 #include <Windows.h>
 #include "WModule.h"
+#include "WTrDatai.h"
 
 class WModule
 {
@@ -96,4 +97,9 @@ void Clear(uchar r, uchar g, uchar b)
 	{
 		g_pPainter->Clear( r, g, b);
 	}
+}
+
+WTriData* LoadMesh( const char* file )
+{
+	return NULL;
 }
