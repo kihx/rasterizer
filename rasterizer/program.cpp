@@ -170,6 +170,7 @@ void keyboard( unsigned char key, int x, int y)
 		break;
 	case '2':
 		Initialize( g_pppScreenImage, SCREEN_WIDTH, SCREEN_HEIGHT, COLOR_DEPTH);
+		LoadMesh( "input.msh");
 		glutPostRedisplay();
 		printf( "\n<woocom>\n\n");
 		g_selectModule = WOOCOM;

@@ -4,6 +4,10 @@
 #include "WModule.h"
 #include "WTrDatai.h"
 
+#include <fstream>
+
+#define MAX_LEN 1024
+
 class WModule
 {
 public:
@@ -101,5 +105,61 @@ void Clear(uchar r, uchar g, uchar b)
 
 WTriData* LoadMesh( const char* file )
 {
-	return NULL;
+	std::fstream stream( file );
+	
+	char buffer[MAX_LEN] = {0};
+	char line[MAX_LEN] = {0};
+
+	int vertexNum = 0;
+	int faceNum = 0;
+
+	WTriData* triangle = new WTriData();
+
+	while( stream.good() )
+	{
+		stream >> buffer;
+
+		if( strstr( buffer, "#$"))
+		{
+			if( _stricmp( &buffer[2], "Vertices") == 0)
+			{
+				stream >> vertexNum;
+				triangle->SetVertexNum( vertexNum );
+			}
+			else if( _stricmp( &buffer[2], "Faces") == 0)
+			{
+				stream >> faceNum;
+				triangle->SetFaceNum( faceNum );
+			}
+		}
+		else if( _stricmp( buffer, "Vertex") == 0)
+		{
+			int vertexID = 0;
+			VERTEX* vertex = new VERTEX();
+			stream >> vertexID >> vertex->m_pos[0] >> vertex->m_pos[1] >> vertex->m_pos[2];
+			triangle->PushVertex( vertex );
+		}
+		else if( _stricmp( buffer, "Face") == 0)
+		{
+			int faceID = 0;
+			int indexNum = 0;
+			int r,g,b;
+			WFace* face = new WFace();
+			stream >> faceID >> r >> g >> b;
+			face->m_rgb[0] = r;
+			face->m_rgb[1] = g;
+			face->m_rgb[2] = b;
+			
+			stream >> indexNum;
+			for(int i=0; i< indexNum; ++i)
+			{
+				int vertexID = 0;
+				stream >> vertexID;
+				face->m_index.push_back( vertexID );
+			}
+			triangle->PushFace( face );
+		}
+	}
+
+	return triangle;
 }
