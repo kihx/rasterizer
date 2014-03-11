@@ -8,7 +8,7 @@
 
 #include "../kihx/kihx.h"
 #include "../woocom/WModule.h"
-
+#include "../xtozero/xtozero.h"
 
 // Constants Directive
 //
@@ -18,6 +18,7 @@
 
 #define KIHX 1
 #define WOOCOM 2
+#define XTOZERO 3
 
 
 // Global variables
@@ -88,6 +89,8 @@ void makeCheckImage( void)
 		break;
 	case WOOCOM:
 		Clear(255,255, 0);
+		break;
+	case XTOZERO:
 		break;
 	}
 	
@@ -173,6 +176,12 @@ void keyboard( unsigned char key, int x, int y)
 		glutPostRedisplay();
 		printf( "\n<woocom>\n\n");
 		g_selectModule = WOOCOM;
+		break;
+	case '3':
+		ClearBuffer( g_pppScreenImage, SCREEN_WIDTH, SCREEN_HEIGHT, COLOR_DEPTH);
+		glutPostRedisplay();
+		printf( "\n<xtozero>\n\n");
+		g_selectModule = XTOZERO;
 		break;
 	case 'r':
 	case 'R':
