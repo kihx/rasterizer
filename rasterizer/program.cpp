@@ -114,6 +114,7 @@ void makeCheckImage( void)
 		Clear(255,255, 0);
 		break;
 	case XTOZERO:
+		RenderToBuffer();
 		break;
 	case COOLD:
 		ClearBuffer();
@@ -215,8 +216,8 @@ void keyboard( unsigned char key, int x, int y)
 		g_selectModule = WOOCOM;
 		break;
 	case '3':
-		ClearBuffer( g_pppScreenImage, SCREEN_WIDTH, SCREEN_HEIGHT, COLOR_DEPTH);
-		glutPostRedisplay();
+		InstallFunctionLoadMeshFromFile( XtzLoadMeshFromFile );
+		InstallFunctionRenderToBuffer( XtzClearBuffer );
 		printf( "\n<xtozero>\n\n");
 		g_selectModule = XTOZERO;
 		break;

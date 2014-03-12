@@ -7,6 +7,10 @@
 #define XTZ_API __declspec(dllimport)
 #endif
 
-XTZ_API void ClearBuffer( void* buffer, int width, int height, int colorDepth );
+#include "Mesh.h"
+
+XTZ_API void XtzClearBuffer( void* buffer, int width, int height, int colorDepth );
+
+XTZ_API void XtzLoadMeshFromFile( const char* pfilename );
 
 #endif

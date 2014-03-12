@@ -4,11 +4,18 @@
 #include "stdafx.h"
 #include "xtozero.h"
 
-XTZ_API void ClearBuffer( void* buffer, int width, int height, int colorDepth )
+using namespace xtozero;
+
+XTZ_API void XtzClearBuffer( void* buffer, int width, int height, int dpp )
 {
 	if ( buffer )
 	{
-		size_t size = width * height * colorDepth;
+		size_t size = width * height * dpp / 8;
 		memset( buffer, 100, size );
 	}
+}
+
+XTZ_API void XtzLoadMeshFromFile( const char* pfilename )
+{
+	CMeshManager::GetInstance()->LoadMeshFromFile( pfilename );
 }
