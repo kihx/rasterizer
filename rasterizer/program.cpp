@@ -110,6 +110,8 @@ namespace
 		}		
 	}	
 
+	/* 템플릿을 활용한 런타임 함수 로더
+	*/
 	void InstallFunctionLoadMeshFromFile( HMODULE hModule, const char* functionName )
 	{
 		RuntimeFunctionLoader<FnLoadMeshFromFile> loader( hModule, functionName );
@@ -123,6 +125,20 @@ namespace
 		RuntimeFunctionLoader<FnRenderToBuffer> loader( hModule, functionName );
 		g_FnRenderToBuffer = loader.Get();
 
+		glutPostRedisplay();
+	}
+
+	/* 하위 호환성을 위해 유지
+	*/
+	void InstallFunctionLoadMeshFromFile( FnLoadMeshFromFile fp )
+	{
+		g_FnLoadMeshFromFile = fp;
+		LoadMeshFromFile( "input.msh" );
+	}
+
+	void InstallFunctionRenderToBuffer( FnRenderToBuffer fp )
+	{
+		g_FnRenderToBuffer = fp;
 		glutPostRedisplay();
 	}
 
@@ -179,6 +195,7 @@ void makeCheckImage( void)
 		Clear(255,255, 0);
 		break;
 	case XTOZERO:
+		RenderToBuffer();
 		break;
 	case COOLD:
 		ClearBuffer();
@@ -270,8 +287,8 @@ void keyboard( unsigned char key, int x, int y)
 		break;
 
 	case '3':
-		ClearBuffer( g_pppScreenImage, SCREEN_WIDTH, SCREEN_HEIGHT, COLOR_DEPTH);
-		glutPostRedisplay();
+		InstallFunctionLoadMeshFromFile( XtzLoadMeshFromFile );
+		InstallFunctionRenderToBuffer( XtzClearBuffer );
 		printf( "\n<xtozero>\n\n");
 		g_selectModule = XTOZERO;
 		break;
