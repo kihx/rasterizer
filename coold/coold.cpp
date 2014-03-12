@@ -11,9 +11,9 @@ EXTERN_FORM DLL_API void __cdecl colorControl( void* pImage, int width, int heig
 {
 	unsigned char* buffer = (unsigned char*)pImage;
 
-	int red		= clearColor>>24;
-	int green	= clearColor>>16;
-	int blue	= clearColor>>8;	
+	unsigned char red	= (clearColor>>24);
+	unsigned char green	= (clearColor>>16) & 0x000000ff ;
+	unsigned char blue	= (clearColor>>8 ) & 0x000000ff;	
 	
 	for (int i = 0; i < height ; i++) 
 	{
