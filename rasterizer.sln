@@ -3,6 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "rasterizer", "rasterizer\rasterizer.vcxproj", "{E8E61192-B0A7-4356-A750-5C1C0AC6BB7E}"
 	ProjectSection(ProjectDependencies) = postProject
 		{2FAC940D-05C1-4C28-AE7B-F99A813F81E2} = {2FAC940D-05C1-4C28-AE7B-F99A813F81E2}
+		{83A39669-B15F-4A4D-BA5C-30D2BCDB63C4} = {83A39669-B15F-4A4D-BA5C-30D2BCDB63C4}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "kihx", "kihx\kihx.vcxproj", "{2FAC940D-05C1-4C28-AE7B-F99A813F81E2}"
@@ -10,6 +11,8 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "woocom", "woocom\woocom.vcxproj", "{16E3FE25-82EC-4A73-AA33-410C6F4494D0}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "xtozero", "xtozero\xtozero.vcxproj", "{DD4D72FD-FFA1-46E0-9387-70E590940A3F}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "coold", "coold\coold.vcxproj", "{83A39669-B15F-4A4D-BA5C-30D2BCDB63C4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,6 +36,10 @@ Global
 		{DD4D72FD-FFA1-46E0-9387-70E590940A3F}.Debug|Win32.Build.0 = Debug|Win32
 		{DD4D72FD-FFA1-46E0-9387-70E590940A3F}.Release|Win32.ActiveCfg = Release|Win32
 		{DD4D72FD-FFA1-46E0-9387-70E590940A3F}.Release|Win32.Build.0 = Release|Win32
+		{83A39669-B15F-4A4D-BA5C-30D2BCDB63C4}.Debug|Win32.ActiveCfg = Debug|Win32
+		{83A39669-B15F-4A4D-BA5C-30D2BCDB63C4}.Debug|Win32.Build.0 = Debug|Win32
+		{83A39669-B15F-4A4D-BA5C-30D2BCDB63C4}.Release|Win32.ActiveCfg = Release|Win32
+		{83A39669-B15F-4A4D-BA5C-30D2BCDB63C4}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

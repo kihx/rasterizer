@@ -1,0 +1,1 @@
+xcopy /Y .\Release\*.dll ..\rasterizer

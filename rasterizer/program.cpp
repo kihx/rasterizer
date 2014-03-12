@@ -2,6 +2,7 @@
 // 
 #include <stdlib.h>
 #include <stdio.h>
+#include <windows.h>
 #include <memory.h>
 
 #include "glut.h"
@@ -19,7 +20,14 @@
 #define KIHX 1
 #define WOOCOM 2
 #define XTOZERO 3
+#define COOLD 4
 
+//------------Output FileName & LineNumber Show-----------------
+#define STR2(x) #x
+#define STR(x) STR2(x)
+#define MSG(desc) message(__FILE__ "(" STR(__LINE__) "):" #desc)
+#define FixLater(desc) __pragma(MSG(desc))
+//--------------------------------------------------------------
 
 // Global variables
 //
@@ -39,9 +47,11 @@ namespace
 {
 	typedef void( *FnLoadMeshFromFile)( const char* filename );
 	typedef void( *FnRenderToBuffer)( void* buffer, int width, int height, int bpp );
+	typedef void( *ClearColorBuffer)( void* pImage, int width, int height, unsigned long clearColor );
 
 	static FnLoadMeshFromFile g_FnLoadMeshFromFile = NULL;
 	static FnRenderToBuffer g_FnRenderToBuffer = NULL;
+	static ClearColorBuffer g_FnClearColorBuffer = NULL;
 
 
 	inline void LoadMeshFromFile( const char* filename )
@@ -58,7 +68,14 @@ namespace
 		{
 			g_FnRenderToBuffer( g_pppScreenImage, SCREEN_WIDTH, SCREEN_HEIGHT, COLOR_DEPTH * 8 );
 		}
+	}
 
+	inline void ClearBuffer()
+	{
+		if( g_FnClearColorBuffer )
+		{
+			g_FnClearColorBuffer( g_pppScreenImage, SCREEN_WIDTH, SCREEN_HEIGHT, 0xff00ffff );
+		}		
 	}
 
 	inline void InstallFunctionLoadMeshFromFile( FnLoadMeshFromFile fp )
@@ -70,6 +87,12 @@ namespace
 	inline void InstallFunctionRenderToBuffer( FnRenderToBuffer fp )
 	{
 		g_FnRenderToBuffer = fp;
+		glutPostRedisplay();
+	}
+
+	inline void InstallFunctionClearColorBuffer( ClearColorBuffer fp )
+	{
+		g_FnClearColorBuffer = fp;
 		glutPostRedisplay();
 	}
 };
@@ -91,6 +114,9 @@ void makeCheckImage( void)
 		Clear(255,255, 0);
 		break;
 	case XTOZERO:
+		break;
+	case COOLD:
+		ClearBuffer();
 		break;
 	}
 	
@@ -161,6 +187,16 @@ void motion( int x, int y)
 void keyboard( unsigned char key, int x, int y)
 {
 	printf( "[keyboard] key: %c\n", key );
+	HMODULE hDll = 0;
+	static char saveKey;
+
+	if( saveKey == key )
+	{
+		return;
+	}else
+	{
+		FreeLibrary( hDll );
+	}
 
 	switch( key)
 	{
@@ -183,6 +219,26 @@ void keyboard( unsigned char key, int x, int y)
 		glutPostRedisplay();
 		printf( "\n<xtozero>\n\n");
 		g_selectModule = XTOZERO;
+		break;
+	case '4':
+		{	
+			FixLater( Begin Explicit... )
+			char* szDllName = "coold.dll";
+			hDll = GetModuleHandle( szDllName );
+
+			if( hDll == NULL)
+			{
+				hDll = LoadLibrary( szDllName );			
+			}
+
+			ClearColorBuffer controlFunc = (ClearColorBuffer)GetProcAddress( hDll, "colorControl" );
+			if( controlFunc != nullptr )
+			{				
+				InstallFunctionClearColorBuffer(controlFunc);
+			}			
+			printf( "\n<coold>\n\n" );
+			g_selectModule = COOLD;
+		}
 		break;
 	case 'r':
 	case 'R':
@@ -216,6 +272,8 @@ void keyboard( unsigned char key, int x, int y)
 	default:
 		break;
 	}
+
+	saveKey = key;
 }
 
 int main( int argc, char** argv)
