@@ -6,9 +6,6 @@
 #define WMODULE_API extern "C" __declspec(dllimport)
 #endif
 
-class WTriData;
-typedef unsigned char uchar;
-
-WMODULE_API bool Initialize( void* buffer, int width, int height, int colorDepth);
-WMODULE_API void Clear( uchar r, uchar g, uchar b);
-WMODULE_API WTriData* LoadMesh( const char* file );
+WMODULE_API void WLoadMesh( const char* filename );
+WMODULE_API void WRender( void* buffer, int width, int height, int bpp );
+WMODULE_API void WClear( void* pImage, int width, int height, unsigned long clearColor );

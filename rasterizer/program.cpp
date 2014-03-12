@@ -192,7 +192,7 @@ void makeCheckImage( void)
 		RenderToBuffer();
 		break;
 	case WOOCOM:
-		Clear(255,255, 0);
+		RenderToBuffer();
 		break;
 	case XTOZERO:
 		RenderToBuffer();
@@ -279,9 +279,8 @@ void keyboard( unsigned char key, int x, int y)
 		break;
 
 	case '2':
-		Initialize( g_pppScreenImage, SCREEN_WIDTH, SCREEN_HEIGHT, COLOR_DEPTH);
-		LoadMesh( "input.msh");
-		glutPostRedisplay();
+		InstallFunctionLoadMeshFromFile( WLoadMesh );
+		InstallFunctionRenderToBuffer( WRender );
 		printf( "\n<woocom>\n\n");
 		g_selectModule = WOOCOM;
 		break;
