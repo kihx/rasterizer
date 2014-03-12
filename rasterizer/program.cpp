@@ -47,11 +47,11 @@ namespace
 {
 	typedef void( *FnLoadMeshFromFile)( const char* filename );
 	typedef void( *FnRenderToBuffer)( void* buffer, int width, int height, int bpp );
-	typedef void( *ClearColorBuffer)( void* pImage, int width, int height, unsigned long clearColor );
+	typedef void( *FnClearColorBuffer)( void* pImage, int width, int height, unsigned long clearColor );
 
 	static FnLoadMeshFromFile g_FnLoadMeshFromFile = NULL;
 	static FnRenderToBuffer g_FnRenderToBuffer = NULL;
-	static ClearColorBuffer g_FnClearColorBuffer = NULL;
+	static FnClearColorBuffer g_FnClearColorBuffer = NULL;
 
 
 	inline void LoadMeshFromFile( const char* filename )
@@ -78,24 +78,77 @@ namespace
 		}		
 	}
 
-	inline void InstallFunctionLoadMeshFromFile( FnLoadMeshFromFile fp )
+	void InstallFunctionLoadMeshFromFile( HMODULE hModule, const char* functionName )
 	{
-		g_FnLoadMeshFromFile = fp;
+		if ( hModule == NULL )
+		{
+			return;
+		}
+
+		if ( functionName == NULL )
+		{
+			return;
+		}
+
+		FnLoadMeshFromFile fp = (FnLoadMeshFromFile) GetProcAddress( hModule, functionName );
+		g_FnLoadMeshFromFile = fp;		// 함수를 못 찾아서 NULL이어도 관계없음. 함수 포인터가 널이면 그냥 호출 못하면 되니까...
+
 		LoadMeshFromFile( "input.msh" );
 	}
 
-	inline void InstallFunctionRenderToBuffer( FnRenderToBuffer fp )
+	void InstallFunctionRenderToBuffer( HMODULE hModule, const char* functionName )
 	{
+		if ( hModule == NULL )
+		{
+			return;
+		}
+
+		if ( functionName == NULL )
+		{
+			return;
+		}
+	
+		FnRenderToBuffer fp = (FnRenderToBuffer) GetProcAddress( hModule, functionName );
 		g_FnRenderToBuffer = fp;
+
 		glutPostRedisplay();
 	}
 
-	inline void InstallFunctionClearColorBuffer( ClearColorBuffer fp )
+	void InstallFunctionClearColorBuffer( FnClearColorBuffer fp )
 	{
 		g_FnClearColorBuffer = fp;
 		glutPostRedisplay();
 	}
 };
+
+
+void LoadModuleKihx()
+{
+#ifdef NDEBUG
+	const char* ModuleName = "kihx.dll";
+#else
+	const char* ModuleName = "kihxD.dll";
+#endif
+	
+	HMODULE hCurrentModule = GetModuleHandle( ModuleName );
+	if ( hCurrentModule == NULL )
+	{
+		hCurrentModule = LoadLibrary( ModuleName );
+	}
+
+	if ( hCurrentModule == NULL )
+	{
+		printf( "Load module failure: %s\n", ModuleName );
+		return;
+	}
+	
+	InstallFunctionLoadMeshFromFile( hCurrentModule, "kiLoadMeshFromFile" );
+	InstallFunctionRenderToBuffer( hCurrentModule, "kiRenderToBuffer" );
+
+	printf( "\n<kihx>\n\n" );
+
+	g_selectModule = KIHX;
+}
 
 
 //-----------------------------------------------------------------------------------------------------------------------
@@ -187,26 +240,15 @@ void motion( int x, int y)
 void keyboard( unsigned char key, int x, int y)
 {
 	printf( "[keyboard] key: %c\n", key );
-	HMODULE hDll = 0;
-	static char saveKey;
+	
+	HMODULE hCurrentModule = NULL;
 
-	if( saveKey == key )
+	switch( key )
 	{
-		return;
-	}else
-	{
-		FreeLibrary( hDll );
-	}
-
-	switch( key)
-	{
-		// kihx implementation
 	case '1':
-		InstallFunctionLoadMeshFromFile( kiLoadMeshFromFile );
-		InstallFunctionRenderToBuffer( kiRenderToBuffer );
-		printf( "\n<kihx>\n\n" );
-		g_selectModule = KIHX;
+		LoadModuleKihx();
 		break;
+
 	case '2':
 		Initialize( g_pppScreenImage, SCREEN_WIDTH, SCREEN_HEIGHT, COLOR_DEPTH);
 		LoadMesh( "input.msh");
@@ -214,24 +256,26 @@ void keyboard( unsigned char key, int x, int y)
 		printf( "\n<woocom>\n\n");
 		g_selectModule = WOOCOM;
 		break;
+
 	case '3':
 		ClearBuffer( g_pppScreenImage, SCREEN_WIDTH, SCREEN_HEIGHT, COLOR_DEPTH);
 		glutPostRedisplay();
 		printf( "\n<xtozero>\n\n");
 		g_selectModule = XTOZERO;
 		break;
+
 	case '4':
 		{	
 			FixLater( Begin Explicit... )
 			char* szDllName = "coold.dll";
-			hDll = GetModuleHandle( szDllName );
+			hCurrentModule = GetModuleHandle( szDllName );
 
-			if( hDll == NULL)
+			if( hCurrentModule == NULL)
 			{
-				hDll = LoadLibrary( szDllName );			
+				hCurrentModule = LoadLibrary( szDllName );			
 			}
 
-			ClearColorBuffer controlFunc = (ClearColorBuffer)GetProcAddress( hDll, "colorControl" );
+			FnClearColorBuffer controlFunc = (FnClearColorBuffer)GetProcAddress( hCurrentModule, "colorControl" );
 			if( controlFunc != nullptr )
 			{				
 				InstallFunctionClearColorBuffer(controlFunc);
@@ -240,6 +284,7 @@ void keyboard( unsigned char key, int x, int y)
 			g_selectModule = COOLD;
 		}
 		break;
+
 	case 'r':
 	case 'R':
 		g_dZoomFactor = 1.0;
@@ -272,8 +317,6 @@ void keyboard( unsigned char key, int x, int y)
 	default:
 		break;
 	}
-
-	saveKey = key;
 }
 
 int main( int argc, char** argv)
