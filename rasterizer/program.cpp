@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <windows.h>
 #include <memory.h>
+#include <type_traits>
 
 #include "glut.h"
 
@@ -54,6 +55,37 @@ namespace
 	static FnClearColorBuffer g_FnClearColorBuffer = NULL;
 
 
+	template<class FuncPtr>
+	class RuntimeFunctionLoader
+	{
+	public:
+		explicit RuntimeFunctionLoader( HMODULE hModule, const char* functionName ) : m_fp( NULL )
+		{
+			static_assert( sizeof( FuncPtr ) > 0, "RuntimeFunctionLoader constructed with unknown type" );
+
+			__try
+			{
+				if ( hModule && functionName )
+				{
+					m_fp = (FuncPtr) GetProcAddress( hModule, functionName );
+				}
+			}
+			__except ( EXCEPTION_EXECUTE_HANDLER )
+			{
+				// do nothing
+			}
+		}
+
+		FuncPtr Get()
+		{
+			return m_fp;
+		}
+
+	private:
+		FuncPtr m_fp;
+	};
+
+
 	inline void LoadMeshFromFile( const char* filename )
 	{
 		if ( g_FnLoadMeshFromFile )
@@ -76,40 +108,20 @@ namespace
 		{
 			g_FnClearColorBuffer( g_pppScreenImage, SCREEN_WIDTH, SCREEN_HEIGHT, 0xff00ffff );
 		}		
-	}
+	}	
 
 	void InstallFunctionLoadMeshFromFile( HMODULE hModule, const char* functionName )
 	{
-		if ( hModule == NULL )
-		{
-			return;
-		}
-
-		if ( functionName == NULL )
-		{
-			return;
-		}
-
-		FnLoadMeshFromFile fp = (FnLoadMeshFromFile) GetProcAddress( hModule, functionName );
-		g_FnLoadMeshFromFile = fp;		// 함수를 못 찾아서 NULL이어도 관계없음. 함수 포인터가 널이면 그냥 호출 못하면 되니까...
+		RuntimeFunctionLoader<FnLoadMeshFromFile> loader( hModule, functionName );
+		g_FnLoadMeshFromFile = loader.Get();
 
 		LoadMeshFromFile( "input.msh" );
 	}
 
 	void InstallFunctionRenderToBuffer( HMODULE hModule, const char* functionName )
 	{
-		if ( hModule == NULL )
-		{
-			return;
-		}
-
-		if ( functionName == NULL )
-		{
-			return;
-		}
-	
-		FnRenderToBuffer fp = (FnRenderToBuffer) GetProcAddress( hModule, functionName );
-		g_FnRenderToBuffer = fp;
+		RuntimeFunctionLoader<FnRenderToBuffer> loader( hModule, functionName );
+		g_FnRenderToBuffer = loader.Get();
 
 		glutPostRedisplay();
 	}
@@ -122,7 +134,7 @@ namespace
 };
 
 
-void LoadModuleKihx()
+static void LoadModuleKihx()
 {
 #ifdef NDEBUG
 	const char* ModuleName = "kihx.dll";
