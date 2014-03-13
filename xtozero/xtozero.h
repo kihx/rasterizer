@@ -1,15 +1,17 @@
 #ifndef _XTOZERO_H
 #define _XTOZERO_H
 
-#ifndef DLL_EXPORT
-#define XTZ_API __declspec(dllexport)
+#ifdef XTOZERO_EXPORTS
+#define XTZ_API extern "C" __declspec(dllexport)
 #else
-#define XTZ_API __declspec(dllimport)
+#define XTZ_API extern "C" __declspec(dllimport)
 #endif
 
 #include "Mesh.h"
 
-XTZ_API void XtzClearBuffer( void* buffer, int width, int height, int colorDepth );
+XTZ_API void XtzRenderToBuffer( void* buffer, int width, int height, int dpp );
+
+XTZ_API void XtzClearBuffer( void* buffer, int width, int height, int color );
 
 XTZ_API void XtzLoadMeshFromFile( const char* pfilename );
 

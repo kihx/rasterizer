@@ -225,6 +225,27 @@ static void LoadModuleKihx()
 	g_selectModule = KIHX;
 }
 
+static void LoadModuleXTZ()
+{
+#ifdef _DEBUG
+	const char* ModuleName = "xtozeroD.dll";
+#else
+	const char* ModuleName = "xtozero.dll";
+#endif	
+	
+	if ( !g_hModule.Load( ModuleName ) )
+	{
+		printf( "Load module failure: %s\n", ModuleName );
+		return;
+	}
+	
+	InstallFunctionLoadMeshFromFile( g_hModule.Get(), "XtzLoadMeshFromFile" );
+	InstallFunctionRenderToBuffer( g_hModule.Get(), "XtzRenderToBuffer" );
+
+	printf( "\n<xtozero>\n\n" );
+
+	g_selectModule = XTOZERO;
+}
 
 //-----------------------------------------------------------------------------------------------------------------------
 //
@@ -333,10 +354,7 @@ void keyboard( unsigned char key, int x, int y)
 		break;
 
 	case '3':
-		InstallFunctionLoadMeshFromFile( XtzLoadMeshFromFile );
-		InstallFunctionRenderToBuffer( XtzClearBuffer );
-		printf( "\n<xtozero>\n\n");
-		g_selectModule = XTOZERO;
+		LoadModuleXTZ();
 		break;
 
 	case '4':

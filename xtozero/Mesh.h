@@ -5,13 +5,15 @@
 #include <map>
 #include <string>
 #include <memory>
+#include <fstream>
+#include <iostream>
 
 #define VETEX_ELEMENT_COUNT 3
 #define COLOR_ELEMENT_COUNT 3
 
 namespace xtozero
 {
-	enum VERTEX_ELMENT
+	enum VERTEX_ELEMENT
 	{
 		x = 0,
 		y,
@@ -24,7 +26,7 @@ namespace xtozero
 		T m_element[VETEX_ELEMENT_COUNT];
 	};
 
-	enum COLOR_ELMENT
+	enum COLOR_ELEMENT
 	{
 		r = 0,
 		g,
@@ -33,8 +35,8 @@ namespace xtozero
 
 	struct Face
 	{
-		unsigned char color[COLOR_ELEMENT_COUNT];
-		std::vector<int> indices;
+		unsigned char m_color[COLOR_ELEMENT_COUNT];
+		std::vector<int> m_indices;
 	};
 
 	typedef Vertex<float> VERTEXF;
@@ -47,6 +49,9 @@ namespace xtozero
 	public:
 		CMesh( void ){}
 		~CMesh( void ){}
+
+		bool LoadFromFile( const char* pfilename );
+		void PrintMeshInfo( void );
 	};
 
 	class CMeshManager
