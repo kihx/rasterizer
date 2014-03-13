@@ -55,37 +55,91 @@ namespace
 	static FnClearColorBuffer g_FnClearColorBuffer = NULL;
 
 
-	template<class FuncPtr>
-	class RuntimeFunctionLoader
+	// 클래스 복사 방지 기법
+	class Uncopyable
+	{
+	protected:
+		Uncopyable() {}
+		~Uncopyable() {}
+
+	private:
+		Uncopyable( const Uncopyable& );
+		Uncopyable& operator=( const Uncopyable& );
+	};
+	
+
+	// 모듈 리소스 관리 객체
+	// 다른 모듈이 로드되면 이전 모듈은 해제한다
+	class ModuleLoader : private Uncopyable
 	{
 	public:
-		explicit RuntimeFunctionLoader( HMODULE hModule, const char* functionName ) : m_fp( NULL )
+		bool Load( const char* moduleName )
 		{
-			static_assert( sizeof( FuncPtr ) > 0, "RuntimeFunctionLoader constructed with unknown type" );
-
-			__try
+			HMODULE h = GetModuleHandle( moduleName );
+			if ( h == NULL )
 			{
-				if ( hModule && functionName )
-				{
-					m_fp = (FuncPtr) GetProcAddress( hModule, functionName );
-				}
+				h = LoadLibrary( moduleName );
 			}
-			__except ( EXCEPTION_EXECUTE_HANDLER )
-			{
-				// do nothing
-			}
+			AssignOrReplace( h );
+			return h != NULL;
 		}
 
-		FuncPtr Get()
+		HMODULE& operator=( HMODULE h )
 		{
-			return m_fp;
+			AssignOrReplace( h );
+			return m_hModule;
+		}
+
+		HMODULE Get()
+		{
+			return m_hModule;
 		}
 
 	private:
-		FuncPtr m_fp;
+		void AssignOrReplace( HMODULE h )
+		{
+			if ( m_hModule == h )
+			{
+				return;
+			}
+
+			if ( m_hModule )
+			{
+				FreeLibrary( m_hModule );
+			}
+			m_hModule = h;
+		}
+
+	private:
+		HMODULE m_hModule;
+	};
+
+	ModuleLoader g_hModule;
+
+	// 지정된 모듈로부터 함수 주소 얻어오기
+	template<typename FuncPtr>
+	FuncPtr GetFunctionFromModule( HMODULE hModule, const char* functionName )
+	{
+		static_assert( std::is_pointer<FuncPtr>::value, "not pointer" );
+		static_assert( sizeof( FuncPtr ) > 0, "unknown type" );
+
+		__try
+		{
+			if ( hModule && functionName )
+			{
+				return (FuncPtr) GetProcAddress( hModule, functionName );
+			}
+		}
+		__except ( EXCEPTION_EXECUTE_HANDLER )
+		{
+			// do nothing
+		}
+	
+		return NULL;
 	};
 
 
+	// 래스터라이저 기능 수행
 	inline void LoadMeshFromFile( const char* filename )
 	{
 		if ( g_FnLoadMeshFromFile )
@@ -114,16 +168,15 @@ namespace
 	*/
 	void InstallFunctionLoadMeshFromFile( HMODULE hModule, const char* functionName )
 	{
-		RuntimeFunctionLoader<FnLoadMeshFromFile> loader( hModule, functionName );
-		g_FnLoadMeshFromFile = loader.Get();
+		g_FnLoadMeshFromFile = GetFunctionFromModule<FnLoadMeshFromFile>( hModule, functionName );
 
 		LoadMeshFromFile( "input.msh" );
 	}
 
 	void InstallFunctionRenderToBuffer( HMODULE hModule, const char* functionName )
 	{
-		RuntimeFunctionLoader<FnRenderToBuffer> loader( hModule, functionName );
-		g_FnRenderToBuffer = loader.Get();
+		g_FnRenderToBuffer = GetFunctionFromModule<FnRenderToBuffer>( hModule, functionName );
+
 
 		glutPostRedisplay();
 	}
@@ -156,22 +209,16 @@ static void LoadModuleKihx()
 	const char* ModuleName = "kihx.dll";
 #else
 	const char* ModuleName = "kihxD.dll";
-#endif
+#endif	
 	
-	HMODULE hCurrentModule = GetModuleHandle( ModuleName );
-	if ( hCurrentModule == NULL )
-	{
-		hCurrentModule = LoadLibrary( ModuleName );
-	}
-
-	if ( hCurrentModule == NULL )
+	if ( !g_hModule.Load( ModuleName ) )
 	{
 		printf( "Load module failure: %s\n", ModuleName );
 		return;
 	}
 	
-	InstallFunctionLoadMeshFromFile( hCurrentModule, "kiLoadMeshFromFile" );
-	InstallFunctionRenderToBuffer( hCurrentModule, "kiRenderToBuffer" );
+	InstallFunctionLoadMeshFromFile( g_hModule.Get(), "kiLoadMeshFromFile" );
+	InstallFunctionRenderToBuffer( g_hModule.Get(), "kiRenderToBuffer" );
 
 	printf( "\n<kihx>\n\n" );
 
