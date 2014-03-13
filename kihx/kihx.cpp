@@ -12,9 +12,11 @@ using namespace std;
 using namespace kihx;
 
 
+static shared_ptr<Mesh> g_mesh;
+
 KIHX_API void kiLoadMeshFromFile( const char* filename )
 {
-	shared_ptr<Mesh> mesh( Mesh::CreateFromFile( filename ) );
+	g_mesh = Mesh::CreateFromFile( filename );
 }
 
 KIHX_API void kiRenderToBuffer( void* buffer, int width, int height, int bpp )

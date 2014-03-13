@@ -76,7 +76,7 @@ namespace kihx
 
 	}
 
-	Mesh* Mesh::CreateFromFile( const char* filename )
+	std::shared_ptr<Mesh> Mesh::CreateFromFile( const char* filename )
 	{
 		Mesh* pMesh = new Mesh();
 		if ( !pMesh->LoadMshFile( filename ) )
@@ -85,7 +85,7 @@ namespace kihx
 			pMesh = NULL;
 		}
 
-		return pMesh;
+		return std::shared_ptr<Mesh>( pMesh );
 	}
 
 

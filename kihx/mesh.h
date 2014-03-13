@@ -2,6 +2,7 @@
 
 #include "base.h"
 #include <vector>
+#include <memory>
 
 
 namespace kihx
@@ -84,7 +85,7 @@ namespace kihx
 	public:
 		virtual ~Mesh();
 
-		static Mesh* CreateFromFile( const char* filename );
+		static std::shared_ptr<Mesh> CreateFromFile( const char* filename );
 
 	private:
 		bool LoadMshFile( const char* filename );
