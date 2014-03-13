@@ -73,6 +73,15 @@ namespace
 	class ModuleLoader : private Uncopyable
 	{
 	public:
+		ModuleLoader():m_hModule(NULL){}
+		~ModuleLoader()
+		{
+			if( m_hModule )
+			{
+				FreeLibrary( m_hModule );
+			}
+		}
+
 		bool Load( const char* moduleName )
 		{
 			HMODULE h = GetModuleHandle( moduleName );
@@ -247,6 +256,28 @@ static void LoadModuleXTZ()
 	g_selectModule = XTOZERO;
 }
 
+static void LoadModuleWoocom()
+{
+#ifdef _DEBUG
+	const char* ModuleName = "woocomD.dll";
+#else
+	const char* ModuleName = "woocomD.dll";
+#endif	
+
+	if ( !g_hModule.Load( ModuleName ) )
+	{
+		printf( "Load module failure: %s\n", ModuleName );
+		return;
+	}
+
+	InstallFunctionLoadMeshFromFile( g_hModule.Get(), "WLoadMesh" );
+	InstallFunctionRenderToBuffer( g_hModule.Get(), "WRender" );
+
+	printf( "\n<woocom>\n\n" );
+
+	g_selectModule = WOOCOM;
+}
+
 //-----------------------------------------------------------------------------------------------------------------------
 //
 // TODO THIS...
@@ -347,10 +378,7 @@ void keyboard( unsigned char key, int x, int y)
 		break;
 
 	case '2':
-		InstallFunctionLoadMeshFromFile( WLoadMesh );
-		InstallFunctionRenderToBuffer( WRender );
-		printf( "\n<woocom>\n\n");
-		g_selectModule = WOOCOM;
+		LoadModuleWoocom();
 		break;
 
 	case '3':

@@ -4,6 +4,7 @@
 #include "WModule.h"
 #include "WTrDatai.h"
 
+#include <memory>
 #include <fstream>
 
 #define MAX_LEN 1024
@@ -20,8 +21,8 @@ private:
 	int m_colorDepth;
 };
 
-WModule* g_pPainter = nullptr;
-WTriData* g_pTriangle = nullptr;
+std::shared_ptr<WModule> g_pPainter;
+std::shared_ptr<WTriData> g_pTriangle;
 
 WModule::WModule(int bpp) : m_colorDepth(bpp)
 {
@@ -58,11 +59,7 @@ BOOL WINAPI DllMain(HINSTANCE hInst, DWORD fdwReason, PVOID fImpLoad)
 	case DLL_THREAD_ATTACH:
 		break;
 	case DLL_PROCESS_DETACH:
-		if ( g_pPainter )
-		{
-			delete g_pPainter;
-			g_pPainter = nullptr;
-		}
+		g_pPainter.reset();
 		break;
 	case DLL_THREAD_DETACH:
 		break;
@@ -76,7 +73,7 @@ void WRender(void* buffer, int width, int height, int colorDepth)
 {
 	if( g_pPainter == nullptr )
 	{
-		g_pPainter = new WModule(colorDepth);
+		g_pPainter = std::shared_ptr<WModule>(new WModule(colorDepth));
 	}
 
 	g_pPainter->Render( buffer, width, height, colorDepth );
@@ -108,25 +105,25 @@ void WLoadMesh( const char* file )
 
 		if( strstr( buffer, "#$"))
 		{
-			if( _stricmp( &buffer[2], "Vertices") == 0)
+			if( strncmp( &buffer[2], "Vertices", 8) == 0)
 			{
 				stream >> vertexNum;
 				triangle->SetVertexNum( vertexNum );
 			}
-			else if( _stricmp( &buffer[2], "Faces") == 0)
+			else if( strncmp( &buffer[2], "Faces", 5) == 0)
 			{
 				stream >> faceNum;
 				triangle->SetFaceNum( faceNum );
 			}
 		}
-		else if( _stricmp( buffer, "Vertex") == 0)
+		else if( strncmp( buffer, "Vertex", 6) == 0)
 		{
 			int vertexID = 0;
 			VERTEX* vertex = new VERTEX();
 			stream >> vertexID >> vertex->m_pos[0] >> vertex->m_pos[1] >> vertex->m_pos[2];
 			triangle->PushVertex( vertex );
 		}
-		else if( _stricmp( buffer, "Face") == 0)
+		else if( strncmp( buffer, "Face", 4) == 0)
 		{
 			int faceID = 0;
 			int indexNum = 0;
@@ -148,9 +145,5 @@ void WLoadMesh( const char* file )
 		}
 	}
 	
-	if( g_pTriangle )
-	{
-		delete g_pTriangle;
-	}
-	g_pTriangle = triangle;
+	g_pTriangle = std::shared_ptr<WTriData>(triangle);
 }
