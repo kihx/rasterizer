@@ -12,6 +12,7 @@
 #include "../woocom/WModule.h"
 #include "../xtozero/xtozero.h"
 
+#include "defines.h"
 // Constants Directive
 //
 #define	SCREEN_WIDTH 640
@@ -23,13 +24,6 @@
 #define XTOZERO 3
 #define COOLD 4
 
-//------------Output FileName & LineNumber Show-----------------
-#define STR2(x) #x
-#define STR(x) STR2(x)
-#define MSG(desc) message(__FILE__ "(" STR(__LINE__) "):" #desc)
-#define FixLater(desc) __pragma(MSG(desc))
-//--------------------------------------------------------------
-
 // Global variables
 //
 typedef unsigned char ubyte;
@@ -40,6 +34,7 @@ int g_selectModule = 0;
 //
 static GLdouble g_dZoomFactor = 1.0;
 static GLint g_iHeight;
+static GLint g_clearcolor= BLACK;
 
 
 // Customization 
@@ -111,10 +106,14 @@ namespace
 			{
 				return;
 			}
-
+			
 			if ( m_hModule )
 			{
 				FreeLibrary( m_hModule );
+
+				g_FnLoadMeshFromFile = nullptr;
+				g_FnRenderToBuffer = nullptr;	
+				g_FnClearColorBuffer = nullptr;
 			}
 			m_hModule = h;
 		}
@@ -163,13 +162,17 @@ namespace
 		{
 			g_FnRenderToBuffer( g_pppScreenImage, SCREEN_WIDTH, SCREEN_HEIGHT, COLOR_DEPTH * 8 );
 		}
+		else if( g_FnClearColorBuffer )
+		{
+			g_FnClearColorBuffer( g_pppScreenImage, SCREEN_WIDTH, SCREEN_HEIGHT, g_clearcolor );
+		}
 	}
 
 	inline void ClearBuffer()
 	{
 		if( g_FnClearColorBuffer )
 		{
-			g_FnClearColorBuffer( g_pppScreenImage, SCREEN_WIDTH, SCREEN_HEIGHT, 0xff00ffff );
+			g_FnClearColorBuffer( g_pppScreenImage, SCREEN_WIDTH, SCREEN_HEIGHT, g_clearcolor );
 		}		
 	}	
 
@@ -186,6 +189,13 @@ namespace
 	{
 		g_FnRenderToBuffer = GetFunctionFromModule<FnRenderToBuffer>( hModule, functionName );
 
+
+		glutPostRedisplay();
+	}
+
+	void InstallFunctionClearColorBuffer( HMODULE hModule, const char* functionName )
+	{
+		g_FnClearColorBuffer = GetFunctionFromModule<FnClearColorBuffer>( hModule, functionName );
 
 		glutPostRedisplay();
 	}
@@ -278,6 +288,29 @@ static void LoadModuleWoocom()
 	g_selectModule = WOOCOM;
 }
 
+static void LoadModuleCoolD()
+{
+#ifdef _DEBUG
+	const char* ModuleName = "cooldD.dll";
+#else
+	const char* ModuleName = "cooldR.dll";
+#endif	
+
+	if ( !g_hModule.Load( ModuleName ) )
+	{
+		printf( "Load module failure: %s\n", ModuleName );
+		return;
+	}
+
+	InstallFunctionLoadMeshFromFile( g_hModule.Get(), "coold_LoadMeshFromFile" );
+	InstallFunctionClearColorBuffer( g_hModule.Get(), "coold_ClearColorBuffer" );
+	//InstallFunctionRenderToBuffer( g_hModule.Get(), "coold_RenderToBuffer" );	//일단은 만들어 둠
+
+	printf( "\n<CoolD>\n\n" );
+
+	g_selectModule = COOLD;
+}
+
 //-----------------------------------------------------------------------------------------------------------------------
 //
 // TODO THIS...
@@ -297,7 +330,7 @@ void makeCheckImage( void)
 		RenderToBuffer();
 		break;
 	case COOLD:
-		ClearBuffer();
+		RenderToBuffer();
 		break;
 	}
 	
@@ -387,22 +420,9 @@ void keyboard( unsigned char key, int x, int y)
 
 	case '4':
 		{	
-			FixLater( Begin Explicit... )
-			char* szDllName = "coold.dll";
-			hCurrentModule = GetModuleHandle( szDllName );
-
-			if( hCurrentModule == NULL)
-			{
-				hCurrentModule = LoadLibrary( szDllName );			
-			}
-
-			FnClearColorBuffer controlFunc = (FnClearColorBuffer)GetProcAddress( hCurrentModule, "colorControl" );
-			if( controlFunc != nullptr )
-			{				
-				InstallFunctionClearColorBuffer(controlFunc);
-			}			
-			printf( "\n<coold>\n\n" );
-			g_selectModule = COOLD;
+			FixLater( 많이 바꼈네요 오호~~ )
+			LoadModuleCoolD();
+			g_clearcolor = GREEN;
 		}
 		break;
 

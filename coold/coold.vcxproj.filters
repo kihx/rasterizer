@@ -18,9 +18,15 @@
     <ClInclude Include="coold.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CustomMesh.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="coold.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CustomMesh.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
