@@ -92,7 +92,6 @@
     <ClCompile Include="program.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="defines.h" />
     <ClInclude Include="glut.h" />
   </ItemGroup>
   <ItemGroup>

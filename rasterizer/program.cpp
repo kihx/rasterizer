@@ -12,7 +12,6 @@
 #include "../woocom/WModule.h"
 #include "../xtozero/xtozero.h"
 
-#include "defines.h"
 // Constants Directive
 //
 #define	SCREEN_WIDTH 640
@@ -34,8 +33,6 @@ int g_selectModule = 0;
 //
 static GLdouble g_dZoomFactor = 1.0;
 static GLint g_iHeight;
-static GLint g_clearcolor= BLACK;
-
 
 // Customization 
 //
@@ -43,12 +40,9 @@ namespace
 {
 	typedef void( *FnLoadMeshFromFile)( const char* filename );
 	typedef void( *FnRenderToBuffer)( void* buffer, int width, int height, int bpp );
-	typedef void( *FnClearColorBuffer)( void* pImage, int width, int height, unsigned long clearColor );
-
+	
 	static FnLoadMeshFromFile g_FnLoadMeshFromFile = NULL;
 	static FnRenderToBuffer g_FnRenderToBuffer = NULL;
-	static FnClearColorBuffer g_FnClearColorBuffer = NULL;
-
 
 	// 클래스 복사 방지 기법
 	class Uncopyable
@@ -113,7 +107,6 @@ namespace
 
 				g_FnLoadMeshFromFile = nullptr;
 				g_FnRenderToBuffer = nullptr;	
-				g_FnClearColorBuffer = nullptr;
 			}
 			m_hModule = h;
 		}
@@ -161,19 +154,7 @@ namespace
 		if ( g_FnRenderToBuffer )
 		{
 			g_FnRenderToBuffer( g_pppScreenImage, SCREEN_WIDTH, SCREEN_HEIGHT, COLOR_DEPTH * 8 );
-		}
-		else if( g_FnClearColorBuffer )
-		{
-			g_FnClearColorBuffer( g_pppScreenImage, SCREEN_WIDTH, SCREEN_HEIGHT, g_clearcolor );
-		}
-	}
-
-	inline void ClearBuffer()
-	{
-		if( g_FnClearColorBuffer )
-		{
-			g_FnClearColorBuffer( g_pppScreenImage, SCREEN_WIDTH, SCREEN_HEIGHT, g_clearcolor );
-		}		
+		}	
 	}	
 
 	/* 템플릿을 활용한 런타임 함수 로더
@@ -193,13 +174,6 @@ namespace
 		glutPostRedisplay();
 	}
 
-	void InstallFunctionClearColorBuffer( HMODULE hModule, const char* functionName )
-	{
-		g_FnClearColorBuffer = GetFunctionFromModule<FnClearColorBuffer>( hModule, functionName );
-
-		glutPostRedisplay();
-	}
-
 	/* 하위 호환성을 위해 유지
 	*/
 	void InstallFunctionLoadMeshFromFile( FnLoadMeshFromFile fp )
@@ -212,13 +186,7 @@ namespace
 	{
 		g_FnRenderToBuffer = fp;
 		glutPostRedisplay();
-	}
-
-	void InstallFunctionClearColorBuffer( FnClearColorBuffer fp )
-	{
-		g_FnClearColorBuffer = fp;
-		glutPostRedisplay();
-	}
+	}	
 };
 
 
@@ -303,8 +271,7 @@ static void LoadModuleCoolD()
 	}
 
 	InstallFunctionLoadMeshFromFile( g_hModule.Get(), "coold_LoadMeshFromFile" );
-	InstallFunctionClearColorBuffer( g_hModule.Get(), "coold_ClearColorBuffer" );
-	//InstallFunctionRenderToBuffer( g_hModule.Get(), "coold_RenderToBuffer" );	//일단은 만들어 둠
+	InstallFunctionRenderToBuffer( g_hModule.Get(), "coold_RenderToBuffer" );
 
 	printf( "\n<CoolD>\n\n" );
 
@@ -419,10 +386,8 @@ void keyboard( unsigned char key, int x, int y)
 		break;
 
 	case '4':
-		{	
-			FixLater( 많이 바꼈네요 오호~~ )
-			LoadModuleCoolD();
-			g_clearcolor = GREEN;
+		{				
+			LoadModuleCoolD();			
 		}
 		break;
 

@@ -1,12 +1,13 @@
+#include "CoolD_CustomMesh.h"
+#include "CoolD_Inlines.h"
 #include <fstream>
 #include <sstream>
 #include <string>
 #include <cassert>
-#include "CustomMesh.h"
 
 using namespace std;
 
-namespace coold
+namespace CoolD
 {
 	CustomMesh* CustomMesh::CreateMeshFromFile( const char* filename )
 	{
@@ -15,6 +16,8 @@ namespace coold
 		{
 			return pMesh;
 		}
+
+		Safe_Delete(pMesh);
 		return nullptr;
 	}
 		
@@ -93,6 +96,8 @@ namespace coold
 
 					f.vecIndex.push_back( vertexNum );
 				}
+
+				m_vecFace.push_back(f);
 			}		
 		}
 		return true;

@@ -88,11 +88,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="coold.h" />
-    <ClInclude Include="CustomMesh.h" />
+    <ClInclude Include="CoolD_Defines.h" />
+    <ClInclude Include="CoolD_Inlines.h" />
+    <ClInclude Include="CoolD_SubFunction.h" />
+    <ClInclude Include="CoolD_CustomMesh.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="coold.cpp" />
-    <ClCompile Include="CustomMesh.cpp" />
+    <ClCompile Include="CoolD_CustomMesh.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
