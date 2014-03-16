@@ -1,5 +1,11 @@
 // Include Directive
 // 
+#include "../kihx/kihx.h"
+#include "../woocom/WModule.h"
+#include "../xtozero/xtozero.h"
+
+#include "defines.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <windows.h>
@@ -8,27 +14,19 @@
 
 #include "glut.h"
 
-#include "../kihx/kihx.h"
-#include "../woocom/WModule.h"
-#include "../xtozero/xtozero.h"
 
-#include "defines.h"
 // Constants Directive
 //
 #define	SCREEN_WIDTH 640
 #define	SCREEN_HEIGHT 480
 #define COLOR_DEPTH 3
 
-#define KIHX 1
-#define WOOCOM 2
-#define XTOZERO 3
-#define COOLD 4
 
 // Global variables
 //
-typedef unsigned char ubyte;
-ubyte g_pppScreenImage[SCREEN_HEIGHT][SCREEN_WIDTH][COLOR_DEPTH];
-int g_selectModule = 0;
+typedef unsigned char byte;
+byte g_pppScreenImage[SCREEN_HEIGHT][SCREEN_WIDTH][COLOR_DEPTH];
+
 
 // Static variables
 //
@@ -45,38 +43,47 @@ namespace
 	typedef void( *FnRenderToBuffer)( void* buffer, int width, int height, int bpp );
 	typedef void( *FnClearColorBuffer)( void* pImage, int width, int height, unsigned long clearColor );
 
-	static FnLoadMeshFromFile g_FnLoadMeshFromFile = NULL;
-	static FnRenderToBuffer g_FnRenderToBuffer = NULL;
-	static FnClearColorBuffer g_FnClearColorBuffer = NULL;
 
-
-	// 클래스 복사 방지 기법
-	class Uncopyable
+	// 지정된 모듈로부터 함수 주소 얻어오기
+	template<typename FuncPtr>
+	FuncPtr GetFunctionFromModule( HMODULE hModule, const char* functionName )
 	{
-	protected:
-		Uncopyable() {}
-		~Uncopyable() {}
+		static_assert( std::is_pointer<FuncPtr>::value, "not pointer" );
+		static_assert( sizeof( FuncPtr ) > 0, "unknown type" );
 
-	private:
-		Uncopyable( const Uncopyable& );
-		Uncopyable& operator=( const Uncopyable& );
-	};
-	
-
-	// 모듈 리소스 관리 객체
-	// 다른 모듈이 로드되면 이전 모듈은 해제한다
-	class ModuleLoader : private Uncopyable
-	{
-	public:
-		ModuleLoader():m_hModule(NULL){}
-		~ModuleLoader()
+		__try
 		{
-			if( m_hModule )
+			if ( hModule && functionName )
 			{
-				FreeLibrary( m_hModule );
+				return (FuncPtr) GetProcAddress( hModule, functionName );
 			}
 		}
+		__except ( EXCEPTION_EXECUTE_HANDLER )
+		{
+			// do nothing
+		}
 
+		return NULL;
+	};	
+			
+	// 모듈별 작업 수행
+	class ModuleContext : private Uncopyable
+	{
+	public:
+		ModuleContext() : 
+			m_hModule( NULL ),
+			m_fnLoadMeshFromFile( NULL ),
+			m_fnRenderToBuffer( NULL ),
+			m_fnClearColorBuffer( NULL )
+		{
+		}
+
+		~ModuleContext()
+		{
+			Release();
+		}
+
+		// 다른 모듈이 로드되면 이전 모듈은 해제한다
 		bool Load( const char* moduleName )
 		{
 			HMODULE h = GetModuleHandle( moduleName );
@@ -99,6 +106,55 @@ namespace
 			return m_hModule;
 		}
 
+		void LoadMeshFromFile( const char* filename )
+		{
+			if ( m_fnLoadMeshFromFile )
+			{
+				m_fnLoadMeshFromFile( filename );
+			} 
+		}
+
+		void RenderToBuffer( byte* buffer, GLint clearColor )
+		{
+			if ( m_fnRenderToBuffer )
+			{
+				m_fnRenderToBuffer( buffer, SCREEN_WIDTH, SCREEN_HEIGHT, COLOR_DEPTH * 8 );
+			}
+			else if( m_fnClearColorBuffer )
+			{
+				m_fnClearColorBuffer( buffer, SCREEN_WIDTH, SCREEN_HEIGHT, clearColor );
+			}
+		}
+
+		void ClearBuffer( byte* buffer, GLint clearColor )
+		{
+			if ( m_fnClearColorBuffer )
+			{
+				m_fnClearColorBuffer( buffer, SCREEN_WIDTH, SCREEN_HEIGHT, clearColor );
+			}		
+		}	
+
+		void InstallFunctionLoadMeshFromFile( const char* functionName )
+		{
+			m_fnLoadMeshFromFile = GetFunctionFromModule<FnLoadMeshFromFile>( m_hModule, functionName );
+
+			LoadMeshFromFile( "input.msh" );
+		}
+
+		void InstallFunctionRenderToBuffer( const char* functionName )
+		{
+			m_fnRenderToBuffer = GetFunctionFromModule<FnRenderToBuffer>( m_hModule, functionName );
+
+			glutPostRedisplay();
+		}
+
+		void InstallFunctionClearColorBuffer( const char* functionName )
+		{
+			m_fnClearColorBuffer = GetFunctionFromModule<FnClearColorBuffer>( m_hModule, functionName );
+
+			glutPostRedisplay();
+		}
+
 	private:
 		void AssignOrReplace( HMODULE h )
 		{
@@ -109,116 +165,27 @@ namespace
 			
 			if ( m_hModule )
 			{
-				FreeLibrary( m_hModule );
-
-				g_FnLoadMeshFromFile = nullptr;
-				g_FnRenderToBuffer = nullptr;	
-				g_FnClearColorBuffer = nullptr;
+				Release();
 			}
 			m_hModule = h;
 		}
 
+		void Release() 
+		{
+			FreeLibrary( m_hModule );
+			m_fnLoadMeshFromFile = NULL;
+			m_fnRenderToBuffer = NULL;	
+			m_fnClearColorBuffer = NULL;
+		}
+
 	private:
 		HMODULE m_hModule;
+		FnLoadMeshFromFile m_fnLoadMeshFromFile;
+		FnRenderToBuffer m_fnRenderToBuffer;
+		FnClearColorBuffer m_fnClearColorBuffer;
 	};
 
-	ModuleLoader g_hModule;
-
-	// 지정된 모듈로부터 함수 주소 얻어오기
-	template<typename FuncPtr>
-	FuncPtr GetFunctionFromModule( HMODULE hModule, const char* functionName )
-	{
-		static_assert( std::is_pointer<FuncPtr>::value, "not pointer" );
-		static_assert( sizeof( FuncPtr ) > 0, "unknown type" );
-
-		__try
-		{
-			if ( hModule && functionName )
-			{
-				return (FuncPtr) GetProcAddress( hModule, functionName );
-			}
-		}
-		__except ( EXCEPTION_EXECUTE_HANDLER )
-		{
-			// do nothing
-		}
-	
-		return NULL;
-	};
-
-
-	// 래스터라이저 기능 수행
-	inline void LoadMeshFromFile( const char* filename )
-	{
-		if ( g_FnLoadMeshFromFile )
-		{
-			g_FnLoadMeshFromFile( filename );
-		} 
-	}
-
-	inline void RenderToBuffer()
-	{
-		if ( g_FnRenderToBuffer )
-		{
-			g_FnRenderToBuffer( g_pppScreenImage, SCREEN_WIDTH, SCREEN_HEIGHT, COLOR_DEPTH * 8 );
-		}
-		else if( g_FnClearColorBuffer )
-		{
-			g_FnClearColorBuffer( g_pppScreenImage, SCREEN_WIDTH, SCREEN_HEIGHT, g_clearcolor );
-		}
-	}
-
-	inline void ClearBuffer()
-	{
-		if( g_FnClearColorBuffer )
-		{
-			g_FnClearColorBuffer( g_pppScreenImage, SCREEN_WIDTH, SCREEN_HEIGHT, g_clearcolor );
-		}		
-	}	
-
-	/* 템플릿을 활용한 런타임 함수 로더
-	*/
-	void InstallFunctionLoadMeshFromFile( HMODULE hModule, const char* functionName )
-	{
-		g_FnLoadMeshFromFile = GetFunctionFromModule<FnLoadMeshFromFile>( hModule, functionName );
-
-		LoadMeshFromFile( "input.msh" );
-	}
-
-	void InstallFunctionRenderToBuffer( HMODULE hModule, const char* functionName )
-	{
-		g_FnRenderToBuffer = GetFunctionFromModule<FnRenderToBuffer>( hModule, functionName );
-
-
-		glutPostRedisplay();
-	}
-
-	void InstallFunctionClearColorBuffer( HMODULE hModule, const char* functionName )
-	{
-		g_FnClearColorBuffer = GetFunctionFromModule<FnClearColorBuffer>( hModule, functionName );
-
-		glutPostRedisplay();
-	}
-
-	/* 하위 호환성을 위해 유지
-	*/
-	void InstallFunctionLoadMeshFromFile( FnLoadMeshFromFile fp )
-	{
-		g_FnLoadMeshFromFile = fp;
-		LoadMeshFromFile( "input.msh" );
-	}
-
-	void InstallFunctionRenderToBuffer( FnRenderToBuffer fp )
-	{
-		g_FnRenderToBuffer = fp;
-		glutPostRedisplay();
-	}
-
-	void InstallFunctionClearColorBuffer( FnClearColorBuffer fp )
-	{
-		g_FnClearColorBuffer = fp;
-		glutPostRedisplay();
-	}
+	ModuleContext g_ModuleContext;
 };
 
 
@@ -230,18 +197,16 @@ static void LoadModuleKihx()
 	const char* ModuleName = "kihxD.dll";
 #endif	
 	
-	if ( !g_hModule.Load( ModuleName ) )
+	if ( !g_ModuleContext.Load( ModuleName ) )
 	{
 		printf( "Load module failure: %s\n", ModuleName );
 		return;
 	}
 	
-	InstallFunctionLoadMeshFromFile( g_hModule.Get(), "kiLoadMeshFromFile" );
-	InstallFunctionRenderToBuffer( g_hModule.Get(), "kiRenderToBuffer" );
+	g_ModuleContext.InstallFunctionLoadMeshFromFile( "kiLoadMeshFromFile" );
+	g_ModuleContext.InstallFunctionRenderToBuffer( "kiRenderToBuffer" );
 
 	printf( "\n<kihx>\n\n" );
-
-	g_selectModule = KIHX;
 }
 
 static void LoadModuleXTZ()
@@ -252,18 +217,16 @@ static void LoadModuleXTZ()
 	const char* ModuleName = "xtozero.dll";
 #endif	
 	
-	if ( !g_hModule.Load( ModuleName ) )
+	if ( !g_ModuleContext.Load( ModuleName ) )
 	{
 		printf( "Load module failure: %s\n", ModuleName );
 		return;
 	}
 	
-	InstallFunctionLoadMeshFromFile( g_hModule.Get(), "XtzLoadMeshFromFile" );
-	InstallFunctionRenderToBuffer( g_hModule.Get(), "XtzRenderToBuffer" );
+	g_ModuleContext.InstallFunctionLoadMeshFromFile( "XtzLoadMeshFromFile" );
+	g_ModuleContext.InstallFunctionRenderToBuffer( "XtzRenderToBuffer" );
 
 	printf( "\n<xtozero>\n\n" );
-
-	g_selectModule = XTOZERO;
 }
 
 static void LoadModuleWoocom()
@@ -274,18 +237,16 @@ static void LoadModuleWoocom()
 	const char* ModuleName = "woocomD.dll";
 #endif	
 
-	if ( !g_hModule.Load( ModuleName ) )
+	if ( !g_ModuleContext.Load( ModuleName ) )
 	{
 		printf( "Load module failure: %s\n", ModuleName );
 		return;
 	}
 
-	InstallFunctionLoadMeshFromFile( g_hModule.Get(), "WLoadMesh" );
-	InstallFunctionRenderToBuffer( g_hModule.Get(), "WRender" );
+	g_ModuleContext.InstallFunctionLoadMeshFromFile( "WLoadMesh" );
+	g_ModuleContext.InstallFunctionRenderToBuffer( "WRender" );
 
 	printf( "\n<woocom>\n\n" );
-
-	g_selectModule = WOOCOM;
 }
 
 static void LoadModuleCoolD()
@@ -296,19 +257,17 @@ static void LoadModuleCoolD()
 	const char* ModuleName = "cooldR.dll";
 #endif	
 
-	if ( !g_hModule.Load( ModuleName ) )
+	if ( !g_ModuleContext.Load( ModuleName ) )
 	{
 		printf( "Load module failure: %s\n", ModuleName );
 		return;
 	}
 
-	InstallFunctionLoadMeshFromFile( g_hModule.Get(), "coold_LoadMeshFromFile" );
-	InstallFunctionClearColorBuffer( g_hModule.Get(), "coold_ClearColorBuffer" );
+	g_ModuleContext.InstallFunctionLoadMeshFromFile( "coold_LoadMeshFromFile" );
+	g_ModuleContext.InstallFunctionClearColorBuffer( "coold_ClearColorBuffer" );
 	//InstallFunctionRenderToBuffer( g_hModule.Get(), "coold_RenderToBuffer" );	//일단은 만들어 둠
 
 	printf( "\n<CoolD>\n\n" );
-
-	g_selectModule = COOLD;
 }
 
 //-----------------------------------------------------------------------------------------------------------------------
@@ -318,34 +277,7 @@ static void LoadModuleCoolD()
 //-----------------------------------------------------------------------------------------------------------------------
 void makeCheckImage( void)
 {
-	switch( g_selectModule )
-	{
-	case KIHX:
-		RenderToBuffer();
-		break;
-	case WOOCOM:
-		RenderToBuffer();
-		break;
-	case XTOZERO:
-		RenderToBuffer();
-		break;
-	case COOLD:
-		RenderToBuffer();
-		break;
-	}
-	
-	// Initializes a screen image.
-	//memset( g_pppScreenImage, 0, sizeof( g_pppScreenImage) );
-
-	/*for ( int i = 0; i < SCREEN_HEIGHT; i++) 
-	{
-		for ( int j = 0; j < SCREEN_WIDTH; j++)
-		{
-			g_pppScreenImage[i][j][0] = (ubyte) 0;
-			g_pppScreenImage[i][j][1] = (ubyte) 0;
-			g_pppScreenImage[i][j][2] = (ubyte) 0;
-		}
-	}*/
+	g_ModuleContext.RenderToBuffer( (byte*) g_pppScreenImage, g_clearcolor );
 }
 
 
