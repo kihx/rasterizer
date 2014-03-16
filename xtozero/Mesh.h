@@ -1,11 +1,12 @@
 #ifndef _MESH_H_
 #define _MESH_H_
 
+#include "FileHandler.h"
+
 #include <vector>
 #include <map>
 #include <string>
 #include <memory>
-#include <fstream>
 #include <iostream>
 
 #define VETEX_ELEMENT_COUNT 3

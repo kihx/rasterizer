@@ -5,9 +5,7 @@ namespace xtozero
 {
 	bool CMesh::LoadFromFile( const char* pfilename )
 	{
-		std::ifstream meshfile;
-
-		meshfile.open( pfilename );
+		CFileHandler meshfile( pfilename );
 		if( meshfile.is_open() )
 		{
 			char token[256] = {0};
@@ -15,10 +13,10 @@ namespace xtozero
 			{
 				meshfile >> token;
 
-				int simbollen = sizeof("#$") - 1;
-				if( strncmp( token, "#$", simbollen ) == 0 )
+				int symbollen = sizeof("#$") - 1;
+				if( strncmp( token, "#$", symbollen ) == 0 )
 				{
-					if( strncmp( token + simbollen, "Vertices", sizeof("Vertices") ) == 0 )
+					if( strncmp( token + symbollen, "Vertices", sizeof("Vertices") ) == 0 )
 					{
 						int vertices;
 						meshfile >> vertices;
@@ -30,7 +28,7 @@ namespace xtozero
 
 						m_vertices.reserve( vertices );
 					}
-					else if( strncmp( token + simbollen, "Faces", sizeof("Faces") ) == 0 )
+					else if( strncmp( token + symbollen, "Faces", sizeof("Faces") ) == 0 )
 					{
 						int faces;
 						meshfile >> faces;
@@ -104,7 +102,7 @@ namespace xtozero
 		}
 		for( auto iter = m_faces.begin(); iter != m_faces.end(); ++iter )
 		{
-			std::cout << "[FASE] " << "color : ";
+			std::cout << "[FACE] " << "color : ";
 			for( int i = 0; i < COLOR_ELEMENT_COUNT; ++i )
 			{
 				std::cout << static_cast<int>(iter->m_color[i]) << " | ";
@@ -155,10 +153,9 @@ namespace xtozero
 			
 			if ( pMesh->LoadFromFile(pfilename) )
 			{
-				newMesh = std::shared_ptr<CMesh>( pMesh );
-				m_meshes[filename] = newMesh;
+				m_meshes[filename] = std::shared_ptr<CMesh>( pMesh );
 
-				return newMesh;
+				return m_meshes[filename];
 			}
 			else
 			{
