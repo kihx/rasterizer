@@ -5,6 +5,9 @@
 #include <memory>
 
 
+typedef unsigned char byte;
+
+
 #define LOG_WARNING( msg )	{ printf( "[Warning] %s, in %s at %d\n", msg, __FUNCTION__, __LINE__ ); }
 
 
@@ -34,12 +37,6 @@ private:
 template<class T>
 class Singleton
 {
-protected:
-	Singleton()
-	{
-		static_assert( !std::is_pointer<T>::value && std::is_class<T>::value, "invalid class type of Singleton" );
-	}
-
 public:
 	//template<typename... Args>
 	//static T* GetInstance( Args... args )
@@ -54,6 +51,12 @@ public:
 
 	static T* GetInstance()
 	{
+		static_assert( 
+			std::is_class<T>::value && 
+			!std::is_polymorphic<T>::value &&
+			!std::is_pointer<T>::value, 
+			"invalid type of Singleton" );
+
 		if ( s_instance == NULL )
 		{
 			s_instance = std::unique_ptr<T>( new T() );
@@ -74,4 +77,24 @@ private:
 
 template <class T> 
 std::unique_ptr<T> Singleton<T>::s_instance = NULL;
+
+
+
+template<class T>
+class SafeUnlock
+{
+public:
+	SafeUnlock( T* obj ) :
+		m_obj( obj )
+	{
+	}
+
+	~SafeUnlock()
+	{
+		m_obj->Unlock();
+	}
+
+private:
+	T* m_obj;
+};
 

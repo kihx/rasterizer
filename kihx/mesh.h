@@ -4,6 +4,8 @@
 #include <vector>
 #include <memory>
 
+#define SUPPORT_MSH		// .msh file format
+
 
 namespace kihx
 {
