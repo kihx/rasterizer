@@ -14,3 +14,6 @@
 
 
 // TODO: reference additional headers your program requires here
+
+
+#define PIXEL_COLOR(r, g, b)  ( b << 16 ) + ( g << 8 ) + r
