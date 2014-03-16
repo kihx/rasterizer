@@ -108,10 +108,10 @@ namespace kihx
 		{
 			assert( ( faceIndex >= 0 && faceIndex < m_faces.size() ) && "out of ranged faceIndex" );
 			assert( ( vertexIndex >= 0 && vertexIndex < m_faces[faceIndex].m_indices.size() ) && "out of ranged vertexIndex" );			
-			unsigned short index = m_faces[faceIndex].m_indices[vertexIndex];
+			unsigned short index = m_faces[faceIndex].m_indices[vertexIndex] - 1;
 
 			assert( ( index >= 0 && index < m_vertices.size() ) && "out of ranged index" );
-			return &m_vertices[index - 1].x;
+			return &m_vertices[index].x;
 		}
 
 	private:

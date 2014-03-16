@@ -68,6 +68,13 @@ class RenderingContext;
 class Texture
 {
 public:
+	enum ColorFormat
+	{
+		UNKNOWN = 0,
+
+		RGB888 = 10,
+	};
+
 	enum
 	{
 		EF_CLAMP_U = 0x1,
@@ -83,7 +90,7 @@ protected:
 	Texture() :
 		m_width( -1 ),
 		m_height( -1 ),
-		m_bpp( -1 ),
+		m_format( UNKNOWN ),
 		m_flags( 0 ),
 		m_pMemory( NULL )
 	{
@@ -96,12 +103,13 @@ public:
 
 public:
 	// factory
-	static shared_ptr<Texture> Create( int width, int height, int bpp, void* pExternalMemory )
+	static shared_ptr<Texture> Create( int width, int height, ColorFormat format, void* pExternalMemory )
 	{
 		Texture* pTexture = new Texture();
 		pTexture->m_width = width;
 		pTexture->m_height = height;
-		pTexture->m_bpp = bpp;
+		pTexture->m_format = format;
+		
 		pTexture->m_flags = 0;
 
 		if ( pExternalMemory )
@@ -110,10 +118,23 @@ public:
 		}
 		else
 		{
-			pTexture->m_pMemory = malloc( width * height * bpp / 8 );
+			int bytesPerPixel = 3;
+			pTexture->m_pMemory = malloc( width * height * bytesPerPixel );
 		}
 		
 		return shared_ptr<Texture>( pTexture );
+	}
+
+	static int ToBytesPerPixel( ColorFormat format )
+	{
+		switch ( format )
+		{
+		case RGB888:
+			return 3;
+
+		default:
+			return 0;
+		}
 	}
 
 public:
@@ -127,9 +148,9 @@ public:
 		return m_height;
 	}
 
-	int BitsPerPixel() const
+	ColorFormat Format() const
 	{
-		return m_bpp;
+		return m_format;
 	}
 
 	bool HasFlag( unsigned int flags )
@@ -162,7 +183,7 @@ public:
 		}
 
 		AddFlags( EF_LOCKED );
-		ppMemory = &m_pMemory;
+		*ppMemory = m_pMemory;
 		return true;
 	}
 
@@ -172,10 +193,38 @@ public:
 	}
 
 private:
-	void WriteTexel( int x, int y, unsigned char r, unsigned char g, unsigned char b, unsigned char a )
+	bool WriteTexel( int x, int y, unsigned char r, unsigned char g, unsigned char b )
 	{
+		if ( !HasFlag( EF_LOCKED ) )
+		{
+			return false;
+		}
+
 		assert( (x >= 0 && x < m_width) && "out of ranged x-coordinate" );
 		assert( (y >= 0 && y < m_height) && "out of ranged y-coordinate" );
+		assert( (ToBytesPerPixel( Format() ) == 3) && "incorrect color format" );
+
+		if ( unsigned char* buffer = static_cast<unsigned char*>( m_pMemory ) )
+		{
+			unsigned char* base = buffer + ( ( ( m_width * y ) + x ) * 3 );			
+			*( base + 0 ) = r;
+			*( base + 1 ) = g;
+			*( base + 2 ) = b;
+		}
+
+		return true;
+	}
+
+	bool WriteTexel( int x, int y, unsigned char r, unsigned char g, unsigned char b, unsigned char a )
+	{
+		if ( !HasFlag( EF_LOCKED ) )
+		{
+			return false;
+		}
+
+		assert( (x >= 0 && x < m_width) && "out of ranged x-coordinate" );
+		assert( (y >= 0 && y < m_height) && "out of ranged y-coordinate" );
+		assert( (ToBytesPerPixel( Format() ) == 4) && "incorrect color format" );
 
 		if ( unsigned char* buffer = static_cast<unsigned char*>( m_pMemory ) )
 		{
@@ -184,11 +233,9 @@ private:
 			*( base + 1 ) = g;
 			*( base + 2 ) = b;
 			*( base + 3 ) = a;
-			//*( buffer + ( ( ( m_width * y ) + x ) * 4 ) + 0 ) = r;
-			//*( buffer + ( ( ( m_width * y ) + x ) * 4 ) + 1 ) = g;
-			//*( buffer + ( ( ( m_width * y ) + x ) * 4 ) + 2 ) = b;
-			//*( buffer + ( ( ( m_width * y ) + x ) * 4 ) + 3 ) = a;
 		}
+
+		return true;
 	}
 
 	void SetExternalMemory( void* pMemory )
@@ -214,9 +261,11 @@ private:
 private:
 	int m_width;
 	int m_height;
-	int m_bpp;
+	ColorFormat m_format;
 	unsigned int m_flags;
 	void* m_pMemory;
+	
+	friend class RenderingContext;
 };
 
 

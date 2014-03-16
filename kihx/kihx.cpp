@@ -194,7 +194,7 @@ public:
 
 	void Clear( unsigned char r, unsigned char g, unsigned char b, unsigned char a )
 	{
-		unsigned int color = ( r | ( ((unsigned short) g) << 8 ) | ( ((unsigned int) b) << 16 )) | ( ((unsigned int) a) << 24 );
+		//unsigned int color = ( r | ( ((unsigned short) g) << 8 ) | ( ((unsigned int) b) << 16 )) | ( ((unsigned int) a) << 24 );
 
 		size_t num = m_renderTargets.size();
 		for ( size_t i = 0; i < num; ++i )
@@ -204,8 +204,23 @@ public:
 				void* p = NULL;
 				if ( pTexture->Lock( &p ) )
 				{
-					int size = pTexture->Width() * pTexture->Height() * pTexture->BitsPerPixel() / 8;
-					memset( p, color, size );
+					assert( p && "a null pointer of internal memory of a texture" );
+
+					if ( r == g && g == b )
+					{
+						int size = pTexture->Width() * pTexture->Height() * Texture::ToBytesPerPixel( pTexture->Format() );
+						memset( p, r, size );
+					}
+					else
+					{
+						for ( int h = 0; h < pTexture->Height(); ++h )
+						{
+							for ( int w = 0; w < pTexture->Width(); ++w )
+							{
+								pTexture->WriteTexel( w, h, r, g, b );
+							}
+						}
+					}					
 				}
 			}
 		}
@@ -239,6 +254,7 @@ public:
 	{
 		assert( (index >= 0 && index < m_renderTargets.size()) && "out of ranged index" );
 		m_renderTargets[index] = texture;
+		return true;
 	}
 
 private:
@@ -249,6 +265,32 @@ private:
 	OutputMerger m_outputMerger;
 	vector< shared_ptr<Texture> > m_renderTargets;
 } rp;
+
+
+class KihxDevice : public Singleton<KihxDevice>
+{
+	friend class Singleton<KihxDevice>;
+
+protected:
+	KihxDevice()
+	{
+	};
+
+public:
+	virtual ~KihxDevice()
+	{
+	};
+
+	shared_ptr<RenderingContext> CreateRenderingContext()
+	{
+		RenderingContext* pRenderingContext = new RenderingContext();
+		m_renderingContexts.push_back( shared_ptr<RenderingContext>( pRenderingContext ) );
+		return m_renderingContexts.at( m_renderingContexts.size() - 1 );
+	}
+
+private:
+	vector< shared_ptr<RenderingContext> > m_renderingContexts;
+};
 
 
 struct EdgeElement
@@ -295,4 +337,15 @@ KIHX_API void kiRenderToBuffer( void* buffer, int width, int height, int bpp )
 	// clear buffer
 	size_t bufferSize = width * height * (bpp / 8);		
 	::memset( buffer, 255, bufferSize );
+
+
+	__UNDONE( temporal testing code );
+	static shared_ptr<RenderingContext> context = KihxDevice::GetInstance()->CreateRenderingContext();
+	static shared_ptr<Texture> renderTarget = Texture::Create( width, height, Texture::RGB888, buffer );
+	
+	context->SetRenderTarget( renderTarget, 0 );
+
+	context->Clear( 222, 180, 25, 255 );
+
+	context->Draw( g_mesh );
 }
