@@ -82,7 +82,7 @@ namespace kihx
 		if ( !pMesh->LoadMshFile( filename ) )
 		{
 			delete pMesh;
-			pMesh = NULL;
+			pMesh = nullptr;
 		}
 
 		return std::shared_ptr<Mesh>( pMesh );
@@ -103,9 +103,9 @@ namespace kihx
 	*/
 	bool Mesh::LoadMshFile( const char* filename )
 	{
-		if ( filename == NULL )
+		if ( filename == nullptr )
 		{
-			LOG_WARNING( "Null filename" );
+			LOG_WARNING( "nullptr filename" );
 			return false;
 		}
 

@@ -34,41 +34,48 @@ private:
 
 
 
+
 template<class T>
 class Singleton
 {
 public:
-	//template<typename... Args>
-	//static T* GetInstance( Args... args )
-	//{
-	//	if ( s_instance == NULL )
-	//	{
-	//		s_instance = std::unique_ptr<T>( new T( std::forward<Args>( args )... ) );
-	//	}
-	//
-	//	return s_instance.get();
-	//}
-
-	static T* GetInstance()
+	template<typename... Args>
+	static T* GetInstance( Args... args )
 	{
-		static_assert( 
-			std::is_class<T>::value && 
+		static_assert(
+			std::is_class<T>::value &&
 			!std::is_polymorphic<T>::value &&
-			!std::is_pointer<T>::value, 
-			"invalid type of Singleton" );
+			!std::is_pointer<T>::value,
+			"invalid type of Singleton");
 
-		if ( s_instance == NULL )
+		if ( s_instance == nullptr )
 		{
-			s_instance = std::unique_ptr<T>( new T() );
+			s_instance = std::unique_ptr<T>( new T( std::forward<Args>( args )... ) );
 		}
-
+	
 		return s_instance.get();
 	}
+
+	//static T* GetInstance()
+	//{
+	//	static_assert( 
+	//		std::is_class<T>::value && 
+	//		!std::is_polymorphic<T>::value &&
+	//		!std::is_pointer<T>::value, 
+	//		"invalid type of Singleton" );
+
+	//	if ( s_instance == nullptr )
+	//	{
+	//		s_instance = std::unique_ptr<T>( new T() );
+	//	}
+
+	//	return s_instance.get();
+	//}
 
 	static void DestroyInstance()
 	{
 		delete s_instance;
-		s_instance = NULL;
+		s_instance = nullptr;
 	}
 
 private:
@@ -76,7 +83,7 @@ private:
 };
 
 template <class T> 
-std::unique_ptr<T> Singleton<T>::s_instance = NULL;
+std::unique_ptr<T> Singleton<T>::s_instance = nullptr;
 
 
 

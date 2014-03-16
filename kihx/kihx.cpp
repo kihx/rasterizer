@@ -80,7 +80,7 @@ namespace kihx
 			m_height( -1 ),
 			m_format( UNKNOWN ),
 			m_flags( 0 ),
-			m_pMemory( NULL )
+			m_pMemory( nullptr )
 		{
 		}
 
@@ -164,7 +164,7 @@ namespace kihx
 				return false;
 			}
 
-			if ( m_pMemory == NULL )
+			if ( m_pMemory == nullptr )
 			{
 				// not allocated memory
 				return false;
@@ -228,7 +228,7 @@ namespace kihx
 
 		void SetExternalMemory( void* pMemory )
 		{
-			assert( pMemory && "null external memory" );
+			assert( pMemory && "nullptr external memory" );
 
 			Purge();
 
@@ -243,7 +243,7 @@ namespace kihx
 			{
 				free( m_pMemory );
 			}
-			m_pMemory = NULL;
+			m_pMemory = nullptr;
 		}
 
 	private:
@@ -317,10 +317,16 @@ namespace kihx
 		{
 		}
 
-		void Push( const float position[3], const byte color[4] )
+		template <typename... Args>
+		void Push( Args&&... args )
 		{
-			m_streamSource.emplace_back( position, color );
+			m_streamSource.emplace_back( forward<Args>( args )...);
 		}
+
+		//void Push( const float position[3], const byte color[4] )
+		//{
+		//	m_streamSource.emplace_back( position, color );
+		//}
 
 		const float* GetData( size_t index ) const
 		{
@@ -332,7 +338,7 @@ namespace kihx
 		{
 			if ( m_streamSource.empty() )
 			{
-				return NULL;
+				return nullptr;
 			}
 			else
 			{
@@ -394,16 +400,22 @@ namespace kihx
 		{
 		}
 
-		void Push( const float position[4] )
+		template <typename... Args>
+		void Push( Args&&... args )
 		{
-			m_streamSource.emplace_back( position );
+			m_streamSource.emplace_back( forward<Args>( args )... );
 		}
+
+		//void Push( const float position[4] )
+		//{
+		//	m_streamSource.emplace_back( position );
+		//}
 
 		const float* GetStreamSource() const
 		{
 			if ( m_streamSource.empty() )
 			{
-				return NULL;
+				return nullptr;
 			}
 			else
 			{
@@ -490,6 +502,8 @@ namespace kihx
 					pOutputStream->Push( inputStream->GetVertexInFaceAt( face, vert ), color );
 				}
 			}
+#else
+			static_assert( 0, "not implemented yet" );
 #endif
 
 			return shared_ptr<VertexProcInputStream>( pOutputStream );
@@ -540,7 +554,7 @@ namespace kihx
 
 		//IOutputStream* Process( IInputStream* inputStream )
 		//{
-		//	return NULL;
+		//	return nullptr;
 		//}
 
 	private:
@@ -643,12 +657,12 @@ namespace kihx
 			{
 				if ( Texture* pTexture = m_renderTargets[i].get() )
 				{
-					void* p = NULL;
+					void* p = nullptr;
 					if ( pTexture->Lock( &p ) )
 					{
 						SafeUnlock<Texture> unlock( pTexture );
 
-						assert( p && "a null pointer of internal memory of a texture" );
+						assert( p && "a nullptr pointer of internal memory of a texture" );
 
 						if ( r == g && g == b )
 						{
@@ -777,7 +791,7 @@ KIHX_API void kiLoadMeshFromFile( const char* filename )
 
 KIHX_API void kiRenderToBuffer( void* buffer, int width, int height, int bpp )
 {
-	if ( buffer == NULL )
+	if ( buffer == nullptr )
 	{
 		return;
 	}
