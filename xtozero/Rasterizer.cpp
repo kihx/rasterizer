@@ -15,7 +15,7 @@ namespace xtozero
 
 	}
 
-	std::pair<int, int>& CreateEdgeTable(const std::vector<Vertex<float>>& vertexlist)
+	std::pair<int, int> CreateEdgeTable(const std::vector<Vertex<float>>& vertexlist)
 	{
 		//To Do : EdgeTable을 만들고 minY MaxY를 반환할 예정
 		int max = -INT_MAX;
@@ -25,11 +25,11 @@ namespace xtozero
 		{
 			if( iter->m_element[y] > max )
 			{
-				max = iter->m_element[y];
+				max = static_cast<int>(iter->m_element[y]);
 			}
 			if( iter->m_element[y] < min )
 			{
-				min = iter->m_element[y];
+				min = static_cast<int>(iter->m_element[y]);
 			}
 		}
 
