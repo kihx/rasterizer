@@ -1,30 +1,22 @@
 #define WMODULE_API extern "C" __declspec(dllexport)
 
-#include <Windows.h>
 #include "WModule.h"
 #include "WTrDatai.h"
+#include "WMesh.h"
 
 #include <memory>
 #include <fstream>
 
+#include <Windows.h>
+
 #define MAX_LEN 1024
 
-class WModule
-{
-public:
-	WModule(int bpp);
-	~WModule();
 
-	void Render( void* buffer, int width, int height, int bpp);
-	void Clear( void* pImage, int width, int height, unsigned long clearColor );
-private:
-	int m_colorDepth;
-};
+std::unique_ptr<WModule> g_pPainter;
+std::shared_ptr<WMesh> g_pMesh;
 
-std::shared_ptr<WModule> g_pPainter;
-std::shared_ptr<WTriData> g_pTriangle;
-
-WModule::WModule(int bpp) : m_colorDepth(bpp)
+WModule::WModule(void* buffer, int width, int height, int bpp) 
+	: m_buffer(buffer), m_screenWidth(width), m_screenHeight(height), m_colorDepth(bpp)
 {
 }
 
@@ -32,10 +24,15 @@ WModule::~WModule()
 {
 }
 
-void WModule::Render(void* buffer, int width, int height, int bpp)
+void WModule::Render()
 {
-	int bufferSize = width * height * bpp / 8;
-	::memset( buffer, 128, bufferSize);
+	int bufferSize = m_screenWidth * m_screenHeight * m_colorDepth / 8;
+	::memset( m_buffer, 128, bufferSize);
+}
+
+void WModule::Render(WMesh* pMesh)
+{
+
 }
 
 void WModule::Clear(void* pImage, int width, int height, unsigned long clearColor)
@@ -59,7 +56,6 @@ BOOL WINAPI DllMain(HINSTANCE hInst, DWORD fdwReason, PVOID fImpLoad)
 	case DLL_THREAD_ATTACH:
 		break;
 	case DLL_PROCESS_DETACH:
-		g_pPainter.reset();
 		break;
 	case DLL_THREAD_DETACH:
 		break;
@@ -73,10 +69,17 @@ void WRender(void* buffer, int width, int height, int colorDepth)
 {
 	if( g_pPainter == nullptr )
 	{
-		g_pPainter = std::shared_ptr<WModule>(new WModule(colorDepth));
+		g_pPainter = std::unique_ptr<WModule>(new WModule(buffer, width, height, colorDepth));
 	}
 
-	g_pPainter->Render( buffer, width, height, colorDepth );
+	if( g_pMesh == nullptr )
+	{
+		g_pPainter->Render();
+	}
+	else
+	{
+	}
+	
 }
 
 void WClear( void* pImage, int width, int height, unsigned long clearColor )
@@ -145,5 +148,5 @@ void WLoadMesh( const char* file )
 		}
 	}
 	
-	g_pTriangle = std::shared_ptr<WTriData>(triangle);
+	g_pMesh = std::shared_ptr<WMesh>( new WMesh( triangle, g_pPainter));
 }
