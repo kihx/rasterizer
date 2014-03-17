@@ -18,8 +18,8 @@ public:
 	~WModule();
 
 	void Render();
-	void Render(WMesh* pMesh);
-	void Clear( void* pImage, int width, int height, unsigned long clearColor );
+	void Clear( void* pImage, int width, int height, unsigned int clearColor );
+	void PaintPixel( int x, int y, unsigned char* rgb);
 private:
 	void* m_buffer;
 	int m_screenWidth;

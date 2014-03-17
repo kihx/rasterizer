@@ -8,18 +8,19 @@ class WModule;
 class WMesh
 {
 public:
-	WMesh(WTriData* data, const std::unique_ptr<WModule>& painter) 
-		: m_data(data), m_Painter(painter){}
+	WMesh(WTriData* data) 
+		: m_data(data)
+	{
+	}
 	~WMesh()
 	{
 		delete m_data;
 	}
 
-	void DrawOutline();
-	void DrawSolid();
+	void DrawOutline( WModule* pPainter);
+	void DrawSolid( WModule* pPainter);
 private:
-	void DrawLine(VERTEX* v1, VERTEX* v2, unsigned char* rgb);
+	void DrawLine(WModule* pPainter, VERTEX* v1, VERTEX* v2, unsigned char* rgb);
 
 	WTriData* m_data;
-	const std::unique_ptr<WModule>& m_Painter;
 };
