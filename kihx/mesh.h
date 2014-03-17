@@ -7,7 +7,7 @@
 #define SUPPORT_MSH		// .msh file format
 
 
-namespace kihx
+namespace kih
 {
 	template<typename VertexType>
 	struct Vertex

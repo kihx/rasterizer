@@ -18,7 +18,16 @@
     <ClInclude Include="coold.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="CustomMesh.h">
+    <ClInclude Include="CoolD_Defines.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CoolD_Inlines.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CoolD_SubFunction.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CoolD_CustomMesh.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -26,7 +35,7 @@
     <ClCompile Include="coold.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="CustomMesh.cpp">
+    <ClCompile Include="CoolD_CustomMesh.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

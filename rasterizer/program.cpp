@@ -4,8 +4,6 @@
 #include "../woocom/WModule.h"
 #include "../xtozero/xtozero.h"
 
-#include "defines.h"
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <windows.h>
@@ -32,8 +30,6 @@ byte g_pppScreenImage[SCREEN_HEIGHT][SCREEN_WIDTH][COLOR_DEPTH];
 //
 static GLdouble g_dZoomFactor = 1.0;
 static GLint g_iHeight;
-static GLint g_clearcolor= BLACK;
-
 
 // Customization 
 //
@@ -67,14 +63,13 @@ namespace
 	};	
 			
 	// 모듈별 작업 수행
-	class ModuleContext : private Uncopyable
+	class ModuleContext
 	{
 	public:
 		ModuleContext() : 
 			m_hModule( NULL ),
 			m_fnLoadMeshFromFile( NULL ),
-			m_fnRenderToBuffer( NULL ),
-			m_fnClearColorBuffer( NULL )
+			m_fnRenderToBuffer( NULL )
 		{
 		}
 
@@ -111,28 +106,16 @@ namespace
 			if ( m_fnLoadMeshFromFile )
 			{
 				m_fnLoadMeshFromFile( filename );
-			} 
+			}
 		}
 
-		void RenderToBuffer( byte* buffer, GLint clearColor )
+		void RenderToBuffer( byte* buffer )
 		{
 			if ( m_fnRenderToBuffer )
 			{
 				m_fnRenderToBuffer( buffer, SCREEN_WIDTH, SCREEN_HEIGHT, COLOR_DEPTH * 8 );
 			}
-			else if( m_fnClearColorBuffer )
-			{
-				m_fnClearColorBuffer( buffer, SCREEN_WIDTH, SCREEN_HEIGHT, clearColor );
-			}
 		}
-
-		void ClearBuffer( byte* buffer, GLint clearColor )
-		{
-			if ( m_fnClearColorBuffer )
-			{
-				m_fnClearColorBuffer( buffer, SCREEN_WIDTH, SCREEN_HEIGHT, clearColor );
-			}		
-		}	
 
 		void InstallFunctionLoadMeshFromFile( const char* functionName )
 		{
@@ -146,14 +129,7 @@ namespace
 			m_fnRenderToBuffer = GetFunctionFromModule<FnRenderToBuffer>( m_hModule, functionName );
 
 			glutPostRedisplay();
-		}
-
-		void InstallFunctionClearColorBuffer( const char* functionName )
-		{
-			m_fnClearColorBuffer = GetFunctionFromModule<FnClearColorBuffer>( m_hModule, functionName );
-
-			glutPostRedisplay();
-		}
+		}	
 
 	private:
 		void AssignOrReplace( HMODULE h )
@@ -175,14 +151,12 @@ namespace
 			FreeLibrary( m_hModule );
 			m_fnLoadMeshFromFile = NULL;
 			m_fnRenderToBuffer = NULL;	
-			m_fnClearColorBuffer = NULL;
 		}
 
 	private:
 		HMODULE m_hModule;
 		FnLoadMeshFromFile m_fnLoadMeshFromFile;
 		FnRenderToBuffer m_fnRenderToBuffer;
-		FnClearColorBuffer m_fnClearColorBuffer;
 	};
 
 	ModuleContext g_ModuleContext;
@@ -264,8 +238,7 @@ static void LoadModuleCoolD()
 	}
 
 	g_ModuleContext.InstallFunctionLoadMeshFromFile( "coold_LoadMeshFromFile" );
-	g_ModuleContext.InstallFunctionClearColorBuffer( "coold_ClearColorBuffer" );
-	//InstallFunctionRenderToBuffer( g_hModule.Get(), "coold_RenderToBuffer" );	//일단은 만들어 둠
+	g_ModuleContext.InstallFunctionRenderToBuffer( "coold_RenderToBuffer" );
 
 	printf( "\n<CoolD>\n\n" );
 }
@@ -277,7 +250,7 @@ static void LoadModuleCoolD()
 //-----------------------------------------------------------------------------------------------------------------------
 void makeCheckImage( void)
 {
-	g_ModuleContext.RenderToBuffer( (byte*) g_pppScreenImage, g_clearcolor );
+	g_ModuleContext.RenderToBuffer( (byte*) g_pppScreenImage );
 }
 
 
@@ -351,10 +324,8 @@ void keyboard( unsigned char key, int x, int y)
 		break;
 
 	case '4':
-		{	
-			FixLater( 많이 바꼈네요 오호~~ )
-			LoadModuleCoolD();
-			g_clearcolor = GREEN;
+		{				
+			LoadModuleCoolD();			
 		}
 		break;
 

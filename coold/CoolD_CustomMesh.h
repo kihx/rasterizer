@@ -2,7 +2,7 @@
 
 #include <vector>
 
-namespace coold
+namespace CoolD
 {
 	struct baseVertex
 	{

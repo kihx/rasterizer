@@ -4,7 +4,7 @@
 #include <fstream>
 
 
-namespace kihx
+namespace kih
 {
 	// RAII: Resource Acquisition Is Initialization
 	// stream reader class

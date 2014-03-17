@@ -7,12 +7,11 @@
 #define FixLater(desc) __pragma(MSG(desc))
 //-------------------------------------------------------------- 
 
-#define RED		0xff0000ff;
-#define GREEN	0x00ff00ff;
-#define BLUE	0x0000ffff;
-#define WHITE	0xffffffff;
-#define BLACK	0x000000ff;
-
+#define RED		0xff0000ff
+#define GREEN	0x00ff00ff
+#define BLUE	0x0000ffff
+#define WHITE	0xffffffff
+#define BLACK	0x000000f
 
 // 클래스 복사 방지 기법
 class Uncopyable

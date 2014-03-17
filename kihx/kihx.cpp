@@ -10,8 +10,6 @@
 #include <memory>
 
 
-using namespace kihx;
-using namespace std;
 
 //class IInputOutputStream
 //{
@@ -20,7 +18,7 @@ using namespace std;
 //};
 
 
-namespace kihx
+namespace kih
 {
 	template<class InputStream, class OutputStream>
 	class IRenderingProcessor
@@ -28,7 +26,7 @@ namespace kihx
 	public:
 		//virtual ~IRenderingProcessor() = 0;
 
-		virtual shared_ptr<OutputStream> Process( shared_ptr<InputStream> inputStream ) = 0;
+		virtual std::shared_ptr<OutputStream> Process( std::shared_ptr<InputStream> inputStream ) = 0;
 
 		//virtual IOutputStream* Process( IInputStream* inputStream ) = 0;
 		//bool SetInputStream( IInputStream* inputStream );
@@ -52,33 +50,46 @@ namespace kihx
 	class RenderingContext;
 
 
+	enum class ColorFormat : unsigned int
+	{
+		UNKNOWN = 0,
+
+		RGB888 = 10,
+	};
+
+	static int ComputeBytesPerPixel( ColorFormat format )
+	{
+		switch ( format )
+		{
+		case ColorFormat::RGB888:
+			return 3;
+
+		default:
+			return 0;
+		}
+	}
+
 
 	class Texture
 	{
 	public:
-		enum ColorFormat
-		{
-			UNKNOWN = 0,
-
-			RGB888 = 10,
-		};
-
+		// texture flags
 		enum
 		{
-			EF_CLAMP_U = 0x1,
-			EF_CLAMP_V = 0x2,
+			FL_CLAMP_U = 0x1,
+			FL_CLAMP_V = 0x2,
 
 			// if the external memory flag is set, we neither allocate nor deallocate its memory
-			EF_EXTERNAL_MEMORY = 0x100,
+			FL_EXTERNAL_MEMORY = 0x100,
 			// locking to directly access its memory
-			EF_LOCKED = 0x1000
+			FL_LOCKED = 0x1000
 		};
 
 	protected:
 		Texture() :
 			m_width( -1 ),
 			m_height( -1 ),
-			m_format( UNKNOWN ),
+			m_format( ColorFormat::UNKNOWN ),
 			m_flags( 0 ),
 			m_pMemory( nullptr )
 		{
@@ -91,7 +102,7 @@ namespace kihx
 
 	public:
 		// factory
-		static shared_ptr<Texture> Create( int width, int height, ColorFormat format, void* pExternalMemory )
+		static std::shared_ptr<Texture> Create( int width, int height, ColorFormat format, void* pExternalMemory )
 		{
 			Texture* pTexture = new Texture();
 			pTexture->m_width = width;
@@ -110,21 +121,9 @@ namespace kihx
 				pTexture->m_pMemory = malloc( width * height * bytesPerPixel );
 			}
 
-			return shared_ptr<Texture>( pTexture );
+			return std::shared_ptr<Texture>( pTexture );
 		}
-
-		static int ToBytesPerPixel( ColorFormat format )
-		{
-			switch ( format )
-			{
-			case RGB888:
-				return 3;
-
-			default:
-				return 0;
-			}
-		}
-
+		
 	public:
 		int Width() const
 		{
@@ -158,7 +157,7 @@ namespace kihx
 
 		bool Lock( void** ppMemory )
 		{
-			if ( HasFlag( EF_LOCKED ) )
+			if ( HasFlag( FL_LOCKED ) )
 			{
 				// already locked
 				return false;
@@ -170,27 +169,27 @@ namespace kihx
 				return false;
 			}
 
-			AddFlags( EF_LOCKED );
+			AddFlags( FL_LOCKED );
 			*ppMemory = m_pMemory;
 			return true;
 		}
 
 		void Unlock()
 		{
-			RemoveFlags( EF_LOCKED );
+			RemoveFlags( FL_LOCKED );
 		}
 
 	private:
 		bool WriteTexel( int x, int y, byte r, byte g, byte b )
 		{
-			if ( !HasFlag( EF_LOCKED ) )
+			if ( !HasFlag( FL_LOCKED ) )
 			{
 				return false;
 			}
 
 			assert( (x >= 0 && x < m_width) && "out of ranged x-coordinate" );
 			assert( (y >= 0 && y < m_height) && "out of ranged y-coordinate" );
-			assert( (ToBytesPerPixel( Format() ) == 3) && "incorrect color format" );
+			assert( (ComputeBytesPerPixel( Format() ) == 3) && "incorrect color format" );
 
 			if ( byte* buffer = static_cast<byte*>( m_pMemory ) )
 			{
@@ -205,14 +204,14 @@ namespace kihx
 
 		bool WriteTexel( int x, int y, byte r, byte g, byte b, byte a )
 		{
-			if ( !HasFlag( EF_LOCKED ) )
+			if ( !HasFlag( FL_LOCKED ) )
 			{
 				return false;
 			}
 
 			assert( (x >= 0 && x < m_width) && "out of ranged x-coordinate" );
 			assert( (y >= 0 && y < m_height) && "out of ranged y-coordinate" );
-			assert( (ToBytesPerPixel( Format() ) == 4) && "incorrect color format" );
+			assert( (ComputeBytesPerPixel( Format() ) == 4) && "incorrect color format" );
 
 			if ( byte* buffer = static_cast<byte*>( m_pMemory ) )
 			{
@@ -232,14 +231,14 @@ namespace kihx
 
 			Purge();
 
-			AddFlags( EF_EXTERNAL_MEMORY );
+			AddFlags( FL_EXTERNAL_MEMORY );
 			m_pMemory = pMemory;
 		}
 
 		void Purge() 
 		{
 			// release internal memory only
-			if ( !HasFlag( EF_EXTERNAL_MEMORY) )
+			if ( !HasFlag( FL_EXTERNAL_MEMORY) )
 			{
 				free( m_pMemory );
 			}
@@ -255,6 +254,32 @@ namespace kihx
 
 		friend class RenderingContext;
 	};
+
+	template<>
+	class LockGuard<Texture>
+	{
+	public:
+		LockGuard( Texture* obj ) :
+			m_obj( obj )
+		{
+			m_obj->Lock( &m_p );
+		}
+
+		~LockGuard()
+		{
+			m_obj->Unlock();
+		}
+
+		void* Ptr()
+		{
+			return m_p;
+		}
+
+	private:
+		Texture* m_obj;
+		void* m_p;
+	};
+
 
 
 	class VertexProcInputStream
@@ -283,14 +308,23 @@ namespace kihx
 			};
 
 			Data() :
- 				X( 0.0f ), Y( 0.0f ), Z( 0.0f ),
- 				R( 0 ), G( 0 ), B( 0 ), A( 0 )
+ 				X( 0.0f ), 
+				Y( 0.0f ), 
+				Z( 0.0f ),
+ 				R( 0 ), 
+				G( 0 ), 
+				B( 0 ), 
+				A( 0 )
 			{
 			}
 
 			Data( const float position[3], const byte color[4] ) :
-				X( position[0] ), Y( position[1] ), Z( position[2] ),
-				R( color[0] ), G( color[1] ), B( color[2] )
+				X( position[0] ), 
+				Y( position[1] ), 
+				Z( position[2] ),
+				R( color[0] ), 
+				G( color[1] ), 
+				B( color[2] )
 			{
 			}
 
@@ -320,7 +354,7 @@ namespace kihx
 		template <typename... Args>
 		void Push( Args&&... args )
 		{
-			m_streamSource.emplace_back( forward<Args>( args )...);
+			m_streamSource.emplace_back( std::forward<Args>( args )...);
 		}
 
 		//void Push( const float position[3], const byte color[4] )
@@ -380,12 +414,18 @@ namespace kihx
 			};
 
 			Data() :
-				X( 0.0f ), Y( 0.0f ), Z( 0.0f ), W( 1.0f )
+				X( 0.0f ), 
+				Y( 0.0f ), 
+				Z( 0.0f ), 
+				W( 1.0f )
 			{
 			}
 
 			Data( const float position[4] ) :
-				X( position[0] ), Y( position[1] ), Z( position[2] ), W( position[3] )
+				X( position[0] ), 
+				Y( position[1] ), 
+				Z( position[2] ), 
+				W( position[3] )
 			{
 			}
 
@@ -403,7 +443,7 @@ namespace kihx
 		template <typename... Args>
 		void Push( Args&&... args )
 		{
-			m_streamSource.emplace_back( forward<Args>( args )... );
+			m_streamSource.emplace_back( std::forward<Args>( args )... );
 		}
 
 		//void Push( const float position[4] )
@@ -477,7 +517,7 @@ namespace kihx
 		{
 		}
 
-		virtual shared_ptr<VertexProcInputStream> Process( shared_ptr<Mesh> inputStream )
+		virtual std::shared_ptr<VertexProcInputStream> Process( std::shared_ptr<Mesh> inputStream )
 		{	
 			VertexProcInputStream* pOutputStream = new VertexProcInputStream();			
 
@@ -506,7 +546,7 @@ namespace kihx
 			static_assert( 0, "not implemented yet" );
 #endif
 
-			return shared_ptr<VertexProcInputStream>( pOutputStream );
+			return std::shared_ptr<VertexProcInputStream>( pOutputStream );
 		}
 
 	private:
@@ -526,7 +566,7 @@ namespace kihx
 		{
 		}
 
-		virtual shared_ptr<RasterizerInputStream> Process( shared_ptr<VertexProcInputStream> inputStream )
+		virtual std::shared_ptr<RasterizerInputStream> Process( std::shared_ptr<VertexProcInputStream> inputStream )
 		{	
 			RasterizerInputStream* pOutputStream = new RasterizerInputStream();		
 
@@ -539,7 +579,7 @@ namespace kihx
 				pOutputStream->Push( transformedPosition );
 			}
 
-			return shared_ptr<RasterizerInputStream>( pOutputStream );
+			return std::shared_ptr<RasterizerInputStream>( pOutputStream );
 		}
 
 	private:
@@ -573,12 +613,12 @@ namespace kihx
 		{
 		}
 
-		virtual shared_ptr<PixelProcInputStream> Process( shared_ptr<RasterizerInputStream> inputStream )
+		virtual std::shared_ptr<PixelProcInputStream> Process( std::shared_ptr<RasterizerInputStream> inputStream )
 		{	
 			PixelProcInputStream* pOutputStream = new PixelProcInputStream();
 
 		
-			return shared_ptr<PixelProcInputStream>( pOutputStream );
+			return std::shared_ptr<PixelProcInputStream>( pOutputStream );
 		}
 
 	private:
@@ -597,11 +637,11 @@ namespace kihx
 		{
 		}
 
-		virtual shared_ptr<OutputMergerInputStream> Process( shared_ptr<PixelProcInputStream> inputStream )
+		virtual std::shared_ptr<OutputMergerInputStream> Process( std::shared_ptr<PixelProcInputStream> inputStream )
 		{	
 			OutputMergerInputStream* pOutputStream = new OutputMergerInputStream();
 			
-			return shared_ptr<OutputMergerInputStream>( pOutputStream );
+			return std::shared_ptr<OutputMergerInputStream>( pOutputStream );
 		}
 
 	private:
@@ -620,12 +660,12 @@ namespace kihx
 		{
 		}
 
-		virtual shared_ptr<OutputMergerInputStream> Process( shared_ptr<OutputMergerInputStream> inputStream )
+		virtual std::shared_ptr<OutputMergerInputStream> Process( std::shared_ptr<OutputMergerInputStream> inputStream )
 		{	
 			//OutputMergerInputStream* pOut = new OutputMergerInputStream();
 
 			//inputStream.reset();
-			//return shared_ptr<OutputMergerInputStream>( pOut );
+			//return std::shared_ptr<OutputMergerInputStream>( pOut );
 			return inputStream;
 		}
 
@@ -656,17 +696,15 @@ namespace kihx
 			for ( size_t i = 0; i < num; ++i )
 			{
 				if ( Texture* pTexture = m_renderTargets[i].get() )
-				{
-					void* p = nullptr;
-					if ( pTexture->Lock( &p ) )
+				{					
+					LockGuard<Texture> guard( pTexture );					
+					if ( void* p = guard.Ptr() )
 					{
-						SafeUnlock<Texture> unlock( pTexture );
-
 						assert( p && "a nullptr pointer of internal memory of a texture" );
 
 						if ( r == g && g == b )
 						{
-							int size = pTexture->Width() * pTexture->Height() * Texture::ToBytesPerPixel( pTexture->Format() );
+							int size = pTexture->Width() * pTexture->Height() * ComputeBytesPerPixel( pTexture->Format() );
 							memset( p, r, size );
 						}
 						else
@@ -684,31 +722,31 @@ namespace kihx
 			}
 		}
 
-		void Draw( shared_ptr<Mesh> mesh )
+		void Draw( std::shared_ptr<Mesh> mesh )
 		{
 			// input assembler
-			shared_ptr<VertexProcInputStream> vpInput = m_inputAssembler.Process( mesh );
+			std::shared_ptr<VertexProcInputStream> vpInput = m_inputAssembler.Process( mesh );
 
 			// vertex processor
-			shared_ptr<RasterizerInputStream> raInput = m_vertexProcessor.Process( vpInput );
+			std::shared_ptr<RasterizerInputStream> raInput = m_vertexProcessor.Process( vpInput );
 
 			// rasterizer
-			shared_ptr<PixelProcInputStream> ppInput = m_rasterizer.Process( raInput );
+			std::shared_ptr<PixelProcInputStream> ppInput = m_rasterizer.Process( raInput );
 
 			// pixel processor
-			shared_ptr<OutputMergerInputStream> omInput = m_pixelProcessor.Process( ppInput );
+			std::shared_ptr<OutputMergerInputStream> omInput = m_pixelProcessor.Process( ppInput );
 
 			// output merger
 			omInput = m_outputMerger.Process( omInput );
 		}
 
-		shared_ptr<Texture> GetRenderTaget( size_t index )
+		std::shared_ptr<Texture> GetRenderTaget( size_t index )
 		{
 			assert( (index >= 0 && index < m_renderTargets.size()) && "out of ranged index" );
 			return m_renderTargets[index];
 		}
 
-		bool SetRenderTarget( shared_ptr<Texture> texture, size_t index )
+		bool SetRenderTarget( std::shared_ptr<Texture> texture, size_t index )
 		{
 			assert( (index >= 0 && index < m_renderTargets.size()) && "out of ranged index" );
 			m_renderTargets[index] = texture;
@@ -721,7 +759,7 @@ namespace kihx
 		Rasterizer m_rasterizer;
 		PixelProcessor m_pixelProcessor;
 		OutputMerger m_outputMerger;
-		vector< shared_ptr<Texture> > m_renderTargets;
+		std::vector< std::shared_ptr<Texture> > m_renderTargets;
 	};
 
 
@@ -739,15 +777,15 @@ namespace kihx
 		{
 		};
 
-		shared_ptr<RenderingContext> CreateRenderingContext()
+		std::shared_ptr<RenderingContext> CreateRenderingContext()
 		{
 			RenderingContext* pRenderingContext = new RenderingContext();
-			m_renderingContexts.push_back( shared_ptr<RenderingContext>( pRenderingContext ) );
+			m_renderingContexts.push_back( std::shared_ptr<RenderingContext>( pRenderingContext ) );
 			return m_renderingContexts.at( m_renderingContexts.size() - 1 );
 		}
 
 	private:
-		vector< shared_ptr<RenderingContext> > m_renderingContexts;
+		std::vector< std::shared_ptr<RenderingContext> > m_renderingContexts;
 	};
 
 
@@ -781,12 +819,12 @@ namespace kihx
 
 
 
-static shared_ptr<Mesh> g_mesh;
+static std::shared_ptr<kih::Mesh> g_mesh;
 
 
 KIHX_API void kiLoadMeshFromFile( const char* filename )
 {
-	g_mesh = Mesh::CreateFromFile( filename );
+	g_mesh = kih::Mesh::CreateFromFile( filename );
 }
 
 KIHX_API void kiRenderToBuffer( void* buffer, int width, int height, int bpp )
@@ -802,8 +840,8 @@ KIHX_API void kiRenderToBuffer( void* buffer, int width, int height, int bpp )
 
 
 	__UNDONE( temporal testing code );
-	static shared_ptr<RenderingContext> context = RenderingDevice::GetInstance()->CreateRenderingContext();
-	static shared_ptr<Texture> renderTarget = Texture::Create( width, height, Texture::RGB888, buffer );
+	static std::shared_ptr<kih::RenderingContext> context = kih::RenderingDevice::GetInstance( )->CreateRenderingContext( );
+	static std::shared_ptr<kih::Texture> renderTarget = kih::Texture::Create( width, height, kih::ColorFormat::RGB888, buffer );
 	
 	context->SetRenderTarget( renderTarget, 0 );
 

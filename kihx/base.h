@@ -88,20 +88,22 @@ std::unique_ptr<T> Singleton<T>::s_instance = nullptr;
 
 
 template<class T>
-class SafeUnlock
+class LockGuard
 {
 public:
-	SafeUnlock( T* obj ) :
+	LockGuard( T* obj ) :
 		m_obj( obj )
 	{
+		m_obj->Lock();
 	}
 
-	~SafeUnlock()
+	~LockGuard()
 	{
 		m_obj->Unlock();
 	}
 
 private:
 	T* m_obj;
+	void* m_p;
 };
 
