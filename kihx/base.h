@@ -21,6 +21,12 @@ typedef unsigned char byte;
 //-------------------------------------------------------------- 
 
 
+#define MAKE_NONCOPYABLE( ClassName )	\
+	private:	\
+		ClassName::ClassName( const ClassName& ) = delete;	\
+		ClassName& operator=( const ClassName& ) = delete;
+
+/* C++98 style
 class Uncopyable
 {
 protected:
@@ -31,6 +37,7 @@ private:
 	Uncopyable( const Uncopyable& );
 	Uncopyable& operator=( const Uncopyable& );
 };
+*/
 
 
 

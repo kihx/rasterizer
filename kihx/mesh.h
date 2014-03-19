@@ -21,7 +21,7 @@ namespace kih
 	/* class VertexBuffer
 	*/
 	//template<typename VertexType>
-	//class VertexBuffer : private Uncopyable
+	//class VertexBuffer
 	//{
 	//public:
 	//	VertexBuffer() {}
@@ -44,7 +44,7 @@ namespace kih
 	/* class IndexBuffer
 	*/
 	//template<typename IndexType>
-	//class IndexBuffer : private Uncopyable
+	//class IndexBuffer
 	//{
 	//public:
 	//	IndexBuffer() {}
@@ -77,8 +77,10 @@ namespace kih
 
 	/* class Mesh
 	*/
-	class Mesh : private Uncopyable
+	class Mesh
 	{
+		MAKE_NONCOPYABLE( Mesh )
+
 		typedef Vertex<float> VertexF;
 		typedef Face<unsigned short> FaceS;
 
