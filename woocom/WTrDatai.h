@@ -27,13 +27,47 @@ public:
 		Release();
 	}
 
-	void SetVertexNum( int num )
+	void SetVertexNum( size_t num )
 	{
 		m_vertices.reserve( num );
+	}
+	int GetVertexNum(size_t faceIndex)
+	{ 
+		if( faceIndex >= m_faces.size())
+		{
+			return 0;
+		}
+		return m_faces[faceIndex]->m_index.size(); 
 	}
 	void SetFaceNum( int num )
 	{
 		m_faces.reserve( num );
+	}
+	int GetFaceNum()
+	{
+		return m_faces.size();
+	}
+
+	unsigned char* GetFaceColor(size_t index)
+	{
+		if( index >= m_faces.size() )
+		{
+			return nullptr;
+		}
+		return m_faces[index]->m_rgb;
+	}
+
+	VERTEX* GetVertex(size_t faceIndex, size_t vertexIndex)
+	{
+		if( faceIndex >= m_faces.size())
+		{
+			return nullptr;
+		}
+		if( vertexIndex >= m_faces[faceIndex]->m_index.size() )
+		{
+			return nullptr;
+		}
+		return m_vertices[ m_faces[faceIndex]->m_index[vertexIndex] ];
 	}
 	void PushVertex( VERTEX* vertex)
 	{

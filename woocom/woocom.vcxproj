@@ -84,10 +84,12 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="WMesh.h" />
     <ClInclude Include="WModule.h" />
     <ClInclude Include="WTrDatai.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="WMesh.cpp" />
     <ClCompile Include="WModule.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

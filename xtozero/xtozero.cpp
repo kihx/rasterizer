@@ -10,8 +10,21 @@ XTZ_API void XtzRenderToBuffer( void* buffer, int width, int height, int dpp )
 {
 	if ( buffer )
 	{
-		size_t size = width * height * dpp / 8;
-		memset( buffer, 100, size );
+		size_t size = dpp / 8;
+
+		BYTE* buf = static_cast<BYTE*>(buffer);
+		unsigned int color = PIXEL_COLOR(0, 255, 0);
+
+		for( int i = 0; i < height; ++i )
+		{
+			for( int j = 0; j < width; ++j )
+			{
+				memcpy_s( buf + (( width * i ) + j ) * size, 
+					size,
+					&color, 
+					size);
+			}
+		}
 	}
 }
 

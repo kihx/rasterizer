@@ -1,30 +1,22 @@
 #define WMODULE_API extern "C" __declspec(dllexport)
 
-#include <Windows.h>
 #include "WModule.h"
 #include "WTrDatai.h"
+#include "WMesh.h"
 
 #include <memory>
 #include <fstream>
 
+#include <Windows.h>
+
 #define MAX_LEN 1024
 
-class WModule
-{
-public:
-	WModule(int bpp);
-	~WModule();
-
-	void Render( void* buffer, int width, int height, int bpp);
-	void Clear( void* pImage, int width, int height, unsigned long clearColor );
-private:
-	int m_colorDepth;
-};
 
 std::shared_ptr<WModule> g_pPainter;
-std::shared_ptr<WTriData> g_pTriangle;
+std::shared_ptr<WMesh> g_pMesh;
 
-WModule::WModule(int bpp) : m_colorDepth(bpp)
+WModule::WModule(void* buffer, int width, int height, int bpp) 
+	: m_buffer(buffer), m_screenWidth(width), m_screenHeight(height), m_colorDepth(bpp)
 {
 }
 
@@ -32,13 +24,13 @@ WModule::~WModule()
 {
 }
 
-void WModule::Render(void* buffer, int width, int height, int bpp)
+void WModule::Render()
 {
-	int bufferSize = width * height * bpp / 8;
-	::memset( buffer, 128, bufferSize);
+	int bufferSize = m_screenWidth * m_screenHeight * m_colorDepth / 8;
+	::memset( m_buffer, 128, bufferSize);
 }
 
-void WModule::Clear(void* pImage, int width, int height, unsigned long clearColor)
+void WModule::Clear(void* pImage, int width, int height, unsigned int clearColor)
 {
 	char* buffer = (char*)pImage;
 	int loopCount = (width * height * m_colorDepth / 8) - ( m_colorDepth / 8 );
@@ -50,6 +42,32 @@ void WModule::Clear(void* pImage, int width, int height, unsigned long clearColo
 	}
 }
 
+void WModule::PaintPixel(int x, int y, unsigned char* rgb)
+{
+	if( m_buffer == nullptr )
+	{
+		return;
+	}
+
+	// Å¬¸®ÇÎ
+	if( x < 0 || x > m_screenWidth )
+	{
+		return;
+	}
+
+	if( y < 0 || y > m_screenHeight )
+	{
+		return;
+	}
+
+	char* buffer = (char*)m_buffer;
+
+	int index =	(m_screenWidth * y) * ( m_colorDepth / 8 ) + ( x * m_colorDepth / 8);
+	buffer[index] = rgb[0];
+	buffer[index + 1] = rgb[1];
+	buffer[index + 2] = rgb[2];
+}
+
 BOOL WINAPI DllMain(HINSTANCE hInst, DWORD fdwReason, PVOID fImpLoad)
 {
 	switch(fdwReason)
@@ -59,7 +77,6 @@ BOOL WINAPI DllMain(HINSTANCE hInst, DWORD fdwReason, PVOID fImpLoad)
 	case DLL_THREAD_ATTACH:
 		break;
 	case DLL_PROCESS_DETACH:
-		g_pPainter.reset();
 		break;
 	case DLL_THREAD_DETACH:
 		break;
@@ -73,10 +90,16 @@ void WRender(void* buffer, int width, int height, int colorDepth)
 {
 	if( g_pPainter == nullptr )
 	{
-		g_pPainter = std::shared_ptr<WModule>(new WModule(colorDepth));
+		g_pPainter = std::shared_ptr<WModule>(new WModule(buffer, width, height, colorDepth));
 	}
 
-	g_pPainter->Render( buffer, width, height, colorDepth );
+	g_pPainter->Render();
+	
+	if( g_pMesh )
+	{
+		g_pMesh->DrawOutline( g_pPainter.get() );
+	}
+	
 }
 
 void WClear( void* pImage, int width, int height, unsigned long clearColor )
@@ -139,11 +162,11 @@ void WLoadMesh( const char* file )
 			{
 				int vertexID = 0;
 				stream >> vertexID;
-				face->m_index.push_back( vertexID );
+				face->m_index.push_back( vertexID -1 );
 			}
 			triangle->PushFace( face );
 		}
 	}
 	
-	g_pTriangle = std::shared_ptr<WTriData>(triangle);
+	g_pMesh = std::shared_ptr<WMesh>( new WMesh( triangle ));
 }

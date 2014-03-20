@@ -87,6 +87,7 @@
   <ItemGroup>
     <ClInclude Include="FileHandler.h" />
     <ClInclude Include="Mesh.h" />
+    <ClInclude Include="Rasterizer.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="xtozero.h" />
@@ -102,6 +103,7 @@
     </ClCompile>
     <ClCompile Include="FileHandler.cpp" />
     <ClCompile Include="Mesh.cpp" />
+    <ClCompile Include="Rasterizer.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
