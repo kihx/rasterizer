@@ -1,36 +1,31 @@
 #pragma once
 
-#include <vector>
+#include "CoolD_Type.h"
 
 namespace CoolD
 {
-	struct baseVertex
-	{
-		float x, y, z;
-	};
-
-	struct baseFace
-	{
-		unsigned char		r, g, b, a;
-		std::vector<int>	vecIndex;
-	};
-
 	class CustomMesh
 	{
 	private:
-		CustomMesh( const char* filename );
+		CustomMesh( const Dchar* filename );
+	public:
+		~CustomMesh();
 	
 	public:
-		static CustomMesh* CreateMeshFromFile( const char* filename );
+		static CustomMesh* CreateMeshFromFile( const Dchar* filename );
+		const baseVertex& GetVertex( Duint index ) const;
+		const baseFace&	GetFace(Duint index) const;
+		Duint GetVertexSize() const;
+		Duint GetFaceSize() const;		
 
 	private:
 		bool LoadMeshInfo( );
 
 	public:
-		const char* m_szFileName;
+		const Dchar* m_szFileName;
 
 	private:
-		std::vector<baseVertex> m_vecVertex;
-		std::vector<baseFace>	m_vecFace;
+		vector<baseVertex> m_vecVertex;
+		vector<baseFace>	m_vecFace;
 	};
 };

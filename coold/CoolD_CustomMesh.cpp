@@ -5,11 +5,17 @@
 #include <string>
 #include <cassert>
 
-using namespace std;
-
 namespace CoolD
 {
-	CustomMesh* CustomMesh::CreateMeshFromFile( const char* filename )
+	CustomMesh::CustomMesh( const Dchar* filename ) 
+		: m_szFileName(filename)
+	{
+	}
+	CustomMesh::~CustomMesh()
+	{		
+	}
+
+	CustomMesh* CustomMesh::CreateMeshFromFile( const Dchar* filename )
 	{
 		CustomMesh* pMesh = new CustomMesh( filename );
 		if( pMesh && pMesh->LoadMeshInfo() )
@@ -19,12 +25,7 @@ namespace CoolD
 
 		Safe_Delete(pMesh);
 		return nullptr;
-	}
-		
-	CustomMesh::CustomMesh( const char* filename ) 
-	: m_szFileName(filename)
-	{
-	}
+	}	
 
 	bool CustomMesh::LoadMeshInfo()
 	{
@@ -33,14 +34,14 @@ namespace CoolD
 			return false;
 		}
 
-		int vectexCount = 0;
-		int faceCount	= 0;
+		Dint vectexCount = 0;
+		Dint faceCount	= 0;
 
 		fstream readStream( m_szFileName );
 		istreambuf_iterator<char> begin( readStream );
 		istreambuf_iterator<char> end;
 		
-		string strBuffer( std::vector<char>(begin, end).data() );
+		string strBuffer( vector<char>(begin, end).data() );
 		stringstream sstream(strBuffer);
 		
 		while( !sstream.eof() )
@@ -60,7 +61,7 @@ namespace CoolD
 			}
 			else if( strToken == "Vertex" )
 			{
-				int vertexNum;
+				Dint vertexNum;
 				sstream >> vertexNum;
 
 				assert( 0 < vertexNum && vertexNum <= vectexCount );	//지정된 형식과 다를경우 kill
@@ -71,25 +72,25 @@ namespace CoolD
 			}
 			else if( strToken == "Face" )
 			{
-				int faceNum;				
+				Dint faceNum;				
 				sstream >> faceNum;
 
 				assert( 0 < faceNum && faceNum <= faceCount );
 
 				baseFace f;
-				int readR, readG, readB;
+				Dint readR, readG, readB;
 				sstream >> readR >> readG >> readB;
 				f.r = readR & 0x000000ff;
 				f.g = readG & 0x000000ff;
 				f.b = readB & 0x000000ff;
 				f.a = 0x000000ff;
 
-				int indexCount = 0;
+				Dint indexCount = 0;
 				sstream>>indexCount;
 
-				for( int i = 0; i < indexCount; ++i)
+				for( Dint i = 0; i < indexCount; ++i)
 				{
-					int vertexNum;
+					Dint vertexNum;
 					sstream>>vertexNum;
 
 					assert( 0 < vertexNum && vertexNum <= vectexCount );
@@ -103,4 +104,23 @@ namespace CoolD
 		return true;
 	}
 
+	const baseVertex& CustomMesh::GetVertex( Duint index ) const
+	{
+		return m_vecVertex[index - 1];	//정점 정보는 1부터 시작하지만 벡터는 0부터 시작하기 때문에
+	}
+
+	const baseFace& CustomMesh::GetFace( Duint index ) const
+	{
+		return m_vecFace[index - 1];
+	}
+
+	Duint CustomMesh::GetVertexSize() const
+	{
+		return m_vecVertex.size();
+	}
+
+	Duint CustomMesh::GetFaceSize() const
+	{
+		return m_vecFace.size();
+	}
 }

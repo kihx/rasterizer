@@ -30,6 +30,9 @@
     <ClInclude Include="CoolD_CustomMesh.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CoolD_Type.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="coold.cpp">

@@ -11,16 +11,4 @@
 #define GREEN	0x00ff00ff
 #define BLUE	0x0000ffff
 #define WHITE	0xffffffff
-#define BLACK	0x000000f
-
-// 클래스 복사 방지 기법
-class Uncopyable
-{
-protected:
-	Uncopyable() {}
-	~Uncopyable() {}
-
-private:
-	Uncopyable( const Uncopyable& );
-	Uncopyable& operator=( const Uncopyable& );
-};
+#define BLACK	0x000000ff
