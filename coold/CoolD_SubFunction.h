@@ -13,9 +13,9 @@ void ClearColorBuffer( void* pImage, Duint width, Duint height, Dulong clearColo
 	Duchar blue	= (clearColor>>8 ) & 0x000000ff;
 	Duchar currentcolor = 0;
 
-	for ( Duint i = 0; i < height - 100; ++i) 
+	for ( Duint i = 0; i < height; ++i) 
 	{
-		for (Duint j = 0; j < width- 100 ; ++j)
+		for (Duint j = 0; j < width; ++j)
 		{	
 			for( Duint k = 0; k < 3; ++k)
 			{
@@ -27,14 +27,4 @@ void ClearColorBuffer( void* pImage, Duint width, Duint height, Dulong clearColo
 			}		
 		}
 	}
-}
-
-bool CheckContinue( const Line* lhs, const Line* rhs )
-{
-	if( lhs->beginIndex == rhs->endIndex ||	lhs->endIndex == rhs->beginIndex )
-	{
-		return true;
-	}
-
-	return false;
 }
