@@ -79,7 +79,7 @@ namespace kih
 	*/
 	class Mesh
 	{
-		MAKE_NONCOPYABLE( Mesh )
+		NONCOPYABLE_CLASS( Mesh )
 
 		typedef Vertex<float> VertexF;
 		typedef Face<unsigned short> FaceS;

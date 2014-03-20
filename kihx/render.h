@@ -47,6 +47,7 @@ namespace kih
 
 	class OutputMergerInputStream;
 	typedef OutputMergerInputStream PixelProcOutputStream;
+	typedef OutputMergerInputStream OutputMergerOutputStream;
 
 	class InputAssembler;
 	class VertexProcessor;
@@ -273,7 +274,7 @@ namespace kih
 	*/
 	class RenderingContext
 	{
-		MAKE_NONCOPYABLE( RenderingContext )
+		NONCOPYABLE_CLASS( RenderingContext )
 
 	public:
 		explicit RenderingContext( size_t numRenderTargets );

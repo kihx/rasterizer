@@ -2,6 +2,8 @@
 #include "render.h"
 #include "mesh.h"
 
+#include <list>
+
 
 namespace kih
 {
@@ -78,10 +80,10 @@ namespace kih
 			{
 			}
 
-			Data( const Data& data )
-			{
-				Assign( data.Position, data.Color );
-			}
+			//Data( const Data& data )
+			//{
+			//	Assign( data.Position, data.Color );
+			//}
 
 			void Assign( const float position[3], const byte color[4] )
 			{
@@ -182,11 +184,11 @@ namespace kih
 			{
 			}
 
-			Data( const Data& data )
-			{
-				const int DataSize = sizeof( Data );
-				memcpy_s( this, DataSize, &data, DataSize );
-			}
+			//Data( const Data& data )
+			//{
+			//	const int DataSize = sizeof( Data );
+			//	memcpy_s( this, DataSize, &data, DataSize );
+			//}
 		};
 
 		RasterizerInputStream()
@@ -270,11 +272,11 @@ namespace kih
 			{
 			}
 
-			Data( const Data& data )
-			{
-				const int DataSize = sizeof( Data );
-				memcpy_s( this, DataSize, &data, DataSize );
-			}
+			//Data( const Data& data )
+			//{
+			//	const int DataSize = sizeof( Data );
+			//	memcpy_s( this, DataSize, &data, DataSize );
+			//}
 		};
 
 		PixelProcInputStream()
@@ -325,6 +327,9 @@ namespace kih
 		std::vector<Data> m_streamSource;
 	};
 
+
+	/* class OutputMergerInputStream
+	*/
 	class OutputMergerInputStream
 	{
 	public:
@@ -340,9 +345,9 @@ namespace kih
 
 	/* class InputAssembler
 	*/
-	class InputAssembler : public IRenderingProcessor<Mesh, VertexProcInputStream>
+	class InputAssembler : public IRenderingProcessor<Mesh, InputAssemblerOutputStream>
 	{
-		MAKE_NONCOPYABLE( InputAssembler )
+		NONCOPYABLE_CLASS( InputAssembler )
 
 	public:
 		explicit InputAssembler( RenderingContext* pRenderingContext ) :
@@ -354,9 +359,9 @@ namespace kih
 		{
 		}
 
-		virtual std::shared_ptr<VertexProcInputStream> Process( std::shared_ptr<Mesh> inputStream )
+		virtual std::shared_ptr<InputAssemblerOutputStream> Process( std::shared_ptr<Mesh> inputStream )
 		{
-			VertexProcInputStream* pOutputStream = new VertexProcInputStream();
+			InputAssemblerOutputStream* pOutputStream = new InputAssemblerOutputStream( );
 
 			// Count the number of vertices in the mesh
 #ifdef SUPPORT_MSH
@@ -384,7 +389,7 @@ namespace kih
 			static_assert( 0, "not implemented yet" );
 #endif
 
-			return std::shared_ptr<VertexProcInputStream>( pOutputStream );
+			return std::shared_ptr<InputAssemblerOutputStream>( pOutputStream );
 		}
 
 	private:
@@ -394,9 +399,9 @@ namespace kih
 
 	/* class VertexProcessor
 	*/
-	class VertexProcessor : public IRenderingProcessor<VertexProcInputStream, RasterizerInputStream>
+	class VertexProcessor : public IRenderingProcessor<VertexProcInputStream, VertexProcOutputStream>
 	{
-		MAKE_NONCOPYABLE( VertexProcessor )
+		NONCOPYABLE_CLASS( VertexProcessor )
 
 	public:
 		explicit VertexProcessor( RenderingContext* pRenderingContext ) :
@@ -408,9 +413,9 @@ namespace kih
 		{
 		}
 
-		virtual std::shared_ptr<RasterizerInputStream> Process( std::shared_ptr<VertexProcInputStream> inputStream )
+		virtual std::shared_ptr<VertexProcOutputStream> Process( std::shared_ptr<VertexProcInputStream> inputStream )
 		{
-			RasterizerInputStream* pOutputStream = new RasterizerInputStream();
+			VertexProcOutputStream* pOutputStream = new VertexProcOutputStream( );
 
 			size_t inputSize = inputStream->Size();
 			for ( size_t i = 0; i < inputSize; ++i )
@@ -421,7 +426,7 @@ namespace kih
 				pOutputStream->Push( transformedPosition );
 			}
 
-			return std::shared_ptr<RasterizerInputStream>( pOutputStream );
+			return std::shared_ptr<VertexProcOutputStream>( pOutputStream );
 		}
 
 	private:
@@ -446,15 +451,16 @@ namespace kih
 
 	/* class ScanlineConversionImpl
 	*/
-	struct EdgeElement
-	{
-		unsigned short YMax;
-		unsigned short XMin;
-		float Slope;
-	};
-
 	class ScanlineConversionImpl
 	{
+	private:
+		struct EdgeElement
+		{
+			unsigned short YMax;
+			unsigned short XMin;
+			float Slope;
+		};
+
 	public:
 		ScanlineConversionImpl()
 		{
@@ -464,7 +470,8 @@ namespace kih
 		{
 		}
 
-		bool BuildEdgeTable( std::shared_ptr<RasterizerInputStream> inputStream, std::shared_ptr<Texture> renderTarget )
+	private:
+		void BuildEdgeTable( std::shared_ptr<RasterizerInputStream> inputStream, std::shared_ptr<Texture> renderTarget )
 		{
 			assert( inputStream.get() && "nullptr input stream" );
 			assert( renderTarget.get() && "nullptr render target" );
@@ -474,30 +481,60 @@ namespace kih
 			// ignore uncirculated vertices
 			if ( numVertices < 3 )
 			{
-				return true;
+				return;
 			}
 
 			// reserve scanlines
 			int height = renderTarget->Height();
 			m_edgeTable.resize( height );
 
-			size_t lastVertexIndex = numVertices - 1;
+			size_t lastVertIndex = numVertices - 1;
 			for ( size_t i = 0; i < numVertices; ++i )
 			{
-				size_t v1Index = i + 1;
-				if ( i == lastVertexIndex )
+				// select an edge
+				size_t v1Index = ( i == lastVertIndex ) ? 0 : i + 1;				
+				const RasterizerInputStream::Data& v0 = inputStream->GetData( i );
+				const RasterizerInputStream::Data& v1 = inputStream->GetData( v1Index );
+
+				// here, fill an ET element
+				float yMax = 0.0f;
+				float yMin = 0.0f;
+				if ( v0.Y >= v1.Y )
 				{
-					v1Index = 0;
+					yMax = v0.Y;
+					yMin = v1.Y;
+				}
+				else
+				{
+					yMax = v1.Y;
+					yMin = v0.Y;
 				}
 
-				//const Data& v0 = inputStream->GetData( i );
-				//const Data& v1 = inputStream->GetData( i + 1 );
+				EdgeElement elem
+				{ 
+					// YMax
+					FloatToInteger<float, unsigned short>( yMax ),
+					// XMin
+					FloatToInteger<float, unsigned short>( min( v0.X, v1.X ) ), 
+					// Slope
+					0.0f 
+				};
 
+				float dx = v0.X - v1.X;
+				float dy = v0.Y - v1.Y;
+				elem.Slope = ( dx == 0.0f ) ? 0.0f : dy / dx;
+
+				// select a start scanline with Y-axis clipping
+				unsigned short scanline = FloatToInteger<float, unsigned short>( yMin );
+				scanline = Clamp<unsigned short>( scanline, 0, height - 1 );
+
+				// add this element at the selected scanline
+				m_edgeTable[scanline].push_back( elem );
 			}
 		}
 
 	private:
-		std::vector<std::vector<EdgeElement>> m_edgeTable;
+		std::vector<std::list<EdgeElement>> m_edgeTable;
 	};
 
 
@@ -505,7 +542,7 @@ namespace kih
 	*/
 	class Rasterizer : public IRenderingProcessor<RasterizerInputStream, RasterizerOutputStream>
 	{
-		MAKE_NONCOPYABLE( Rasterizer )
+		NONCOPYABLE_CLASS( Rasterizer )
 
 	public:
 		explicit Rasterizer( RenderingContext* pRenderingContext ) :
@@ -527,14 +564,15 @@ namespace kih
 
 	private:
 		std::shared_ptr<RenderingContext> m_renderingContext;
+		ScanlineConversionImpl m_scanlineImpl;
 	};
 
 
 	/* class PixelProcessor
 	*/
-	class PixelProcessor : public IRenderingProcessor<PixelProcInputStream, OutputMergerInputStream>
+	class PixelProcessor : public IRenderingProcessor<PixelProcInputStream, PixelProcOutputStream>
 	{
-		MAKE_NONCOPYABLE( PixelProcessor )
+		NONCOPYABLE_CLASS( PixelProcessor )
 
 	public:
 		explicit PixelProcessor( RenderingContext* pRenderingContext ) :
@@ -546,11 +584,11 @@ namespace kih
 		{
 		}
 
-		virtual std::shared_ptr<OutputMergerInputStream> Process( std::shared_ptr<PixelProcInputStream> inputStream )
+		virtual std::shared_ptr<PixelProcOutputStream> Process( std::shared_ptr<PixelProcInputStream> inputStream )
 		{
-			OutputMergerInputStream* pOutputStream = new OutputMergerInputStream();
+			PixelProcOutputStream* pOutputStream = new PixelProcOutputStream( );
 
-			return std::shared_ptr<OutputMergerInputStream>( pOutputStream );
+			return std::shared_ptr<PixelProcOutputStream>( pOutputStream );
 		}
 
 	private:
@@ -560,9 +598,9 @@ namespace kih
 
 	/* class OutputMerger
 	*/
-	class OutputMerger : public IRenderingProcessor<OutputMergerInputStream, OutputMergerInputStream>
+	class OutputMerger : public IRenderingProcessor<OutputMergerInputStream, OutputMergerOutputStream>
 	{
-		MAKE_NONCOPYABLE( OutputMerger )
+		NONCOPYABLE_CLASS( OutputMerger )
 
 	public:
 		explicit OutputMerger( RenderingContext* pRenderingContext ) :
@@ -574,7 +612,7 @@ namespace kih
 		{
 		}
 
-		virtual std::shared_ptr<OutputMergerInputStream> Process( std::shared_ptr<OutputMergerInputStream> inputStream )
+		virtual std::shared_ptr<OutputMergerOutputStream> Process( std::shared_ptr<OutputMergerInputStream> inputStream )
 		{
 			//OutputMergerInputStream* pOut = new OutputMergerInputStream();
 
@@ -591,14 +629,13 @@ namespace kih
 
 	/* class RenderingContext
 	*/
-	RenderingContext::RenderingContext( size_t numRenderTargets )
+	RenderingContext::RenderingContext( size_t numRenderTargets ) :
+		m_inputAssembler( std::make_unique<InputAssembler>( this ) ),
+		m_vertexProcessor( std::make_unique<VertexProcessor>( this ) ),
+		m_rasterizer( std::make_unique<Rasterizer>( this ) ),
+		m_pixelProcessor( std::make_unique<PixelProcessor>( this ) ),
+		m_outputMerger( std::make_unique<OutputMerger>( this ) )
 	{
-		m_inputAssembler = std::make_unique<InputAssembler>( this );
-		m_vertexProcessor = std::make_unique<VertexProcessor>( this );
-		m_rasterizer = std::make_unique<Rasterizer>( this );
-		m_pixelProcessor = std::make_unique<PixelProcessor>( this );
-		m_outputMerger = std::make_unique<OutputMerger>( this );
-		
 		m_renderTargets.resize( numRenderTargets );
 		/* nullptr initialization is not necessary
 		for ( auto& rt : m_renderTargets )
@@ -642,6 +679,12 @@ namespace kih
 
 	void RenderingContext::Draw( std::shared_ptr<Mesh> mesh )
 	{
+		assert( m_inputAssembler.get() && "nullptr of input assembler" );
+		assert( m_vertexProcessor.get( ) && "nullptr of vertex processor" );
+		assert( m_rasterizer.get( ) && "nullptr of rasterizer" );
+		assert( m_pixelProcessor.get( ) && "nullptr of pixel processor" );
+		assert( m_outputMerger.get( ) && "nullptr of output merger" );
+
 		// input assembler
 		std::shared_ptr<VertexProcInputStream> vpInput = m_inputAssembler->Process( mesh );
 

@@ -21,7 +21,7 @@ typedef unsigned char byte;
 //-------------------------------------------------------------- 
 
 
-#define MAKE_NONCOPYABLE( ClassName )	\
+#define NONCOPYABLE_CLASS( ClassName )	\
 	private:	\
 		ClassName::ClassName( const ClassName& ) = delete;	\
 		ClassName& operator=( const ClassName& ) = delete;
@@ -39,7 +39,32 @@ private:
 };
 */
 
+template<typename T>
+inline const T& Min( const T& lhs, const T& rhs )
+{
+	return (lhs <= rhs) ? lhs : rhs;
+}
 
+template<typename T>
+inline const T& Max( const T& lhs, const T& rhs )
+{
+	return ( lhs >= rhs ) ? lhs : rhs;
+}
+
+template<typename T>
+inline const T& Clamp( const T& value, const T& min, const T& max )
+{
+	return Max<T>( Min<T>( value, max ), min );
+}
+
+template<typename T1, typename T2>
+inline T2 FloatToInteger( T1 f )
+{
+	static_assert( std::is_floating_point<T1>::value, "input type must be floating point" );
+	static_assert( std::is_integral<T2>::value, "return type must be integer" );
+	__UNDONE( change to a faster function );
+	return static_cast< T2 >( floor( f ) );
+}
 
 
 template<class T>
@@ -47,7 +72,7 @@ class Singleton
 {
 public:
 	template<typename... Args>
-	static T* GetInstance( Args... args )
+	static T* GetInstance( Args&&... args )
 	{
 		static_assert(
 			std::is_class<T>::value &&
