@@ -1,5 +1,6 @@
 #pragma once
 
+#include "pipelineElements.h"
 #include "Mesh.h"
 
 #include <memory>
@@ -8,17 +9,20 @@
 #include <iterator>
 #include <vector>
 #include <set>
+#include <algorithm>
 
 namespace xtozero
 {
 	class Edge
 	{
 	public:
+		int m_minY;
 		int m_maxY;
 		float m_minX;
 		float m_gradient;
 
-		Edge(int maxY, float minX, float gradient) : m_maxY(maxY), m_minX(minX), m_gradient(gradient) {}
+		Edge(int minY, int maxY, float minX, float gradient) 
+			: m_minY(minY), m_maxY(maxY), m_minX(minX), m_gradient(gradient) {}
 		~Edge() {}
 	};
 
@@ -28,10 +32,12 @@ namespace xtozero
 		std::vector<Vertex<int>> m_pixels;
 		std::map<int, std::vector<Edge>> m_edgeTable;
 		std::vector<Edge> m_activeEdgeTable;
+		std::vector<PS_ELEMENT_DESC> m_outputRS;
 
-		void CreateEdgeTable(const std::shared_ptr<CMesh>& pVertex);
+		void CreateEdgeTable(const std::shared_ptr<CMesh>& pVertex, const int faceNumber);
 		void UpdateActiveEdgeTable(const int scanline);
 		float GetIntersectXpos(const int minY, const int scanlineY, const float minX, const float gradient) const;
+		void ProcessScanline();
 	public:
 		explicit CRasterizer(const std::shared_ptr<CMesh> pMesh);
 		~CRasterizer(void);
