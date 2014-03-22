@@ -190,6 +190,11 @@ namespace kih
 			return true;
 		}
 
+		bool WriteTexel( int x, int y, const byte* color )
+		{
+			return WriteTexel( x, y, color[0], color[1], color[2] );
+		}
+
 		void SetExternalMemory( void* pMemory )
 		{
 			assert( pMemory && "nullptr external memory" );

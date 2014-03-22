@@ -76,7 +76,8 @@ namespace kih
 				Z( position[2] ),
 				R( color[0] ),
 				G( color[1] ),
-				B( color[2] )
+				B( color[2] ),
+				A( color[3] )
 			{
 			}
 
@@ -114,10 +115,10 @@ namespace kih
 		//	m_streamSource.emplace_back( position, color );
 		//}
 
-		const float* GetData( size_t index ) const
+		const Data& GetData( size_t index ) const
 		{
 			assert( ( index >= 0 && index < Size() ) && "Out of ranged index" );
-			return m_streamSource[index].Position;
+			return m_streamSource[index];
 		}
 
 		const float* GetStreamSource() const
@@ -154,33 +155,47 @@ namespace kih
 	public:
 		struct Data
 		{
-			// in NDC coordinates
 			union
 			{
 				struct
 				{
+					// in NDC coordinates
 					float X;
 					float Y;
 					float Z;
 					float W;
+
+					byte R;
+					byte G;
+					byte B;
+					byte A;
 				};
 
 				float Position[4];
+				byte Color[4];
 			};
 
 			Data() :
 				X( 0.0f ),
 				Y( 0.0f ),
 				Z( 0.0f ),
-				W( 1.0f )
+				W( 1.0f ),
+				R( 0 ),
+				G( 0 ),
+				B( 0 ),
+				A( 0 )
 			{
 			}
 
-			Data( const float position[4] ) :
+			Data( const float position[4], const byte color[4] ) :
 				X( position[0] ),
 				Y( position[1] ),
 				Z( position[2] ),
-				W( position[3] )
+				W( position[3] ),
+				R( color[0] ),
+				G( color[1] ),
+				B( color[2] ),
+				A( color[3] )
 			{
 			}
 
@@ -254,17 +269,39 @@ namespace kih
 			// z of a pixel
 			float PZ;
 
+			union
+			{
+				struct
+				{
+					// interpolated color
+					byte R;
+					byte G;
+					byte B;
+					byte A;
+				};
+
+				byte Color[4];
+			};
+
 			Data() :
 				PX( 0 ),
 				PY( 0 ),
-				PZ( 1.0f ) // farthest
+				PZ( 1.0f ), // farthest
+				R( 0 ),
+				G( 0 ),
+				B( 0 ),
+				A( 0 )
 			{
 			}
 
-			Data( unsigned short px, unsigned short py, float pz ) :
+			Data( unsigned short px, unsigned short py, float pz, const byte color[4] ) :
 				PX( px ),
 				PY( py ),
-				PZ( pz )
+				PZ( pz ),
+				R( color[0] ),
+				G( color[1] ),
+				B( color[2] ),
+				A( color[3] )
 			{
 			}
 
@@ -412,10 +449,12 @@ namespace kih
 			size_t inputSize = inputStream->Size();
 			for ( size_t i = 0; i < inputSize; ++i )
 			{
+				const auto& vertex = inputStream->GetData( i );
+				
 				float transformedPosition[4];
-				Transform( inputStream->GetData( i ), transformedPosition );
+				Transform( vertex.Position, transformedPosition );
 
-				pOutputStream->Push( transformedPosition );
+				pOutputStream->Push( transformedPosition, vertex.Color );
 			}
 
 			return std::shared_ptr<VertexProcOutputStream>( pOutputStream );
@@ -468,11 +507,14 @@ namespace kih
 				return std::shared_ptr<RasterizerOutputStream>( pOutputStream );
 			}
 
+			int width = rt->Width();
+			int height = rt->Height();
+
 			// do scanline conversion
-			size_t edgeCount = BuildEdgeTable( inputStream, rt );
+			size_t edgeCount = BuildEdgeTable( inputStream, width, height );
 			if ( edgeCount > 0 )
 			{
-				size_t drawCount = GatherPixelsBeingDrawnFromScanlines( pOutputStream );
+				size_t drawCount = GatherPixelsBeingDrawnFromScanlines( pOutputStream, width, height );
 			}
 
 			return std::shared_ptr<RasterizerOutputStream>( pOutputStream );
@@ -485,11 +527,14 @@ namespace kih
 			unsigned short XMin;
 			float Slope;
 			// float PZ;	// depth
+
+			const byte* ColorL;
+			const byte* ColorR;
 		};	
 
 		struct ActiveEdgeTableElement
 		{
-			EdgeTableElement ETElement;
+			const EdgeTableElement& ETElement;
 			float CurrentX;
 
 			ActiveEdgeTableElement( const EdgeTableElement& etElem ) :
@@ -505,10 +550,9 @@ namespace kih
 			}
 		};	
 
-		size_t BuildEdgeTable( std::shared_ptr<RasterizerInputStream> inputStream, std::shared_ptr<Texture> renderTarget )
+		size_t BuildEdgeTable( std::shared_ptr<RasterizerInputStream> inputStream, int width, int height )
 		{
 			assert( inputStream );
-			assert( renderTarget );
 
 			size_t numVertices = inputStream->Size();
 
@@ -519,9 +563,8 @@ namespace kih
 			}
 
 			size_t edgeCount = 0;
-
+			
 			// reserve scanlines
-			int height = renderTarget->Height();
 			m_edgeTable.resize( height );
 
 			size_t lastVertIndex = numVertices - 1;
@@ -529,8 +572,8 @@ namespace kih
 			{
 				// select an edge
 				size_t v1Index = ( i == lastVertIndex ) ? 0 : i + 1;				
-				const RasterizerInputStream::Data& v0 = inputStream->GetData( i );
-				const RasterizerInputStream::Data& v1 = inputStream->GetData( v1Index );
+				const auto& v0 = inputStream->GetData( i );
+				const auto& v1 = inputStream->GetData( v1Index );
 
 				// make an ET element
 				float yMax = 0.0f;
@@ -551,9 +594,12 @@ namespace kih
 					// YMax
 					FloatToInteger<float, unsigned short>( yMax ),
 					// XMin
-					FloatToInteger<float, unsigned short>( min( v0.X, v1.X ) ), 
+					FloatToInteger<float, unsigned short>( Min<float>( v0.X, v1.X ) ), 
 					// Slope
-					0.0f 
+					0.0f,
+					// Colors
+					v0.Color,
+					v1.Color,
 				};
 
 				float dx = v0.X - v1.X;
@@ -573,9 +619,10 @@ namespace kih
 			return edgeCount;
 		}
 
-		size_t GatherPixelsBeingDrawnFromScanlines( RasterizerOutputStream* pOutputStream )
+		size_t GatherPixelsBeingDrawnFromScanlines( RasterizerOutputStream* pOutputStream, int width, int height )
 		{
 			assert( pOutputStream );
+			assert( height == m_edgeTable.size() && "target height and scanline are mismatched" );
 
 			size_t drawnCount = 0;
 
@@ -583,7 +630,6 @@ namespace kih
 			std::list<ActiveEdgeTableElement> aet;
 
 			// for each scanline
-			size_t height = m_edgeTable.size();
 			for ( size_t y = 0; y < height; ++y )
 			{
 				// find outside elements in AET and remove them
@@ -633,11 +679,16 @@ namespace kih
 						Swap<unsigned short>( xLeft, xRight );
 					}
 
+					// clipping on RT
+					xLeft = Min<unsigned short>( xLeft, 0 );
+					xRight = Min<unsigned short>( xRight, width );
+
 					// push inside pixels into the output stream from left-x to right-x
 					for ( unsigned short x = xLeft; x < xRight; ++x )
 					{
 						__TODO( write the pixel Z value );
-						pOutputStream->Push( x, y, 0.0f );
+						__TODO( interpolate colors );
+						pOutputStream->Push( x, y, 0.0f, elemLeft.ETElement.ColorL );
 
 						++drawnCount;
 					}
@@ -674,7 +725,7 @@ namespace kih
 		virtual ~PixelProcessor()
 		{
 		}
-
+		
 		virtual std::shared_ptr<PixelProcOutputStream> Process( std::shared_ptr<PixelProcInputStream> inputStream )
 		{
 			PixelProcOutputStream* pOutputStream = new PixelProcOutputStream();
@@ -690,16 +741,15 @@ namespace kih
 			size_t inputStreamSize = inputStream->Size();
 			for ( size_t i = 0; i < inputStreamSize; ++i )
 			{
-				const auto& pixelData = inputStream->GetData( i );
+				const auto& fragment = inputStream->GetData( i );
 
 				// TODO: Z-buffering
-				// pixelData.PZ
 
 				LockGuardPtr<Texture> guard( rt );
 				if ( void* p = guard.Ptr() )
 				{
-					byte color[4] = { 0, 0, 0, 255 };
-					rt->WriteTexel( pixelData.PX, pixelData.PY, color[0], color[1], color[2] );
+					// TODO: pixel shading
+					rt->WriteTexel( fragment.PX, fragment.PY, fragment.Color );
 				}				
 			}
 
