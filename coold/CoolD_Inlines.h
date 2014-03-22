@@ -35,11 +35,25 @@ void Safe_Delete_Array(T& p)
 }
 
 template <typename T>
-void Safe_Release(T& p)
+void Safe_Delete_Map(T& p)
 {
-	if(p)
+	T::iterator iter = p.begin();
+	while( iter != p.end() )
 	{
-		p->Release();
-		p	= nullptr;
+		Safe_Delete(iter->second);
+		++iter;
 	}
+	p.clear();
+}
+
+template <typename T>
+void Safe_Delete_ListInMap(T& p)
+{
+	T::iterator iter = p.begin();
+	while( iter != p.end() )
+	{
+		Safe_Delete_VecList(iter->second);		
+		++iter;
+	}
+	p.clear();
 }

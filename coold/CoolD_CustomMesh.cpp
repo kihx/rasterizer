@@ -1,5 +1,6 @@
 #include "CoolD_CustomMesh.h"
 #include "CoolD_Inlines.h"
+#include "CoolD_Defines.h"
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -66,8 +67,12 @@ namespace CoolD
 
 				assert( 0 < vertexNum && vertexNum <= vectexCount );	//지정된 형식과 다를경우 kill
 
-				baseVertex v; 
+				BaseVertex v; 
 				sstream >> v.x >> v.y >> v.z;
+				v.x = RoundOff(v.x, 0);
+				v.y = RoundOff(v.y, 0);
+				v.z = RoundOff(v.z, 0);
+
 				m_vecVertex.push_back(v);				
 			}
 			else if( strToken == "Face" )
@@ -77,13 +82,13 @@ namespace CoolD
 
 				assert( 0 < faceNum && faceNum <= faceCount );
 
-				baseFace f;
+				BaseFace f;
 				Dint readR, readG, readB;
 				sstream >> readR >> readG >> readB;
-				f.r = readR & 0x000000ff;
-				f.g = readG & 0x000000ff;
-				f.b = readB & 0x000000ff;
-				f.a = 0x000000ff;
+				f.color.r = readR & 0x000000ff;
+				f.color.g = readG & 0x000000ff;
+				f.color.b = readB & 0x000000ff;
+				f.color.a = 0x000000ff;
 
 				Dint indexCount = 0;
 				sstream>>indexCount;
@@ -104,12 +109,12 @@ namespace CoolD
 		return true;
 	}
 
-	const baseVertex& CustomMesh::GetVertex( Duint index ) const
+	const BaseVertex& CustomMesh::GetVertex( Duint index ) const
 	{
 		return m_vecVertex[index - 1];	//정점 정보는 1부터 시작하지만 벡터는 0부터 시작하기 때문에
 	}
 
-	const baseFace& CustomMesh::GetFace( Duint index ) const
+	const BaseFace& CustomMesh::GetFace( Duint index ) const
 	{
 		return m_vecFace[index - 1];
 	}
