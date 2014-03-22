@@ -167,7 +167,7 @@ namespace kih
 			int indexCount;
 			reader >> indexCount;
 			
-			// undone
+			__UNDONE( load various-sized vertices );
 			if ( lastIndexCount != 0 && lastIndexCount != indexCount )
 			{
 				m_faces.resize( i );

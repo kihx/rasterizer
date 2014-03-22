@@ -166,7 +166,6 @@ namespace kih
 			RemoveFlags( FL_LOCKED );
 		}
 
-	private:
 		bool WriteTexel( int x, int y, byte r, byte g, byte b )
 		{
 			if ( !HasFlag( FL_LOCKED ) )
@@ -176,37 +175,16 @@ namespace kih
 
 			assert( ( x >= 0 && x < m_width ) && "out of ranged x-coordinate" );
 			assert( ( y >= 0 && y < m_height ) && "out of ranged y-coordinate" );
-			assert( ( ComputeBytesPerPixel( Format() ) == 3 ) && "incorrect color format" );
+			
+			int stride = ComputeBytesPerPixel( Format() );
 
 			if ( byte* buffer = static_cast< byte* >( m_pMemory ) )
 			{
-				byte* base = buffer + ( ( ( m_width * y ) + x ) * 3 );
+				byte* base = buffer + ( ( ( m_width * y ) + x ) * stride );
 				*( base + 0 ) = r;
 				*( base + 1 ) = g;
 				*( base + 2 ) = b;
-			}
-
-			return true;
-		}
-
-		bool WriteTexel( int x, int y, byte r, byte g, byte b, byte a )
-		{
-			if ( !HasFlag( FL_LOCKED ) )
-			{
-				return false;
-			}
-
-			assert( ( x >= 0 && x < m_width ) && "out of ranged x-coordinate" );
-			assert( ( y >= 0 && y < m_height ) && "out of ranged y-coordinate" );
-			assert( ( ComputeBytesPerPixel( Format() ) == 4 ) && "incorrect color format" );
-
-			if ( byte* buffer = static_cast< byte* >( m_pMemory ) )
-			{
-				byte* base = buffer + ( ( ( m_width * y ) + x ) * 4 );
-				*( base + 0 ) = r;
-				*( base + 1 ) = g;
-				*( base + 2 ) = b;
-				*( base + 3 ) = a;
+				//*( base + 3 ) = a;
 			}
 
 			return true;
@@ -238,8 +216,6 @@ namespace kih
 		ColorFormat m_format;
 		unsigned int m_flags;
 		void* m_pMemory;
-
-		friend class RenderingContext;
 	};
 
 	/* class LockGuard<Texture>

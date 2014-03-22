@@ -26,18 +26,6 @@ typedef unsigned char byte;
 		ClassName::ClassName( const ClassName& ) = delete;	\
 		ClassName& operator=( const ClassName& ) = delete;
 
-/* C++98 style
-class Uncopyable
-{
-protected:
-	Uncopyable() {}
-	~Uncopyable() {}
-
-private:
-	Uncopyable( const Uncopyable& );
-	Uncopyable& operator=( const Uncopyable& );
-};
-*/
 
 template<typename T>
 inline const T& Min( const T& lhs, const T& rhs )
@@ -55,6 +43,14 @@ template<typename T>
 inline const T& Clamp( const T& value, const T& min, const T& max )
 {
 	return Max<T>( Min<T>( value, max ), min );
+}
+
+template<typename T>
+inline void Swap( T& lhs, T& rhs )
+{
+	T tmp = std::move( lhs );
+	lhs = std::move( rhs );
+	rhs = std::move( tmp );
 }
 
 template<typename T1, typename T2>
@@ -88,22 +84,6 @@ public:
 		return s_instance.get();
 	}
 
-	//static T* GetInstance()
-	//{
-	//	static_assert( 
-	//		std::is_class<T>::value && 
-	//		!std::is_polymorphic<T>::value &&
-	//		!std::is_pointer<T>::value, 
-	//		"invalid type of Singleton" );
-
-	//	if ( s_instance == nullptr )
-	//	{
-	//		s_instance = std::unique_ptr<T>( new T() );
-	//	}
-
-	//	return s_instance.get();
-	//}
-
 	static void DestroyInstance()
 	{
 		delete s_instance;
@@ -123,7 +103,7 @@ template<class T>
 class LockGuard
 {
 public:
-	LockGuard( T* obj ) :
+	LockGuard( std::shared_ptr<T> obj ) :
 		m_obj( obj )
 	{
 		m_obj->Lock();
@@ -135,7 +115,31 @@ public:
 	}
 
 private:
-	T* m_obj;
+	std::shared_ptr<T> m_obj;
+};
+
+template<class T>
+class LockGuardPtr
+{
+public:
+	LockGuardPtr( std::shared_ptr<T> obj ) :
+		m_obj( obj )
+	{
+		m_obj->Lock( &m_p );
+	}
+
+	~LockGuardPtr()
+	{
+		m_obj->Unlock();
+	}
+
+	void* Ptr()
+	{
+		return m_p;
+	}
+
+private:
+	std::shared_ptr<T> m_obj;
 	void* m_p;
 };
 

@@ -184,11 +184,7 @@ namespace kih
 			{
 			}
 
-			//Data( const Data& data )
-			//{
-			//	const int DataSize = sizeof( Data );
-			//	memcpy_s( this, DataSize, &data, DataSize );
-			//}
+			Data( const Data& data ) = default;
 		};
 
 		RasterizerInputStream()
@@ -272,11 +268,7 @@ namespace kih
 			{
 			}
 
-			//Data( const Data& data )
-			//{
-			//	const int DataSize = sizeof( Data );
-			//	memcpy_s( this, DataSize, &data, DataSize );
-			//}
+			Data( const Data& data ) = default;
 		};
 
 		PixelProcInputStream()
@@ -294,18 +286,18 @@ namespace kih
 		//	m_streamSource.emplace_back( position );
 		//}
 
-		__UNDONE( change return type of const void* );
-		const void* GetStreamSource() const
-		{
-			if ( m_streamSource.empty() )
-			{
-				return nullptr;
-			}
-			else
-			{
-				return &m_streamSource[0].PX;
-			}
-		}
+		//__UNDONE( change return type of const void* );
+		//const void* GetStreamSource() const
+		//{
+		//	if ( m_streamSource.empty() )
+		//	{
+		//		return nullptr;
+		//	}
+		//	else
+		//	{
+		//		return &m_streamSource[0].PX;
+		//	}
+		//}
 
 		const Data& GetData( size_t index ) const
 		{
@@ -448,96 +440,7 @@ namespace kih
 		std::shared_ptr<RenderingContext> m_renderingContext;
 	};
 
-
-	/* class ScanlineConversionImpl
-	*/
-	class ScanlineConversionImpl
-	{
-	private:
-		struct EdgeElement
-		{
-			unsigned short YMax;
-			unsigned short XMin;
-			float Slope;
-		};
-
-	public:
-		ScanlineConversionImpl()
-		{
-		}
-
-		~ScanlineConversionImpl()
-		{
-		}
-
-	private:
-		void BuildEdgeTable( std::shared_ptr<RasterizerInputStream> inputStream, std::shared_ptr<Texture> renderTarget )
-		{
-			assert( inputStream.get() && "nullptr input stream" );
-			assert( renderTarget.get() && "nullptr render target" );
-
-			size_t numVertices = inputStream->Size();
-
-			// ignore uncirculated vertices
-			if ( numVertices < 3 )
-			{
-				return;
-			}
-
-			// reserve scanlines
-			int height = renderTarget->Height();
-			m_edgeTable.resize( height );
-
-			size_t lastVertIndex = numVertices - 1;
-			for ( size_t i = 0; i < numVertices; ++i )
-			{
-				// select an edge
-				size_t v1Index = ( i == lastVertIndex ) ? 0 : i + 1;				
-				const RasterizerInputStream::Data& v0 = inputStream->GetData( i );
-				const RasterizerInputStream::Data& v1 = inputStream->GetData( v1Index );
-
-				// here, fill an ET element
-				float yMax = 0.0f;
-				float yMin = 0.0f;
-				if ( v0.Y >= v1.Y )
-				{
-					yMax = v0.Y;
-					yMin = v1.Y;
-				}
-				else
-				{
-					yMax = v1.Y;
-					yMin = v0.Y;
-				}
-
-				EdgeElement elem
-				{ 
-					// YMax
-					FloatToInteger<float, unsigned short>( yMax ),
-					// XMin
-					FloatToInteger<float, unsigned short>( min( v0.X, v1.X ) ), 
-					// Slope
-					0.0f 
-				};
-
-				float dx = v0.X - v1.X;
-				float dy = v0.Y - v1.Y;
-				elem.Slope = ( dx == 0.0f ) ? 0.0f : dy / dx;
-
-				// select a start scanline with Y-axis clipping
-				unsigned short scanline = FloatToInteger<float, unsigned short>( yMin );
-				scanline = Clamp<unsigned short>( scanline, 0, height - 1 );
-
-				// add this element at the selected scanline
-				m_edgeTable[scanline].push_back( elem );
-			}
-		}
-
-	private:
-		std::vector<std::list<EdgeElement>> m_edgeTable;
-	};
-
-
+	
 	/* class Rasterizer
 	*/
 	class Rasterizer : public IRenderingProcessor<RasterizerInputStream, RasterizerOutputStream>
@@ -558,13 +461,201 @@ namespace kih
 		{
 			RasterizerOutputStream* pOutputStream = new RasterizerOutputStream( );
 
+			assert( m_renderingContext );
+			std::shared_ptr<Texture> rt = m_renderingContext->GetRenderTaget( 0 );
+			if ( rt == nullptr )
+			{
+				return std::shared_ptr<RasterizerOutputStream>( pOutputStream );
+			}
+
+			// do scanline conversion
+			size_t edgeCount = BuildEdgeTable( inputStream, rt );
+			if ( edgeCount > 0 )
+			{
+				size_t drawCount = GatherPixelsBeingDrawnFromScanlines( pOutputStream );
+			}
 
 			return std::shared_ptr<RasterizerOutputStream>( pOutputStream );
 		}
 
 	private:
+		struct EdgeTableElement
+		{
+			unsigned short YMax;
+			unsigned short XMin;
+			float Slope;
+			// float PZ;	// depth
+		};	
+
+		struct ActiveEdgeTableElement
+		{
+			EdgeTableElement ETElement;
+			float CurrentX;
+
+			ActiveEdgeTableElement( const EdgeTableElement& etElem ) :
+				ETElement( etElem ),
+				CurrentX( etElem.XMin )
+			{
+			}
+
+			// sortable by XMin ascending order
+			bool operator<( const ActiveEdgeTableElement& rhs )
+			{
+				return ETElement.XMin < rhs.ETElement.XMin;
+			}
+		};	
+
+		size_t BuildEdgeTable( std::shared_ptr<RasterizerInputStream> inputStream, std::shared_ptr<Texture> renderTarget )
+		{
+			assert( inputStream );
+			assert( renderTarget );
+
+			size_t numVertices = inputStream->Size();
+
+			// ignore uncirculated vertices
+			if ( numVertices < 3 )
+			{
+				return 0;
+			}
+
+			size_t edgeCount = 0;
+
+			// reserve scanlines
+			int height = renderTarget->Height();
+			m_edgeTable.resize( height );
+
+			size_t lastVertIndex = numVertices - 1;
+			for ( size_t i = 0; i < numVertices; ++i )
+			{
+				// select an edge
+				size_t v1Index = ( i == lastVertIndex ) ? 0 : i + 1;				
+				const RasterizerInputStream::Data& v0 = inputStream->GetData( i );
+				const RasterizerInputStream::Data& v1 = inputStream->GetData( v1Index );
+
+				// make an ET element
+				float yMax = 0.0f;
+				float yMin = 0.0f;
+				if ( v0.Y >= v1.Y )
+				{
+					yMax = v0.Y;
+					yMin = v1.Y;
+				}
+				else
+				{
+					yMax = v1.Y;
+					yMin = v0.Y;
+				}
+
+				EdgeTableElement elem
+				{ 
+					// YMax
+					FloatToInteger<float, unsigned short>( yMax ),
+					// XMin
+					FloatToInteger<float, unsigned short>( min( v0.X, v1.X ) ), 
+					// Slope
+					0.0f 
+				};
+
+				float dx = v0.X - v1.X;
+				float dy = v0.Y - v1.Y;
+				elem.Slope = ( dx == 0.0f ) ? 0.0f : dy / dx;
+
+				// select a start scanline with Y-axis clipping
+				unsigned short scanline = FloatToInteger<float, unsigned short>( yMin );
+				scanline = Clamp<unsigned short>( scanline, 0, height - 1 );
+
+				// push this element at the selected scanline
+				m_edgeTable[scanline].push_back( elem );
+
+				++edgeCount;
+			}
+
+			return edgeCount;
+		}
+
+		size_t GatherPixelsBeingDrawnFromScanlines( RasterizerOutputStream* pOutputStream )
+		{
+			assert( pOutputStream );
+
+			size_t drawnCount = 0;
+
+			// active edge table
+			std::list<ActiveEdgeTableElement> aet;
+
+			// for each scanline
+			size_t height = m_edgeTable.size();
+			for ( size_t y = 0; y < height; ++y )
+			{
+				// find outside elements in AET and remove them
+				auto iter = aet.begin();
+				while ( iter != aet.end() )
+				{
+					const ActiveEdgeTableElement& elem = *iter;
+					if ( elem.ETElement.YMax > height )
+					{
+						iter = aet.erase( iter );
+					}
+					else
+					{
+						++iter;
+					}
+				}
+
+				// for each ET element
+				const std::list<EdgeTableElement>& edgeList = m_edgeTable[y];
+				for ( const auto& elem : edgeList )
+				{
+					// is inside?
+					if ( elem.YMax <= height )
+					{
+						aet.push_back( ActiveEdgeTableElement( elem ) );
+					}
+				}				
+				aet.sort();
+
+				// for each AET element
+				for ( auto iter = aet.begin(); iter != aet.end(); ++iter )
+				{
+					// select left (=current) and right (=next) elements
+					ActiveEdgeTableElement& elemLeft = *iter;
+					if ( ++iter == aet.end() )
+					{
+						break;
+					}
+					ActiveEdgeTableElement& elemRight = *iter;
+
+					// approximate the intersection of x-coordinates
+					unsigned short xLeft = FloatToInteger<float, unsigned short>( elemLeft.CurrentX );
+					unsigned short xRight = FloatToInteger<float, unsigned short>( elemRight.CurrentX );
+
+					if ( xLeft > xRight )
+					{
+						Swap<unsigned short>( xLeft, xRight );
+					}
+
+					// push inside pixels into the output stream from left-x to right-x
+					for ( unsigned short x = xLeft; x < xRight; ++x )
+					{
+						__TODO( write the pixel Z value );
+						pOutputStream->Push( x, y, 0.0f );
+
+						++drawnCount;
+					}
+
+					// update the next position incrementally
+					elemLeft.CurrentX += elemLeft.ETElement.Slope;
+					elemRight.CurrentX += elemRight.ETElement.Slope;
+				}
+			}
+
+			m_edgeTable.clear();
+
+			return drawnCount;
+		}
+
+	private:
 		std::shared_ptr<RenderingContext> m_renderingContext;
-		ScanlineConversionImpl m_scanlineImpl;
+		std::vector<std::list<EdgeTableElement>> m_edgeTable;
 	};
 
 
@@ -586,7 +677,31 @@ namespace kih
 
 		virtual std::shared_ptr<PixelProcOutputStream> Process( std::shared_ptr<PixelProcInputStream> inputStream )
 		{
-			PixelProcOutputStream* pOutputStream = new PixelProcOutputStream( );
+			PixelProcOutputStream* pOutputStream = new PixelProcOutputStream();
+
+			assert( m_renderingContext );
+			std::shared_ptr<Texture> rt = m_renderingContext->GetRenderTaget( 0 );
+			if ( rt == nullptr )
+			{
+				return std::shared_ptr<PixelProcOutputStream>( pOutputStream );
+			}
+
+			assert( inputStream );
+			size_t inputStreamSize = inputStream->Size();
+			for ( size_t i = 0; i < inputStreamSize; ++i )
+			{
+				const auto& pixelData = inputStream->GetData( i );
+
+				// TODO: Z-buffering
+				// pixelData.PZ
+
+				LockGuardPtr<Texture> guard( rt );
+				if ( void* p = guard.Ptr() )
+				{
+					byte color[4] = { 0, 0, 0, 255 };
+					rt->WriteTexel( pixelData.PX, pixelData.PY, color[0], color[1], color[2] );
+				}				
+			}
 
 			return std::shared_ptr<PixelProcOutputStream>( pOutputStream );
 		}
@@ -651,26 +766,33 @@ namespace kih
 		size_t num = m_renderTargets.size();
 		for ( size_t i = 0; i < num; ++i )
 		{
-			if ( Texture* pTexture = m_renderTargets[i].get() )
+			if ( m_renderTargets[i] == nullptr )
 			{
-				LockGuard<Texture> guard( pTexture );
-				if ( void* p = guard.Ptr() )
-				{
-					assert( p && "a nullptr pointer of internal memory of a texture" );
+				continue;
+			}
 
-					if ( r == g && g == b )
-					{
-						int size = pTexture->Width() * pTexture->Height() * ComputeBytesPerPixel( pTexture->Format() );
-						memset( p, r, size );
-						return;
-					}
+			LockGuardPtr<Texture> guard( m_renderTargets[i] );
+			if ( void* ptr = guard.Ptr() )
+			{
+				assert( ptr );
+
+				std::shared_ptr<Texture> rt = m_renderTargets[i];
+
+				int width = rt->Width();
+				int height = rt->Height();
+
+				if ( r == g && g == b )
+				{
+					int size = width * height * ComputeBytesPerPixel( rt->Format() );
+					memset( ptr, r, size );
+					return;
+				}
 					
-					for ( int h = 0; h < pTexture->Height(); ++h )
+				for ( int h = 0; h < height; ++h )
+				{
+					for ( int w = 0; w < width; ++w )
 					{
-						for ( int w = 0; w < pTexture->Width(); ++w )
-						{
-							pTexture->WriteTexel( w, h, r, g, b );
-						}
+						rt->WriteTexel( w, h, r, g, b );
 					}
 				}
 			}
@@ -679,11 +801,11 @@ namespace kih
 
 	void RenderingContext::Draw( std::shared_ptr<Mesh> mesh )
 	{
-		assert( m_inputAssembler.get() && "nullptr of input assembler" );
-		assert( m_vertexProcessor.get( ) && "nullptr of vertex processor" );
-		assert( m_rasterizer.get( ) && "nullptr of rasterizer" );
-		assert( m_pixelProcessor.get( ) && "nullptr of pixel processor" );
-		assert( m_outputMerger.get( ) && "nullptr of output merger" );
+		assert( m_inputAssembler );
+		assert( m_vertexProcessor );
+		assert( m_rasterizer );
+		assert( m_pixelProcessor );
+		assert( m_outputMerger );
 
 		// input assembler
 		std::shared_ptr<VertexProcInputStream> vpInput = m_inputAssembler->Process( mesh );
