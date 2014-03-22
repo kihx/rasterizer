@@ -34,9 +34,9 @@ namespace xtozero
 		std::vector<Edge> m_activeEdgeTable;
 		std::vector<PS_ELEMENT_DESC> m_outputRS;
 
-		void CreateEdgeTable(const std::shared_ptr<CMesh>& pVertex, const int faceNumber);
-		void UpdateActiveEdgeTable(const int scanline);
-		float GetIntersectXpos(const int minY, const int scanlineY, const float minX, const float gradient) const;
+		void CreateEdgeTable(const std::shared_ptr<CMesh> pVertex, int faceNumber);
+		void UpdateActiveEdgeTable(int scanline);
+		float GetIntersectXpos( int minY, int scanlineY, float minX, float gradient) const;
 		void ProcessScanline();
 	public:
 		explicit CRasterizer(const std::shared_ptr<CMesh> pMesh);

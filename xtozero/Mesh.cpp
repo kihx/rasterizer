@@ -53,7 +53,7 @@ namespace xtozero
 							meshfile >> vertex.m_element[i];
 						}
 
-						m_vertices.push_back( vertex );
+						m_vertices.emplace_back(vertex);
 					}
 					else if( strncmp( token, "Face", sizeof("Face") ) == 0 )
 					{
@@ -74,11 +74,11 @@ namespace xtozero
 						for( int i = 0; i < indices; ++i )
 						{
 							meshfile >> index;
-							face.m_indices.push_back( index - 1 );
+							face.m_indices.emplace_back( index - 1 );
 						}
-						face.m_indices.push_back(*face.m_indices.begin());//마지막 정점은 시작 정점이다.
+						face.m_indices.emplace_back(*face.m_indices.begin());//마지막 정점은 시작 정점이다.
 
-						m_faces.push_back( face );
+						m_faces.emplace_back(face);
 					}
 				}
 			}
@@ -93,7 +93,7 @@ namespace xtozero
 
 	void CMesh::PrintMeshInfo( void )
 	{
-		for( auto iter = m_vertices.begin(); iter != m_vertices.end(); ++iter )
+		for( std::vector<Vertex<float>>::iterator iter = m_vertices.begin(); iter != m_vertices.end(); ++iter )
 		{
 			std::cout << "[VERTEX] ";
 			for( int i = 0; i < VETEX_ELEMENT_COUNT; ++i )
@@ -102,7 +102,7 @@ namespace xtozero
 			}
 			std::cout << std::endl;
 		}
-		for( auto iter = m_faces.begin(); iter != m_faces.end(); ++iter )
+		for ( std::vector<Face>::iterator iter = m_faces.begin(); iter != m_faces.end(); ++iter )
 		{
 			std::cout << "[FACE] " << "color : ";
 			for( int i = 0; i < COLOR_ELEMENT_COUNT; ++i )
@@ -110,7 +110,7 @@ namespace xtozero
 				std::cout << static_cast<int>(iter->m_color[i]) << " | ";
 			}
 			std::cout << " indices : ";
-			for( auto index = iter->m_indices.begin(); index != iter->m_indices.end(); ++index )
+			for ( std::vector<int>::iterator index = iter->m_indices.begin(); index != iter->m_indices.end(); ++index )
 			{
 				std::cout << *index << " | ";
 			}

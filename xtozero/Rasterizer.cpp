@@ -29,7 +29,7 @@ namespace xtozero
 
 	}
 
-	void CRasterizer::CreateEdgeTable(const std::shared_ptr<CMesh>& pMesh, const int faceNumber)
+	void CRasterizer::CreateEdgeTable(const std::shared_ptr<CMesh> pMesh, int faceNumber)
 	{
 		if ( faceNumber >= pMesh->m_faces.size() )
 		{
@@ -45,7 +45,7 @@ namespace xtozero
 		float dy = 0.0f;
 		Face& face = pMesh->m_faces[faceNumber];
 
-		for ( std::vector<int>::iterator index = face.m_indices.begin(); index != face.m_indices.end(); ++index )
+		for ( std::vector<int>::iterator& index = face.m_indices.begin(); index != face.m_indices.end(); ++index )
 		{
 			if ( (index + 1) == face.m_indices.end() )
 			{
@@ -99,7 +99,7 @@ namespace xtozero
 	void CRasterizer::UpdateActiveEdgeTable(const int scanline)
 	{
 		//AET 에서 사용하지 않는 Edge제거
-		for ( auto iter = m_activeEdgeTable.begin(); iter != m_activeEdgeTable.end(); )
+		for ( std::vector<Edge>::iterator& iter = m_activeEdgeTable.begin(); iter != m_activeEdgeTable.end(); )
 		{
 			if ( iter->m_maxY < scanline )
 			{
@@ -121,7 +121,7 @@ namespace xtozero
 
 			if ( m_edgeTable.begin()->first <= scanline )
 			{
-				for ( auto edge = edgelist.begin(); edge != edgelist.end(); ++edge )
+				for ( std::vector<Edge>::iterator& edge = edgelist.begin(); edge != edgelist.end(); ++edge )
 				{
 					m_activeEdgeTable.emplace_back(*edge);
 				}
@@ -130,14 +130,14 @@ namespace xtozero
 
 			//minX로 정렬
 			std::sort(m_activeEdgeTable.begin(), m_activeEdgeTable.end(),
-				[](Edge lhs, Edge rhs)->bool
+				[](const Edge& lhs, const Edge& rhs)->bool
 			{
 				return lhs.m_minX < rhs.m_minX;
 			});
 		}
 	}
 
-	float CRasterizer::GetIntersectXpos(const int minY, const int scanlineY, const float minX, const float gradient) const
+	float CRasterizer::GetIntersectXpos( int minY,  int scanlineY, float minX, float gradient) const
 	{
 		return minX + gradient * (scanlineY - minY);
 	}
