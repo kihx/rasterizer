@@ -11,24 +11,23 @@ namespace kih
 	*/
 	std::shared_ptr<Texture> Texture::Create( int width, int height, ColorFormat format, void* pExternalMemory )
 	{
-		Texture* pTexture = new Texture();
-		pTexture->m_width = width;
-		pTexture->m_height = height;
-		pTexture->m_format = format;
-
-		pTexture->m_flags = 0;
+		// cannot use std::make_shared<>() by the protected access modifier
+		auto texture = std::shared_ptr<Texture>( new Texture() );
+		texture->m_width = width;
+		texture->m_height = height;
+		texture->m_format = format;
+		texture->m_flags = 0;
 
 		if ( pExternalMemory )
 		{
-			pTexture->SetExternalMemory( pExternalMemory );
+			texture->SetExternalMemory( pExternalMemory );
 		}
 		else
 		{
-			int bytesPerPixel = 3;
-			pTexture->m_pMemory = malloc( width * height * bytesPerPixel );
+			texture->m_pMemory = malloc( width * height * ComputeBytesPerPixel( format ) );
 		}
 
-		return std::shared_ptr<Texture>( pTexture );
+		return texture;
 	}
 
 
@@ -390,7 +389,7 @@ namespace kih
 
 		virtual std::shared_ptr<InputAssemblerOutputStream> Process( std::shared_ptr<Mesh> inputStream )
 		{
-			InputAssemblerOutputStream* pOutputStream = new InputAssemblerOutputStream( );
+			auto outputStream = std::make_shared<InputAssemblerOutputStream>();
 
 			// Count the number of vertices in the mesh
 #ifdef SUPPORT_MSH
@@ -400,7 +399,7 @@ namespace kih
 			{
 				capacity += inputStream->NumVerticesInFace( face );
 			}
-			pOutputStream->Reserve( capacity );
+			outputStream->Reserve( capacity );
 
 			// Convert the mesh to an input stream of the vertex processor
 			for ( size_t face = 0; face < numFaces; ++face )
@@ -411,14 +410,14 @@ namespace kih
 				for ( size_t vert = 0; vert < numVertices; ++vert )
 				{
 					__TODO( change vertex color to material color using a pixel processor constant buffer );
-					pOutputStream->Push( inputStream->GetVertexInFaceAt( face, vert ), color );
+					outputStream->Push( inputStream->GetVertexInFaceAt( face, vert ), color );
 				}
 			}
 #else
 			static_assert( 0, "not implemented yet" );
 #endif
 
-			return std::shared_ptr<InputAssemblerOutputStream>( pOutputStream );
+			return outputStream;
 		}
 
 	private:
@@ -444,7 +443,7 @@ namespace kih
 
 		virtual std::shared_ptr<VertexProcOutputStream> Process( std::shared_ptr<VertexProcInputStream> inputStream )
 		{
-			VertexProcOutputStream* pOutputStream = new VertexProcOutputStream( );
+			auto outputStream = std::make_shared<VertexProcOutputStream>();
 
 			size_t inputSize = inputStream->Size();
 			for ( size_t i = 0; i < inputSize; ++i )
@@ -454,10 +453,10 @@ namespace kih
 				float transformedPosition[4];
 				Transform( vertex.Position, transformedPosition );
 
-				pOutputStream->Push( transformedPosition, vertex.Color );
+				outputStream->Push( transformedPosition, vertex.Color );
 			}
 
-			return std::shared_ptr<VertexProcOutputStream>( pOutputStream );
+			return outputStream;
 		}
 
 	private:
@@ -498,13 +497,13 @@ namespace kih
 
 		virtual std::shared_ptr<RasterizerOutputStream> Process( std::shared_ptr<RasterizerInputStream> inputStream )
 		{
-			RasterizerOutputStream* pOutputStream = new RasterizerOutputStream( );
+			auto outputStream = std::make_shared<RasterizerOutputStream>();
 
 			assert( m_renderingContext );
 			std::shared_ptr<Texture> rt = m_renderingContext->GetRenderTaget( 0 );
 			if ( rt == nullptr )
 			{
-				return std::shared_ptr<RasterizerOutputStream>( pOutputStream );
+				return outputStream;
 			}
 
 			int width = rt->Width();
@@ -514,10 +513,10 @@ namespace kih
 			size_t edgeCount = BuildEdgeTable( inputStream, width, height );
 			if ( edgeCount > 0 )
 			{
-				size_t drawCount = GatherPixelsBeingDrawnFromScanlines( pOutputStream, width, height );
+				size_t drawCount = GatherPixelsBeingDrawnFromScanlines( outputStream, width, height );
 			}
 
-			return std::shared_ptr<RasterizerOutputStream>( pOutputStream );
+			return outputStream;
 		}
 
 	private:
@@ -619,9 +618,9 @@ namespace kih
 			return edgeCount;
 		}
 
-		size_t GatherPixelsBeingDrawnFromScanlines( RasterizerOutputStream* pOutputStream, int width, int height )
+		size_t GatherPixelsBeingDrawnFromScanlines( std::shared_ptr<RasterizerOutputStream> outputStream, int width, int height )
 		{
-			assert( pOutputStream );
+			assert( outputStream );
 			assert( height == m_edgeTable.size() && "target height and scanline are mismatched" );
 
 			size_t drawnCount = 0;
@@ -688,7 +687,7 @@ namespace kih
 					{
 						__TODO( write the pixel Z value );
 						__TODO( interpolate colors );
-						pOutputStream->Push( x, y, 0.0f, elemLeft.ETElement.ColorL );
+						outputStream->Push( x, y, 0.0f, elemLeft.ETElement.ColorL );
 
 						++drawnCount;
 					}
@@ -728,13 +727,13 @@ namespace kih
 		
 		virtual std::shared_ptr<PixelProcOutputStream> Process( std::shared_ptr<PixelProcInputStream> inputStream )
 		{
-			PixelProcOutputStream* pOutputStream = new PixelProcOutputStream();
+			auto outputStream = std::make_shared<PixelProcOutputStream>();
 
 			assert( m_renderingContext );
 			std::shared_ptr<Texture> rt = m_renderingContext->GetRenderTaget( 0 );
 			if ( rt == nullptr )
 			{
-				return std::shared_ptr<PixelProcOutputStream>( pOutputStream );
+				return outputStream;
 			}
 
 			assert( inputStream );
@@ -753,7 +752,7 @@ namespace kih
 				}				
 			}
 
-			return std::shared_ptr<PixelProcOutputStream>( pOutputStream );
+			return outputStream;
 		}
 
 	private:
