@@ -13,8 +13,8 @@ namespace CoolD
 	
 	public:
 		static CustomMesh* CreateMeshFromFile( const Dchar* filename );
-		const baseVertex& GetVertex( Duint index ) const;
-		const baseFace&	GetFace(Duint index) const;
+		const BaseVertex& GetVertex( Duint index ) const;
+		const BaseFace&	GetFace(Duint index) const;
 		Duint GetVertexSize() const;
 		Duint GetFaceSize() const;		
 
@@ -25,7 +25,7 @@ namespace CoolD
 		const Dchar* m_szFileName;
 
 	private:
-		vector<baseVertex> m_vecVertex;
-		vector<baseFace>	m_vecFace;
+		vector<BaseVertex> m_vecVertex;
+		vector<BaseFace>	m_vecFace;
 	};
 };

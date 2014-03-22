@@ -12,3 +12,6 @@
 #define BLUE	0x0000ffff
 #define WHITE	0xffffffff
 #define BLACK	0x000000ff
+
+//¹Ý¿Ã¸²
+#define RoundOff(x, dig) (float)(floor((x) * pow(10,dig) + 0.5) / pow(10,dig))

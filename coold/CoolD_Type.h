@@ -5,6 +5,7 @@
 #include <forward_list>
 #include <map>
 #include <algorithm>
+#include <math.h>
 
 typedef int		Dint;
 typedef char	Dchar;
@@ -17,15 +18,15 @@ typedef unsigned long	Dulong;
 
 using namespace std;
 
-struct baseVertex
+struct BaseVertex
 {
 	Dfloat x, y, z;
 
-	baseVertex()
+	BaseVertex()
 	: x(0), y(0), z(0)
 	{}
 
-	bool operator==(const baseVertex& vetex) const
+	bool operator==(const BaseVertex& vetex) const
 	{
 		if( this->x == vetex.x &&
 			this->y == vetex.y &&
@@ -36,7 +37,7 @@ struct baseVertex
 		return false;
 	}
 
-	bool operator!=(const baseVertex& vetex) const
+	bool operator!=(const BaseVertex& vetex) const
 	{
 		if( this->x != vetex.x ||
 			this->y != vetex.y ||
@@ -48,60 +49,67 @@ struct baseVertex
 	}
 };
 
-struct baseFace
+struct BaseColor
 {
 	Duchar		r, g, b, a;
+};
+
+struct BaseFace
+{
+	BaseColor		color;
 	vector<Dint>	vecIndex;
 };
 
-struct AreaFillingNode
+struct EdgeNode
 {
 	Dfloat x_min;
 	Dfloat y_max;
-	Dfloat increment;
+	Dfloat reverseSlope;
 };
 
-struct Line
-{	
+struct LineKey
+{
 	Duint beginIndex;
-	baseVertex beginVertex;
-
 	Duint endIndex;
-	baseVertex endVertex;	
 
-	Line() 
-	: beginIndex(-1),
-	endIndex(-1)	
-	{}	
-	
-	bool operator==(const Line& line) const
+	LineKey() : beginIndex(-1), endIndex(-1)
+	{}
+
+	bool operator==(const LineKey& line) const
 	{
 		//Line 타입에 인덱스를 저장해둬야하나.........나중에 써먹을지도 모르니 일단 포함하여 비교
-		if( this->beginIndex == line.beginIndex && this->beginVertex == line.endVertex && 
-			this->endIndex == line.endIndex && this->endVertex   == line.endVertex	)
+		if( this->beginIndex == line.beginIndex && this->endIndex == line.endIndex )
 		{
 			return true;
 		}
 
 		return false;
 	}
+
+	bool operator<(const LineKey& lineKey) const	//엣지 테이블 맵의 키값으로 사용하기 위해서 오버로딩
+	{
+		return beginIndex < lineKey.beginIndex;
+	}
 };
 
-struct X_LineSort_Desc
-{
-	//음.... 조건이 맞을라나...
-	bool operator()( const Line* pObj1, const Line* pObj2 ) const
+struct Line
+{	
+	LineKey		lineKey;	
+	BaseVertex	beginVertex;	
+	BaseVertex	endVertex;	
+
+	Line() : lineKey()
+	{}	
+	
+	bool operator==(const Line& line) const
 	{
-		if(pObj1->beginVertex.x <= pObj2->beginVertex.x	)
+		//Line 타입에 인덱스를 저장해둬야하나.........나중에 써먹을지도 모르니 일단 포함하여 비교
+		if( lineKey == line.lineKey &&
+			this->beginVertex == line.endVertex && this->endVertex   == line.endVertex	)
 		{
-			if(pObj1->endVertex.x > pObj2->endVertex.x	)
-				return false;
+			return true;
 		}
-		else
-		{
-			if( pObj1->beginVertex.x > pObj2->beginVertex.x )
-				return false;
-		}
-		return true;
-	}	
+
+		return false;
+	}
 };

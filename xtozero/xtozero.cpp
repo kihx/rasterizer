@@ -10,6 +10,8 @@ XTZ_API void XtzRenderToBuffer( void* buffer, int width, int height, int dpp )
 {
 	if ( buffer )
 	{
+		CRasterizer(gMeshManager->LoadRecentMesh());
+
 		size_t size = dpp / 8;
 
 		BYTE* buf = static_cast<BYTE*>(buffer);
@@ -35,5 +37,5 @@ XTZ_API void XtzClearBuffer( void* buffer, int width, int height, int color )
 
 XTZ_API void XtzLoadMeshFromFile( const char* pfilename )
 {
-	CMeshManager::GetInstance()->LoadMeshFromFile( pfilename );
+	gMeshManager->LoadMeshFromFile(pfilename);
 }
