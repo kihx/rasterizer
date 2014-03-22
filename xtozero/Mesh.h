@@ -44,10 +44,10 @@ namespace xtozero
 
 	class CMesh
 	{
-	private:
+	public:
 		std::vector<VERTEXF> m_vertices;
 		std::vector<Face> m_faces;
-	public:
+
 		CMesh( void ){}
 		~CMesh( void ){}
 
@@ -58,6 +58,7 @@ namespace xtozero
 	class CMeshManager
 	{
 	private:
+		std::string m_recentMesh;
 		static CMeshManager* m_instance;
 		std::map<std::string, std::shared_ptr<CMesh>> m_meshes;
 	public:
@@ -68,6 +69,7 @@ namespace xtozero
 		static void ReleaseInstance( void );
 		
 		std::shared_ptr<CMesh> LoadMeshFromFile( const char* pfilename );
+		std::shared_ptr<CMesh> LoadRecentMesh();
 	};
 }
 

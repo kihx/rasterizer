@@ -70,11 +70,13 @@ namespace xtozero
 						int indices;
 						int index;
 						meshfile >> indices;
+						face.m_indices.reserve(indices + 1);
 						for( int i = 0; i < indices; ++i )
 						{
 							meshfile >> index;
-							face.m_indices.push_back( index );
+							face.m_indices.push_back( index - 1 );
 						}
+						face.m_indices.push_back(*face.m_indices.begin());//마지막 정점은 시작 정점이다.
 
 						m_faces.push_back( face );
 					}
@@ -154,7 +156,7 @@ namespace xtozero
 			if ( pMesh->LoadFromFile(pfilename) )
 			{
 				m_meshes[filename] = std::shared_ptr<CMesh>( pMesh );
-
+				m_recentMesh = filename;
 				return m_meshes[filename];
 			}
 			else
@@ -166,7 +168,20 @@ namespace xtozero
 		else
 		{
 			//Return Mesh
+			m_recentMesh = filename;
 			return m_meshes[filename];
+		}
+	}
+
+	std::shared_ptr<CMesh> CMeshManager::LoadRecentMesh()
+	{
+		if ( m_meshes.find(m_recentMesh) == m_meshes.end() )
+		{
+			return nullptr;
+		}
+		else
+		{
+			return m_meshes[m_recentMesh];
 		}
 	}
 }
