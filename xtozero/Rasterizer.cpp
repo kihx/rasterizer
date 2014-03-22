@@ -8,6 +8,14 @@ namespace xtozero
 		//여기에서 메시내부의 픽셀을 계산
 		CreateEdgeTable(pMesh);
 
+		int scanline = m_edgeTable.begin()->first;
+
+		while ( !( m_edgeTable.empty() && m_activeEdgeTable.empty() ) )
+		{
+			UpdateActiveEdgeTable(scanline);
+
+			++scanline;
+		}
 	}
 
 	CRasterizer::~CRasterizer(void)
@@ -78,5 +86,44 @@ namespace xtozero
 				}
 			}
 		}
+	}
+
+	void CRasterizer::UpdateActiveEdgeTable(const int scanline)
+	{
+		//AET 에서 사용하지 않는 Edge제거
+		for ( auto iter = m_activeEdgeTable.begin(); iter != m_activeEdgeTable.end(); )
+		{
+			if ( iter->m_maxY < scanline )
+			{
+				iter = m_activeEdgeTable.erase(iter);
+			}
+			else
+			{
+				++iter;
+			}
+		}
+
+		if ( m_edgeTable.empty() )
+		{
+			//Do Nothing
+		}
+		else // AET 에 Edge 추가
+		{
+			std::vector<Edge>& edgelist = m_edgeTable.begin()->second;
+
+			if ( m_edgeTable.begin()->first <= scanline )
+			{
+				for ( auto edge = edgelist.begin(); edge != edgelist.end(); ++edge )
+				{
+					m_activeEdgeTable.emplace_back(*edge);
+				}
+				m_edgeTable.erase(m_edgeTable.begin());
+			}
+		}
+	}
+
+	float CRasterizer::GetIntersectXpos(const int minY, const int scanlineY, const float minX, const float gradient) const
+	{
+		return minX + gradient * (scanlineY - minY);
 	}
 }

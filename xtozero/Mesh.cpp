@@ -70,11 +70,13 @@ namespace xtozero
 						int indices;
 						int index;
 						meshfile >> indices;
+						face.m_indices.reserve(indices + 1);
 						for( int i = 0; i < indices; ++i )
 						{
 							meshfile >> index;
 							face.m_indices.push_back( index - 1 );
 						}
+						face.m_indices.push_back(*face.m_indices.begin());//마지막 정점은 시작 정점이다.
 
 						m_faces.push_back( face );
 					}
