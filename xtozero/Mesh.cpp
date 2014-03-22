@@ -73,7 +73,7 @@ namespace xtozero
 						for( int i = 0; i < indices; ++i )
 						{
 							meshfile >> index;
-							face.m_indices.push_back( index );
+							face.m_indices.push_back( index - 1 );
 						}
 
 						m_faces.push_back( face );
@@ -154,7 +154,7 @@ namespace xtozero
 			if ( pMesh->LoadFromFile(pfilename) )
 			{
 				m_meshes[filename] = std::shared_ptr<CMesh>( pMesh );
-
+				m_recentMesh = filename;
 				return m_meshes[filename];
 			}
 			else
@@ -166,7 +166,20 @@ namespace xtozero
 		else
 		{
 			//Return Mesh
+			m_recentMesh = filename;
 			return m_meshes[filename];
+		}
+	}
+
+	std::shared_ptr<CMesh> CMeshManager::LoadRecentMesh()
+	{
+		if ( m_meshes.find(m_recentMesh) == m_meshes.end() )
+		{
+			return nullptr;
+		}
+		else
+		{
+			return m_meshes[m_recentMesh];
 		}
 	}
 }
