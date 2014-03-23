@@ -100,6 +100,23 @@ namespace kih
 		TRIANGLES
 	};
 
+	inline size_t ComputeNumberOfVerticesPerPrimitive( PrimitiveType type )
+	{	
+		switch ( type )
+		{
+		case PrimitiveType::POINTS:
+			throw std::runtime_error( "unsupported primitive type" );
+			return 1;
+
+		//case PrimitiveType::LINES:
+		//	numVerticesPerPrimitive = 2;
+		//	break;
+
+		case PrimitiveType::TRIANGLES:
+		default:
+			return 3;
+		}
+	}
 
 	enum class ColorFormat : unsigned int
 	{
@@ -108,7 +125,7 @@ namespace kih
 		RGB888 = 10,
 	};
 
-	static int ComputeBytesPerPixel( ColorFormat format )
+	inline  int ComputeBytesPerPixel( ColorFormat format )
 	{
 		switch ( format )
 		{

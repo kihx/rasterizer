@@ -372,44 +372,27 @@ namespace kih
 			{
 			}
 
-			// sortable by XMin ascending order
+			// sort by x-less
 			bool operator<( const ActiveEdgeTableElement& rhs )
 			{
 				return CurrentX < rhs.CurrentX;
 			}
-		};	
+		};			
 
 		void DoScanlineConversion( std::shared_ptr<RasterizerInputStream> inputStream, std::shared_ptr<RasterizerOutputStream> outputStream, int width, int height )
 		{
 			assert( inputStream );
+			
+			PrimitiveType primitiveType = inputStream->GetPrimitiveType();
+			size_t numVerticesPerPrimitive = ComputeNumberOfVerticesPerPrimitive( primitiveType );
 
+			// Validate the number of vertices considering primitive type.
 			size_t numVertices = inputStream->Size();
-
-			// Determine the number of vertices for the specified primitive.
-			PrimitiveType primType = inputStream->GetPrimitiveType();
-			size_t numberOfPrimitive = 0;
-			switch ( primType )
-			{
-			case PrimitiveType::POINTS:
-				throw std::runtime_error( "unsupported primitive type" );
-				return;
-
-			//case PrimitiveType::LINES:
-			//	numberOfPrimitive = 2;
-			//	break;
-
-			case PrimitiveType::TRIANGLES:
-			default:
-				numberOfPrimitive = 3;
-				break;
-			}
-
-			// Validate the number of vertices.
-			if ( numVertices < numberOfPrimitive )
+			if ( numVertices < numVerticesPerPrimitive )
 			{
 				return;
 			}
-			else if ( numVertices % numberOfPrimitive != 0 )
+			else if ( numVertices % numVerticesPerPrimitive != 0 )
 			{				
 				LOG_WARNING( "incomplete primitive" );
 				return;
@@ -420,81 +403,68 @@ namespace kih
 			m_edgeTable.resize( height );
 
 			// statistics
-			size_t rasterCount = 0;
 			size_t pixelCount = 0;
 
 			// Build an edge table by traversing each primitive in vertices,
 			// and draw each primitive.
-			bool flushRequired = false;
-			for ( size_t i = 0; i < numVertices; ++i )
+			size_t numPrimitives = numVertices / numVerticesPerPrimitive;
+			// for each primitive
+			for ( size_t p = 0; p < numPrimitives; ++p )
 			{
-				// edge: v0 -> v1
-				// v0 = i'th vertex
-				// v1 = (i + 1)'th vertex
-
-				size_t v1Index = i + 1;
-
-				// If v1 is a vertex of the next primitive,
-				// hold the first vertex of the current primitive to v1.
-				// And then reserve flushing the ET to draw the primitive.
-				if ( ( v1Index % numberOfPrimitive ) == 0 )
+				// for each vertex
+				for ( size_t v = 0; v < numVerticesPerPrimitive; ++v )
 				{
-					v1Index -= numberOfPrimitive;
-					flushRequired = true;
+					// edge: v0 -> v1
+					// v0 = i th vertex
+					// v1 = (i + 1) th vertex
+
+					size_t v0Index = p * numVerticesPerPrimitive + v;
+					size_t v1Index = v0Index + 1;
+
+					// If v1 is a vertex of the next primitive,
+					// hold the first vertex of the current primitive to v1.
+					// And then reserve flushing the ET to draw the primitive.
+					if ( v + 1 == numVerticesPerPrimitive )
+					{
+						v1Index -= numVerticesPerPrimitive;
+					}
+
+					const auto& v0 = inputStream->GetData( v0Index );
+					const auto& v1 = inputStream->GetData( v1Index );
+
+					// Make an ET element.
+					float xMax = v0.X;
+					float xMin = v1.X;
+					if ( v0.X < v1.X )
+					{
+						Swap<float>( xMax, xMin );
+					}
+
+					float yMax = v0.Y;
+					float yMin = v1.Y;
+					if ( v0.Y < v1.Y )
+					{
+						Swap<float>( yMax, yMin );
+					}
+
+					float dx = v0.X - v1.X;
+					float dy = v0.Y - v1.Y;
+					float slope = ( dy == 0.0f ) ? 0.0f : ( dx / dy );
+
+					// Select a start scanline with Y-axis clipping.
+					unsigned short startY = FloatToInteger<float, unsigned short>( yMin );
+					startY = Clamp<unsigned short>( startY, 0, height - 1 );
+
+					// Push this element at the selected scanline.
+					m_edgeTable[startY].emplace_back( yMax, xMin, xMax, slope, v0.Color, v1.Color );	// is this color order ok?				
 				}
 
-				const auto& v0 = inputStream->GetData( i );
-				const auto& v1 = inputStream->GetData( v1Index );
-
-				// Make an ET element.
-				float xMax = 0.0f;
-				float xMin = 0.0f;
-				if ( v0.X >= v1.X )
-				{
-					xMax = v0.X;
-					xMin = v1.X;
-				}
-				else
-				{
-					xMax = v1.X;
-					xMin = v0.X;
-				}
-
-				float yMax = 0.0f;
-				float yMin = 0.0f;
-				if ( v0.Y >= v1.Y )
-				{
-					yMax = v0.Y;
-					yMin = v1.Y;
-				}
-				else
-				{
-					yMax = v1.Y;
-					yMin = v0.Y;
-				}
-
-				float dx = v0.X - v1.X;
-				float dy = v0.Y - v1.Y;
-				float slope = ( dy == 0.0f ) ? 0.0f : ( dx / dy );
-
-				// Select a start scanline with Y-axis clipping.
-				unsigned short startY = FloatToInteger<float, unsigned short>( yMin );
-				startY = Clamp<unsigned short>( startY, 0, height - 1 );
-
-				// Push this element at the selected scanline.
-				m_edgeTable[startY].emplace_back( yMax, xMin, xMax, slope, v0.Color, v1.Color );	// is this color order ok?
-
-				// flush to rasterize
-				if ( flushRequired )
-				{
-					pixelCount += GatherPixelsBeingDrawnFromScanlines( outputStream, width, height );
-					++rasterCount;
-					flushRequired = false;
-				}
+				// rasterization
+				GatherPixelsBeingDrawnFromScanlines( outputStream, width, height );
 			}
 		}
 
-		size_t GatherPixelsBeingDrawnFromScanlines( std::shared_ptr<RasterizerOutputStream> outputStream, int width, int height )
+		void GatherPixelsBeingDrawnFromScanlines( std::shared_ptr<RasterizerOutputStream> outputStream, int width, int height )
 		{
 			assert( outputStream );
 			assert( height == m_edgeTable.size() && "target height and scanline are mismatched" );
@@ -546,8 +516,8 @@ namespace kih
 					ActiveEdgeTableElement& elemRight = *iter;
 
 					// Approximate intersection pixels betweeen each edge and the scanline.
-					unsigned short xLeft = FloatToInteger<float, unsigned short>( elemLeft.CurrentX );
-					unsigned short xRight = FloatToInteger<float, unsigned short>( elemRight.CurrentX );
+					unsigned short xLeft = FloatToInteger<float, unsigned short>( std::round( elemLeft.CurrentX ) );
+					unsigned short xRight = FloatToInteger<float, unsigned short>( std::round( elemRight.CurrentX ) );
 
 					// clipping on RT
 					xLeft = Max<unsigned short>( xLeft, 0 );
@@ -559,8 +529,6 @@ namespace kih
 						__TODO( write the pixel Z value );
 						__TODO( interpolate colors );
 						outputStream->Push( x, y, 0.0f, elemLeft.ETElement.ColorL );
-
-						++drawnCount;
 					}
 
 					// Update the next position incrementally
@@ -573,8 +541,6 @@ namespace kih
 			{
 				m_edgeTable[y].clear();
 			}
-
-			return drawnCount;
 		}
 
 	private:
@@ -737,12 +703,18 @@ namespace kih
 		// input assembler
 		std::shared_ptr<VertexProcInputStream> vpInput = m_inputAssembler->Process( mesh );
 
+		printf( "VertexProcInputStream Size: %d\n", vpInput->Size() );
+
 		// vertex processor
 		std::shared_ptr<RasterizerInputStream> raInput = m_vertexProcessor->Process( vpInput );
+
+		printf( "RasterizerInputStream Size: %d\n", raInput->Size() );
 
 		// rasterizer
 		raInput->SetPrimitiveType( primType );
 		std::shared_ptr<PixelProcInputStream> ppInput = m_rasterizer->Process( raInput );
+
+		printf( "PixelProcInputStream Size: %d\n", ppInput->Size() );
 
 		// pixel processor
 		std::shared_ptr<OutputMergerInputStream> omInput = m_pixelProcessor->Process( ppInput );
