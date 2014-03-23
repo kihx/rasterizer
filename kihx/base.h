@@ -3,11 +3,64 @@
 #include <assert.h>
 #include <utility>
 #include <memory>
+#include <type_traits>
 
 
 typedef unsigned char byte;
 
+/* struct Color4
+*/
+template<typename T>
+struct Color4
+{
+	static_assert( std::is_integral<T>::value || std::is_floating_point<T>::value, "base type must be integral or floating point" );
 
+	union
+	{
+		struct
+		{
+			T R;
+			T G;
+			T B;
+			T A;
+		};
+
+		T Value[4];
+	};
+
+	Color4() : 
+		R( T() ),
+		G( T() ),
+		B( T() ),
+		A( T() )
+	{
+	}
+
+	Color4( T r, T g, T b, T a ) :
+		R( r ),
+		G( g ),
+		B( b ),
+		A( a )
+	{
+	}
+
+	Color4( const T color[4] ) :
+		R( color[0] ),
+		G( color[1] ),
+		B( color[2] ),
+		A( color[3] )
+	{
+	}
+
+	Color4( const Color4& c ) = default;
+};
+
+typedef Color4<byte> Color32;
+typedef Color4<float> Color128;
+
+
+// macros
+//
 #define LOG_WARNING( msg )	{ printf( "[Warning] %s, in %s at %d\n", msg, __FUNCTION__, __LINE__ ); }
 
 
@@ -26,35 +79,45 @@ typedef unsigned char byte;
 		ClassName::ClassName( const ClassName& ) = delete;	\
 		ClassName& operator=( const ClassName& ) = delete;
 
-/* C++98 style
-class Uncopyable
-{
-protected:
-	Uncopyable() {}
-	~Uncopyable() {}
 
-private:
-	Uncopyable( const Uncopyable& );
-	Uncopyable& operator=( const Uncopyable& );
-};
-*/
-
+// utility functions
+//
 template<typename T>
 inline const T& Min( const T& lhs, const T& rhs )
 {
+	static_assert( std::is_integral<T>::value || std::is_floating_point<T>::value, "base type must be integral or floating point" );
 	return (lhs <= rhs) ? lhs : rhs;
 }
 
 template<typename T>
 inline const T& Max( const T& lhs, const T& rhs )
 {
+	static_assert( std::is_integral<T>::value || std::is_floating_point<T>::value, "base type must be integral or floating point" );
 	return ( lhs >= rhs ) ? lhs : rhs;
 }
 
 template<typename T>
 inline const T& Clamp( const T& value, const T& min, const T& max )
 {
+	static_assert( std::is_integral<T>::value || std::is_floating_point<T>::value, "base type must be integral or floating point" );
 	return Max<T>( Min<T>( value, max ), min );
+}
+
+template<typename T>
+inline void Swap( T& lhs, T& rhs, typename std::enable_if< std::is_scalar<T>::value >::type* = nullptr )
+{
+	// if T is scalar type, we do not use move semantics
+	T tmp = lhs;
+	lhs = rhs;
+	rhs = tmp;
+}
+
+template<typename T>
+inline void Swap( T& lhs, T& rhs, typename std::enable_if< !std::is_scalar<T>::value >::type* = nullptr )
+{
+	T tmp = std::move( lhs );
+	lhs = std::move( rhs );
+	rhs = std::move( tmp );
 }
 
 template<typename T1, typename T2>
@@ -67,6 +130,8 @@ inline T2 FloatToInteger( T1 f )
 }
 
 
+// utility classes
+//
 template<class T>
 class Singleton
 {
@@ -78,7 +143,7 @@ public:
 			std::is_class<T>::value &&
 			!std::is_polymorphic<T>::value &&
 			!std::is_pointer<T>::value,
-			"invalid type of Singleton");
+			"invalid type of Singleton" );
 
 		if ( s_instance == nullptr )
 		{
@@ -87,22 +152,6 @@ public:
 	
 		return s_instance.get();
 	}
-
-	//static T* GetInstance()
-	//{
-	//	static_assert( 
-	//		std::is_class<T>::value && 
-	//		!std::is_polymorphic<T>::value &&
-	//		!std::is_pointer<T>::value, 
-	//		"invalid type of Singleton" );
-
-	//	if ( s_instance == nullptr )
-	//	{
-	//		s_instance = std::unique_ptr<T>( new T() );
-	//	}
-
-	//	return s_instance.get();
-	//}
 
 	static void DestroyInstance()
 	{
@@ -123,7 +172,7 @@ template<class T>
 class LockGuard
 {
 public:
-	LockGuard( T* obj ) :
+	LockGuard( std::shared_ptr<T> obj ) :
 		m_obj( obj )
 	{
 		m_obj->Lock();
@@ -135,7 +184,31 @@ public:
 	}
 
 private:
-	T* m_obj;
+	std::shared_ptr<T> m_obj;
+};
+
+template<class T>
+class LockGuardPtr
+{
+public:
+	LockGuardPtr( std::shared_ptr<T> obj ) :
+		m_obj( obj )
+	{
+		m_obj->Lock( &m_p );
+	}
+
+	~LockGuardPtr()
+	{
+		m_obj->Unlock();
+	}
+
+	void* Ptr()
+	{
+		return m_p;
+	}
+
+private:
+	std::shared_ptr<T> m_obj;
 	void* m_p;
 };
 

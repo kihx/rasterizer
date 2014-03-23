@@ -6,31 +6,8 @@
 #include <vector>
 
 
-//class IInputOutputStream
-//{
-//public:
-//	//virtual ~IInputOutputStream() = 0;
-//};
-
-
-namespace kih
+namespace kih 
 {
-	/* class IRenderingProcessor
-	*/
-	template<class InputStream, class OutputStream>
-	class IRenderingProcessor
-	{
-	public:
-		//virtual ~IRenderingProcessor() = 0;
-
-		virtual std::shared_ptr<OutputStream> Process( std::shared_ptr<InputStream> inputStream ) = 0;
-
-		//virtual IOutputStream* Process( IInputStream* inputStream ) = 0;
-		//bool SetInputStream( IInputStream* inputStream );
-		//IOutputStream* GetOutputStream();
-	};
-
-
 	class Mesh;
 
 	class ConstantBuffer;
@@ -57,6 +34,98 @@ namespace kih
 	class RenderingContext;
 
 
+	/* class IRenderingProcessor
+	*/
+	template<class InputStream, class OutputStream>
+	class IRenderingProcessor
+	{
+	public:
+		virtual std::shared_ptr<OutputStream> Process( std::shared_ptr<InputStream> inputStream ) = 0;
+	};
+
+
+	/* class BaseInputOutputStream
+	*/
+	template<class Data>
+	class BaseInputOutputStream
+	{
+		NONCOPYABLE_CLASS( BaseInputOutputStream );
+
+	public:
+		BaseInputOutputStream() = default;
+		virtual ~BaseInputOutputStream() = default;
+
+		template <typename... Args>
+		void Push( Args&&... args )
+		{
+			m_streamSource.emplace_back( std::forward<Args>( args )... );
+		}
+
+		const Data* GetStreamSource() const
+		{
+			if ( m_streamSource.empty() )
+			{
+				return nullptr;
+			}
+			else
+			{
+				return &m_streamSource[0];
+			}
+		}
+
+		const Data& GetData( size_t index ) const
+		{
+			assert( ( index >= 0 && index < Size() ) && "out of ranged index" );
+			return m_streamSource[index];
+		}
+
+		size_t Size() const
+		{
+			return m_streamSource.size();
+		}
+
+		void Reserve( size_t capacity )
+		{
+			m_streamSource.reserve( capacity );
+		}
+
+	private:
+		std::vector<Data> m_streamSource;
+	};
+
+	enum class PrimitiveType : unsigned int
+	{
+		POINTS = 1,
+		LINES = 2,
+		TRIANGLES = 3,
+		QUADS = 4,
+		PENTAGONS = 5,
+	};
+
+	inline PrimitiveType GetPrimitiveTypeFromNumberOfVertices( size_t num )
+	{
+		return static_cast< PrimitiveType >( num );
+	}
+
+	inline size_t ComputeNumberOfVerticesPerPrimitive( PrimitiveType type )
+	{	
+		return static_cast< size_t >( type );
+		//switch ( type )
+		//{
+		//case PrimitiveType::POINTS:
+		//	throw std::runtime_error( "unsupported primitive type" );
+		//	return 1;
+
+		////case PrimitiveType::LINES:
+		////	numVerticesPerPrimitive = 2;
+		////	break;
+
+		//case PrimitiveType::TRIANGLES:
+		//default:
+		//	return 3;
+		//}
+	}
+
 	enum class ColorFormat : unsigned int
 	{
 		UNKNOWN = 0,
@@ -64,7 +133,7 @@ namespace kih
 		RGB888 = 10,
 	};
 
-	static int ComputeBytesPerPixel( ColorFormat format )
+	inline  int ComputeBytesPerPixel( ColorFormat format )
 	{
 		switch ( format )
 		{
@@ -166,7 +235,6 @@ namespace kih
 			RemoveFlags( FL_LOCKED );
 		}
 
-	private:
 		bool WriteTexel( int x, int y, byte r, byte g, byte b )
 		{
 			if ( !HasFlag( FL_LOCKED ) )
@@ -176,40 +244,24 @@ namespace kih
 
 			assert( ( x >= 0 && x < m_width ) && "out of ranged x-coordinate" );
 			assert( ( y >= 0 && y < m_height ) && "out of ranged y-coordinate" );
-			assert( ( ComputeBytesPerPixel( Format() ) == 3 ) && "incorrect color format" );
+			
+			int stride = ComputeBytesPerPixel( Format() );
 
 			if ( byte* buffer = static_cast< byte* >( m_pMemory ) )
 			{
-				byte* base = buffer + ( ( ( m_width * y ) + x ) * 3 );
+				byte* base = buffer + ( ( ( m_width * y ) + x ) * stride );
 				*( base + 0 ) = r;
 				*( base + 1 ) = g;
 				*( base + 2 ) = b;
+				//*( base + 3 ) = a;
 			}
 
 			return true;
 		}
 
-		bool WriteTexel( int x, int y, byte r, byte g, byte b, byte a )
+		bool WriteTexel( int x, int y, const byte* color )
 		{
-			if ( !HasFlag( FL_LOCKED ) )
-			{
-				return false;
-			}
-
-			assert( ( x >= 0 && x < m_width ) && "out of ranged x-coordinate" );
-			assert( ( y >= 0 && y < m_height ) && "out of ranged y-coordinate" );
-			assert( ( ComputeBytesPerPixel( Format() ) == 4 ) && "incorrect color format" );
-
-			if ( byte* buffer = static_cast< byte* >( m_pMemory ) )
-			{
-				byte* base = buffer + ( ( ( m_width * y ) + x ) * 4 );
-				*( base + 0 ) = r;
-				*( base + 1 ) = g;
-				*( base + 2 ) = b;
-				*( base + 3 ) = a;
-			}
-
-			return true;
+			return WriteTexel( x, y, color[0], color[1], color[2] );
 		}
 
 		void SetExternalMemory( void* pMemory )
@@ -238,41 +290,12 @@ namespace kih
 		ColorFormat m_format;
 		unsigned int m_flags;
 		void* m_pMemory;
-
-		friend class RenderingContext;
-	};
-
-	/* class LockGuard<Texture>
-	*/
-	template<>
-	class LockGuard<Texture>
-	{
-	public:
-		LockGuard( Texture* obj ) :
-			m_obj( obj )
-		{
-			m_obj->Lock( &m_p );
-		}
-
-		~LockGuard()
-		{
-			m_obj->Unlock();
-		}
-
-		void* Ptr()
-		{
-			return m_p;
-		}
-
-	private:
-		Texture* m_obj;
-		void* m_p;
 	};
 
 
 	/* class RenderingContext
 	*/
-	class RenderingContext
+	class RenderingContext final
 	{
 		NONCOPYABLE_CLASS( RenderingContext )
 
@@ -308,7 +331,7 @@ namespace kih
 
 	/* class RenderingDevice
 	*/
-	class RenderingDevice : public Singleton<RenderingDevice>
+	class RenderingDevice final : public Singleton<RenderingDevice>
 	{
 		friend class Singleton<RenderingDevice>;
 

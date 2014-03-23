@@ -78,14 +78,14 @@ namespace kih
 
 	std::shared_ptr<Mesh> Mesh::CreateFromFile( const char* filename )
 	{
-		Mesh* pMesh = new Mesh();
-		if ( !pMesh->LoadMshFile( filename ) )
+		// cannot use std::make_shared<>() by the protected access modifier
+		auto mesh = std::shared_ptr<Mesh>( new Mesh() );
+		if ( !mesh->LoadMshFile( filename ) )
 		{
-			delete pMesh;
-			pMesh = nullptr;
+			mesh.reset();
 		}
 
-		return std::shared_ptr<Mesh>( pMesh );
+		return mesh;
 	}
 
 
@@ -152,8 +152,6 @@ namespace kih
 
 		// faces
 		int faceNumber;
-		__UNDONE( ignore various index count in a face );
-		int lastIndexCount = 0;
 		m_faces.resize( faceCount );
 		for ( int i = 0; i < faceCount; ++i )
 		{
@@ -166,14 +164,6 @@ namespace kih
 
 			int indexCount;
 			reader >> indexCount;
-			
-			// undone
-			if ( lastIndexCount != 0 && lastIndexCount != indexCount )
-			{
-				m_faces.resize( i );
-				return true;
-			}
-			lastIndexCount = indexCount;
 
 			m_faces[i].m_indices.resize( indexCount );
 			for ( int j = 0; j < indexCount; ++j )

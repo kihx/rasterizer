@@ -11,325 +11,180 @@ namespace kih
 	*/
 	std::shared_ptr<Texture> Texture::Create( int width, int height, ColorFormat format, void* pExternalMemory )
 	{
-		Texture* pTexture = new Texture();
-		pTexture->m_width = width;
-		pTexture->m_height = height;
-		pTexture->m_format = format;
-
-		pTexture->m_flags = 0;
+		// Cannot use std::make_shared<>() by the protected access modifier.
+		auto texture = std::shared_ptr<Texture>( new Texture() );
+		texture->m_width = width;
+		texture->m_height = height;
+		texture->m_format = format;
+		texture->m_flags = 0;
 
 		if ( pExternalMemory )
 		{
-			pTexture->SetExternalMemory( pExternalMemory );
+			texture->SetExternalMemory( pExternalMemory );
 		}
 		else
 		{
-			int bytesPerPixel = 3;
-			pTexture->m_pMemory = malloc( width * height * bytesPerPixel );
+			texture->m_pMemory = malloc( width * height * ComputeBytesPerPixel( format ) );
 		}
 
-		return std::shared_ptr<Texture>( pTexture );
+		return texture;
 	}
 
 
-	/* class VertexProcInputStream
-	*/
-	class VertexProcInputStream
+	struct VertexProcData
 	{
-	public:
-		struct Data
+		// object-space position
+		union
 		{
-			union
+			struct
 			{
-				struct
-				{
-					// object-space position
-					float X;
-					float Y;
-					float Z;
-
-					// vertex color
-					byte R;
-					byte G;
-					byte B;
-					byte A;
-				};
-
-				float Position[3];
-				byte Color[4];
+				float X;
+				float Y;
+				float Z;
 			};
 
-			Data() :
-				X( 0.0f ),
-				Y( 0.0f ),
-				Z( 0.0f ),
-				R( 0 ),
-				G( 0 ),
-				B( 0 ),
-				A( 0 )
-			{
-			}
-
-			Data( const float position[3], const byte color[4] ) :
-				X( position[0] ),
-				Y( position[1] ),
-				Z( position[2] ),
-				R( color[0] ),
-				G( color[1] ),
-				B( color[2] )
-			{
-			}
-
-			//Data( const Data& data )
-			//{
-			//	Assign( data.Position, data.Color );
-			//}
-
-			void Assign( const float position[3], const byte color[4] )
-			{
-				for ( int i = 0; i < 3; ++i )
-				{
-					Position[i] = position[i];
-				}
-
-				for ( int i = 0; i < 4; ++i )
-				{
-					Color[i] = color[i];
-				}
-			}
+			float Position[3];
 		};
 
+		// vertex color
+		Color32 Color;
+
+		VertexProcData() :
+			X( 0.0f ),
+			Y( 0.0f ),
+			Z( 0.0f )			
+		{
+		}
+
+		VertexProcData( const float position[3], const Color32& color) :
+			X( position[0] ),
+			Y( position[1] ),
+			Z( position[2] ),
+			Color( color )
+		{
+		}
+
+		VertexProcData( const VertexProcData& data ) = default;
+	};
+
+	/* class VertexProcInputStream
+	*/
+	class VertexProcInputStream : public BaseInputOutputStream<VertexProcData>
+	{
+	public:
 		VertexProcInputStream()
 		{
 		}
-
-		template <typename... Args>
-		void Push( Args&&... args )
-		{
-			m_streamSource.emplace_back( std::forward<Args>( args )... );
-		}
-
-		//void Push( const float position[3], const byte color[4] )
-		//{
-		//	m_streamSource.emplace_back( position, color );
-		//}
-
-		const float* GetData( size_t index ) const
-		{
-			assert( ( index >= 0 && index < Size() ) && "Out of ranged index" );
-			return m_streamSource[index].Position;
-		}
-
-		const float* GetStreamSource() const
-		{
-			if ( m_streamSource.empty() )
-			{
-				return nullptr;
-			}
-			else
-			{
-				return &m_streamSource[0].X;
-			}
-		}
-
-		size_t Size() const
-		{
-			return m_streamSource.size();
-		}
-
-		void Reserve( size_t capacity )
-		{
-			m_streamSource.reserve( capacity );
-		}
-
-	private:
-		std::vector<Data> m_streamSource;
 	};
 
 
-	/* class RasterizerInputStream
-	*/
-	class RasterizerInputStream
+	struct RasterizerData
 	{
-	public:
-		struct Data
+		// in NDC coordinates
+		union
 		{
-			// in NDC coordinates
-			union
+			struct
 			{
-				struct
-				{
-					float X;
-					float Y;
-					float Z;
-					float W;
-				};
-
-				float Position[4];
+				float X;
+				float Y;
+				float Z;
+				float W;
 			};
 
-			Data() :
-				X( 0.0f ),
-				Y( 0.0f ),
-				Z( 0.0f ),
-				W( 1.0f )
-			{
-			}
-
-			Data( const float position[4] ) :
-				X( position[0] ),
-				Y( position[1] ),
-				Z( position[2] ),
-				W( position[3] )
-			{
-			}
-
-			//Data( const Data& data )
-			//{
-			//	const int DataSize = sizeof( Data );
-			//	memcpy_s( this, DataSize, &data, DataSize );
-			//}
+			float Position[4];
 		};
 
+		// vertex color
+		Color32 Color;
+
+		RasterizerData() :
+			X( 0.0f ),
+			Y( 0.0f ),
+			Z( 0.0f ),
+			W( 1.0f )			
+		{
+		}
+
+		RasterizerData( const float position[4], const Color32& color ) :
+			X( position[0] ),
+			Y( position[1] ),
+			Z( position[2] ),
+			W( position[3] ),
+			Color( color )
+		{
+		}
+
+		RasterizerData( const RasterizerData& data ) = default;
+	};
+
+	/* class RasterizerInputStream
+	*/
+	class RasterizerInputStream : public BaseInputOutputStream<RasterizerData>
+	{
+	public:
 		RasterizerInputStream()
 		{
 		}
 
-		template <typename... Args>
-		void Push( Args&&... args )
+		PrimitiveType GetPrimitiveType() const
 		{
-			m_streamSource.emplace_back( std::forward<Args>( args )... );
+			return m_primType;
 		}
 
-		//void Push( const float position[4] )
-		//{
-		//	m_streamSource.emplace_back( position );
-		//}
-
-		const float* GetStreamSource() const
+		void SetPrimitiveType( PrimitiveType primType )
 		{
-			if ( m_streamSource.empty() )
-			{
-				return nullptr;
-			}
-			else
-			{
-				return &m_streamSource[0].X;
-			}
-		}
-
-		const float* GetPosition( size_t index ) const
-		{
-			assert( ( index >= 0 && index < Size() ) && "Out of ranged index" );
-			return m_streamSource[index].Position;
-		}
-
-		const Data& GetData( size_t index ) const
-		{
-			assert( ( index >= 0 && index < Size() ) && "Out of ranged index" );
-			return m_streamSource[index];
-		}
-
-		size_t Size() const
-		{
-			return m_streamSource.size();
-		}
-
-		void Reserve( size_t capacity )
-		{
-			m_streamSource.reserve( capacity );
+			m_primType = primType;
 		}
 
 	private:
-		std::vector<Data> m_streamSource;
+		PrimitiveType m_primType;
 	};
 
 
+	struct PixelProcData
+	{
+		// x and y coordinates of a pixel
+		unsigned short PX;
+		unsigned short PY;
+		
+		// z of a pixel
+		float Depth;
+
+		// interpolated color
+		Color32 Color;
+
+		PixelProcData() :
+			PX( 0 ),
+			PY( 0 ),
+			Depth( 1.0f ) // farthest
+		{
+		}
+
+		PixelProcData( unsigned short px, unsigned short py, float Depth, const Color32& color ) :
+			PX( px ),
+			PY( py ),
+			Depth( Depth ),
+			Color( color )
+		{
+		}
+
+		PixelProcData( const PixelProcData& data ) = default;
+	};
+
 	/* class PixelProcInputStream
 	*/
-	class PixelProcInputStream
+	class PixelProcInputStream : public BaseInputOutputStream<PixelProcData>
 	{
 	public:
-		struct Data
-		{
-			// x and y coordinates of a pixel
-			unsigned short PX;
-			unsigned short PY;
-			// z of a pixel
-			float PZ;
-
-			Data() :
-				PX( 0 ),
-				PY( 0 ),
-				PZ( 1.0f ) // farthest
-			{
-			}
-
-			Data( unsigned short px, unsigned short py, float pz ) :
-				PX( px ),
-				PY( py ),
-				PZ( pz )
-			{
-			}
-
-			//Data( const Data& data )
-			//{
-			//	const int DataSize = sizeof( Data );
-			//	memcpy_s( this, DataSize, &data, DataSize );
-			//}
-		};
-
 		PixelProcInputStream()
 		{
 		}
-
-		template <typename... Args>
-		void Push( Args&&... args )
-		{
-			m_streamSource.emplace_back( std::forward<Args>( args )... );
-		}
-
-		//void Push( const float position[4] )
-		//{
-		//	m_streamSource.emplace_back( position );
-		//}
-
-		__UNDONE( change return type of const void* );
-		const void* GetStreamSource() const
-		{
-			if ( m_streamSource.empty() )
-			{
-				return nullptr;
-			}
-			else
-			{
-				return &m_streamSource[0].PX;
-			}
-		}
-
-		const Data& GetData( size_t index ) const
-		{
-			assert( ( index >= 0 && index < Size() ) && "Out of ranged index" );
-			return m_streamSource[index];
-		}
-
-		size_t Size() const
-		{
-			return m_streamSource.size();
-		}
-
-		void Reserve( size_t capacity )
-		{
-			m_streamSource.reserve( capacity );
-		}
-
-	private:
-		std::vector<Data> m_streamSource;
 	};
 
 
 	/* class OutputMergerInputStream
 	*/
+	__UNDONE( Need output merger stream );
 	class OutputMergerInputStream
 	{
 	public:
@@ -338,10 +193,10 @@ namespace kih
 		}
 
 	private:
-		void* m_pRenderBuffer;
+
 	};
 
-
+#define FACE_SPECIFIC		1
 
 	/* class InputAssembler
 	*/
@@ -361,20 +216,29 @@ namespace kih
 
 		virtual std::shared_ptr<InputAssemblerOutputStream> Process( std::shared_ptr<Mesh> inputStream )
 		{
-			InputAssemblerOutputStream* pOutputStream = new InputAssemblerOutputStream( );
+			auto outputStream = std::make_shared<InputAssemblerOutputStream>();
 
-			// Count the number of vertices in the mesh
 #ifdef SUPPORT_MSH
+			// Count the number of vertices in the mesh, 
+			// and reserve space for the output stream.
 			size_t capacity = 0;
+#ifdef FACE_SPECIFIC
+			capacity += inputStream->NumVerticesInFace( m_faceIndex );
+#else
 			size_t numFaces = inputStream->NumFaces();
 			for ( size_t face = 0; face < numFaces; ++face )
 			{
 				capacity += inputStream->NumVerticesInFace( face );
 			}
-			pOutputStream->Reserve( capacity );
+#endif
+			outputStream->Reserve( capacity );
 
-			// Convert the mesh to an input stream of the vertex processor
+			// Convert the mesh to an input stream of the vertex processor.
+#ifdef FACE_SPECIFIC
+			size_t face = m_faceIndex;
+#else
 			for ( size_t face = 0; face < numFaces; ++face )
+#endif
 			{
 				const byte* color = inputStream->GetFaceColor( face );
 
@@ -382,18 +246,23 @@ namespace kih
 				for ( size_t vert = 0; vert < numVertices; ++vert )
 				{
 					__TODO( change vertex color to material color using a pixel processor constant buffer );
-					pOutputStream->Push( inputStream->GetVertexInFaceAt( face, vert ), color );
+					outputStream->Push( inputStream->GetVertexInFaceAt( face, vert ), color );
 				}
 			}
 #else
 			static_assert( 0, "not implemented yet" );
 #endif
 
-			return std::shared_ptr<InputAssemblerOutputStream>( pOutputStream );
+			return outputStream;
 		}
 
 	private:
 		std::shared_ptr<RenderingContext> m_renderingContext;
+
+#ifdef FACE_SPECIFIC
+	public:
+		size_t m_faceIndex;
+#endif
 	};
 	
 
@@ -415,18 +284,20 @@ namespace kih
 
 		virtual std::shared_ptr<VertexProcOutputStream> Process( std::shared_ptr<VertexProcInputStream> inputStream )
 		{
-			VertexProcOutputStream* pOutputStream = new VertexProcOutputStream( );
+			auto outputStream = std::make_shared<VertexProcOutputStream>();
 
 			size_t inputSize = inputStream->Size();
 			for ( size_t i = 0; i < inputSize; ++i )
 			{
+				const auto& vertex = inputStream->GetData( i );
+				
 				float transformedPosition[4];
-				Transform( inputStream->GetData( i ), transformedPosition );
+				Transform( vertex.Position, transformedPosition );
 
-				pOutputStream->Push( transformedPosition );
+				outputStream->Push( transformedPosition, vertex.Color );
 			}
 
-			return std::shared_ptr<VertexProcOutputStream>( pOutputStream );
+			return outputStream;
 		}
 
 	private:
@@ -439,105 +310,11 @@ namespace kih
 			outPosition[3] = 1.0f;
 		}
 
-		//IOutputStream* Process( IInputStream* inputStream )
-		//{
-		//	return nullptr;
-		//}
-
 	private:
 		std::shared_ptr<RenderingContext> m_renderingContext;
 	};
 
-
-	/* class ScanlineConversionImpl
-	*/
-	class ScanlineConversionImpl
-	{
-	private:
-		struct EdgeElement
-		{
-			unsigned short YMax;
-			unsigned short XMin;
-			float Slope;
-		};
-
-	public:
-		ScanlineConversionImpl()
-		{
-		}
-
-		~ScanlineConversionImpl()
-		{
-		}
-
-	private:
-		void BuildEdgeTable( std::shared_ptr<RasterizerInputStream> inputStream, std::shared_ptr<Texture> renderTarget )
-		{
-			assert( inputStream.get() && "nullptr input stream" );
-			assert( renderTarget.get() && "nullptr render target" );
-
-			size_t numVertices = inputStream->Size();
-
-			// ignore uncirculated vertices
-			if ( numVertices < 3 )
-			{
-				return;
-			}
-
-			// reserve scanlines
-			int height = renderTarget->Height();
-			m_edgeTable.resize( height );
-
-			size_t lastVertIndex = numVertices - 1;
-			for ( size_t i = 0; i < numVertices; ++i )
-			{
-				// select an edge
-				size_t v1Index = ( i == lastVertIndex ) ? 0 : i + 1;				
-				const RasterizerInputStream::Data& v0 = inputStream->GetData( i );
-				const RasterizerInputStream::Data& v1 = inputStream->GetData( v1Index );
-
-				// here, fill an ET element
-				float yMax = 0.0f;
-				float yMin = 0.0f;
-				if ( v0.Y >= v1.Y )
-				{
-					yMax = v0.Y;
-					yMin = v1.Y;
-				}
-				else
-				{
-					yMax = v1.Y;
-					yMin = v0.Y;
-				}
-
-				EdgeElement elem
-				{ 
-					// YMax
-					FloatToInteger<float, unsigned short>( yMax ),
-					// XMin
-					FloatToInteger<float, unsigned short>( min( v0.X, v1.X ) ), 
-					// Slope
-					0.0f 
-				};
-
-				float dx = v0.X - v1.X;
-				float dy = v0.Y - v1.Y;
-				elem.Slope = ( dx == 0.0f ) ? 0.0f : dy / dx;
-
-				// select a start scanline with Y-axis clipping
-				unsigned short scanline = FloatToInteger<float, unsigned short>( yMin );
-				scanline = Clamp<unsigned short>( scanline, 0, height - 1 );
-
-				// add this element at the selected scanline
-				m_edgeTable[scanline].push_back( elem );
-			}
-		}
-
-	private:
-		std::vector<std::list<EdgeElement>> m_edgeTable;
-	};
-
-
+	
 	/* class Rasterizer
 	*/
 	class Rasterizer : public IRenderingProcessor<RasterizerInputStream, RasterizerOutputStream>
@@ -556,15 +333,233 @@ namespace kih
 
 		virtual std::shared_ptr<RasterizerOutputStream> Process( std::shared_ptr<RasterizerInputStream> inputStream )
 		{
-			RasterizerOutputStream* pOutputStream = new RasterizerOutputStream( );
+			auto outputStream = std::make_shared<RasterizerOutputStream>();
 
+			assert( m_renderingContext );
+			std::shared_ptr<Texture> rt = m_renderingContext->GetRenderTaget( 0 );
+			if ( rt == nullptr )
+			{
+				return outputStream;
+			}
 
-			return std::shared_ptr<RasterizerOutputStream>( pOutputStream );
+			int width = rt->Width();
+			int height = rt->Height();
+
+			DoScanlineConversion( inputStream, outputStream, width, height );
+
+			return outputStream;
+		}
+
+	private:
+		struct EdgeTableElement
+		{
+			float YMax;
+			float XMin;
+			float XMax;
+			float Slope;
+			// float Depth;	// depth
+
+			const Color32& ColorL;
+			const Color32& ColorR;
+
+			EdgeTableElement() = default;
+
+			EdgeTableElement( float yMax, float xMin, float xMax, float slope, const Color32& colorL, const Color32& colorR ) :
+				YMax( yMax ),
+				XMin( xMin ),
+				XMax( xMax ),
+				Slope( slope ),
+				ColorL( colorL ),
+				ColorR( colorR )
+			{
+			}
+		};	
+
+		struct ActiveEdgeTableElement
+		{
+			const EdgeTableElement& ETElement;
+			float CurrentX;
+
+			ActiveEdgeTableElement( const EdgeTableElement& etElem ) :
+				ETElement( etElem ),
+				CurrentX( etElem.Slope > 0.0f ? etElem.XMin : etElem.XMax )
+			{
+			}
+
+			// sort by x-less
+			bool operator<( const ActiveEdgeTableElement& rhs )
+			{
+				return CurrentX < rhs.CurrentX;
+			}
+		};			
+
+		void DoScanlineConversion( std::shared_ptr<RasterizerInputStream> inputStream, std::shared_ptr<RasterizerOutputStream> outputStream, int width, int height )
+		{
+			assert( inputStream );
+			
+			PrimitiveType primitiveType = inputStream->GetPrimitiveType();
+			size_t numVerticesPerPrimitive = ComputeNumberOfVerticesPerPrimitive( primitiveType );
+
+			// Validate the number of vertices considering primitive type.
+			size_t numVertices = inputStream->Size();
+			if ( numVertices < numVerticesPerPrimitive )
+			{
+				return;
+			}
+			else if ( numVertices % numVerticesPerPrimitive != 0 )
+			{				
+				LOG_WARNING( "incomplete primitive" );
+				return;
+			}
+
+			// Reserve ET space based on scanlines.
+			m_edgeTable.clear();
+			m_edgeTable.resize( height );
+
+			// statistics
+			size_t pixelCount = 0;
+
+			// Build an edge table by traversing each primitive in vertices,
+			// and draw each primitive.
+			size_t numPrimitives = numVertices / numVerticesPerPrimitive;
+			// for each primitive
+			for ( size_t p = 0; p < numPrimitives; ++p )
+			{
+				// for each vertex
+				for ( size_t v = 0; v < numVerticesPerPrimitive; ++v )
+				{
+					// edge: v0 -> v1
+					// v0 = i th vertex
+					// v1 = (i + 1) th vertex
+
+					size_t v0Index = p * numVerticesPerPrimitive + v;
+					size_t v1Index = v0Index + 1;
+
+					// If v1 is a vertex of the next primitive,
+					// hold the first vertex of the current primitive to v1.
+					// And then reserve flushing the ET to draw the primitive.
+					if ( v + 1 == numVerticesPerPrimitive )
+					{
+						v1Index -= numVerticesPerPrimitive;
+					}
+
+					const auto& v0 = inputStream->GetData( v0Index );
+					const auto& v1 = inputStream->GetData( v1Index );
+
+					// Make an ET element.
+					float xMax = v0.X;
+					float xMin = v1.X;
+					if ( v0.X < v1.X )
+					{
+						Swap<float>( xMax, xMin );
+					}
+
+					float yMax = v0.Y;
+					float yMin = v1.Y;
+					if ( v0.Y < v1.Y )
+					{
+						Swap<float>( yMax, yMin );
+					}
+
+					float dx = v0.X - v1.X;
+					float dy = v0.Y - v1.Y;
+					float slope = ( dy == 0.0f ) ? 0.0f : ( dx / dy );
+
+					// Select a start scanline with Y-axis clipping.
+					unsigned short startY = FloatToInteger<float, unsigned short>( yMin );
+					startY = Clamp<unsigned short>( startY, 0, height - 1 );
+
+					// Push this element at the selected scanline.
+					m_edgeTable[startY].emplace_back( yMax, xMin, xMax, slope, v0.Color, v1.Color );	// is this color order ok?				
+				}
+
+				// rasterization
+				GatherPixelsBeingDrawnFromScanlines( outputStream, width, height );
+			}
+		}
+
+		void GatherPixelsBeingDrawnFromScanlines( std::shared_ptr<RasterizerOutputStream> outputStream, int width, int height )
+		{
+			assert( outputStream );
+			assert( height == m_edgeTable.size() && "target height and scanline are mismatched" );
+
+			size_t drawnCount = 0;
+
+			std::list<ActiveEdgeTableElement> aet;
+
+			// for each scanline
+			for ( size_t y = 0; y < height; ++y )
+			{
+				// Find outside elements in the AET and remove them.
+				auto iter = aet.begin();
+				while ( iter != aet.end() )
+				{
+					const ActiveEdgeTableElement& elem = *iter;
+					if ( y > elem.ETElement.YMax )
+					{
+						iter = aet.erase( iter );
+					}
+					else
+					{
+						++iter;
+					}
+				}
+
+				// Push inside ET elements on this scanline into the AET.
+				const std::list<EdgeTableElement>& edgeList = m_edgeTable[y];
+				for ( const auto& elem : edgeList )
+				{
+					if ( y <= elem.YMax )
+					{
+						aet.emplace_back( elem );
+					}
+				}				
+
+				// Sort AET elements from left to right.
+				aet.sort();
+
+				// Gather pixels being drawn using the AET.
+				for ( auto iter = aet.begin(); iter != aet.end(); ++iter )
+				{
+					// First, select left (=current) and right (=next) edge elements.
+					ActiveEdgeTableElement& elemLeft = *iter;
+					if ( ++iter == aet.end() )
+					{
+						break;
+					}
+					ActiveEdgeTableElement& elemRight = *iter;
+
+					// Approximate intersection pixels betweeen each edge and the scanline.
+					unsigned short xLeft = FloatToInteger<float, unsigned short>( std::round( elemLeft.CurrentX ) );
+					unsigned short xRight = FloatToInteger<float, unsigned short>( std::round( elemRight.CurrentX ) );
+
+					// clipping on RT
+					xLeft = Max<unsigned short>( xLeft, 0 );
+					xRight = Min<unsigned short>( xRight, width );
+
+					// Push inside pixels between intersections into the output stream.
+					for ( unsigned short x = xLeft; x < xRight; ++x )
+					{
+						__TODO( write the pixel Z value );
+						__TODO( interpolate colors );
+						outputStream->Push( x, y, 0.0f, elemLeft.ETElement.ColorL );
+					}
+
+					// Update the next position incrementally
+					elemLeft.CurrentX += elemLeft.ETElement.Slope;
+					elemRight.CurrentX += elemRight.ETElement.Slope;
+				}
+			}
+
+			for ( size_t y = 0; y < height; ++y )
+			{
+				m_edgeTable[y].clear();
+			}
 		}
 
 	private:
 		std::shared_ptr<RenderingContext> m_renderingContext;
-		ScanlineConversionImpl m_scanlineImpl;
+		std::vector<std::list<EdgeTableElement>> m_edgeTable;
 	};
 
 
@@ -583,12 +578,35 @@ namespace kih
 		virtual ~PixelProcessor()
 		{
 		}
-
+		
 		virtual std::shared_ptr<PixelProcOutputStream> Process( std::shared_ptr<PixelProcInputStream> inputStream )
 		{
-			PixelProcOutputStream* pOutputStream = new PixelProcOutputStream( );
+			auto outputStream = std::make_shared<PixelProcOutputStream>();
 
-			return std::shared_ptr<PixelProcOutputStream>( pOutputStream );
+			assert( m_renderingContext );
+			std::shared_ptr<Texture> rt = m_renderingContext->GetRenderTaget( 0 );
+			if ( rt == nullptr )
+			{
+				return outputStream;
+			}
+
+			assert( inputStream );
+			size_t inputStreamSize = inputStream->Size();
+			for ( size_t i = 0; i < inputStreamSize; ++i )
+			{
+				const auto& fragment = inputStream->GetData( i );
+
+				// TODO: Z-buffering
+
+				LockGuardPtr<Texture> guard( rt );
+				if ( void* p = guard.Ptr() )
+				{
+					// TODO: pixel shading
+					rt->WriteTexel( fragment.PX, fragment.PY, fragment.Color.Value );
+				}				
+			}
+
+			return outputStream;
 		}
 
 	private:
@@ -637,7 +655,7 @@ namespace kih
 		m_outputMerger( std::make_unique<OutputMerger>( this ) )
 	{
 		m_renderTargets.resize( numRenderTargets );
-		/* nullptr initialization is not necessary
+		/* nullptr initialization is not necessary.
 		for ( auto& rt : m_renderTargets )
 		{
 			rt = nullptr;
@@ -651,26 +669,33 @@ namespace kih
 		size_t num = m_renderTargets.size();
 		for ( size_t i = 0; i < num; ++i )
 		{
-			if ( Texture* pTexture = m_renderTargets[i].get() )
+			if ( m_renderTargets[i] == nullptr )
 			{
-				LockGuard<Texture> guard( pTexture );
-				if ( void* p = guard.Ptr() )
-				{
-					assert( p && "a nullptr pointer of internal memory of a texture" );
+				continue;
+			}
 
-					if ( r == g && g == b )
-					{
-						int size = pTexture->Width() * pTexture->Height() * ComputeBytesPerPixel( pTexture->Format() );
-						memset( p, r, size );
-						return;
-					}
+			LockGuardPtr<Texture> guard( m_renderTargets[i] );
+			if ( void* ptr = guard.Ptr() )
+			{
+				assert( ptr );
+
+				std::shared_ptr<Texture> rt = m_renderTargets[i];
+
+				int width = rt->Width();
+				int height = rt->Height();
+
+				if ( r == g && g == b )
+				{
+					int size = width * height * ComputeBytesPerPixel( rt->Format() );
+					memset( ptr, r, size );
+					return;
+				}
 					
-					for ( int h = 0; h < pTexture->Height(); ++h )
+				for ( int h = 0; h < height; ++h )
+				{
+					for ( int w = 0; w < width; ++w )
 					{
-						for ( int w = 0; w < pTexture->Width(); ++w )
-						{
-							pTexture->WriteTexel( w, h, r, g, b );
-						}
+						rt->WriteTexel( w, h, r, g, b );
 					}
 				}
 			}
@@ -679,26 +704,55 @@ namespace kih
 
 	void RenderingContext::Draw( std::shared_ptr<Mesh> mesh )
 	{
-		assert( m_inputAssembler.get() && "nullptr of input assembler" );
-		assert( m_vertexProcessor.get( ) && "nullptr of vertex processor" );
-		assert( m_rasterizer.get( ) && "nullptr of rasterizer" );
-		assert( m_pixelProcessor.get( ) && "nullptr of pixel processor" );
-		assert( m_outputMerger.get( ) && "nullptr of output merger" );
+		if ( mesh == nullptr )
+		{
+			return;
+		}
 
+		assert( m_inputAssembler );
+		assert( m_vertexProcessor );
+		assert( m_rasterizer );
+		assert( m_pixelProcessor );
+		assert( m_outputMerger );
+
+#ifdef FACE_SPECIFIC
+		for ( size_t face = 0; face < mesh->NumFaces(); ++face )
+		{		
+			m_inputAssembler->m_faceIndex = face;
+#else
+		// If a source is the Mesh class
+		// we assume that the primitive type is 'triangles'.
+		PrimitiveType primType = PrimitiveType::TRIANGLES;
+#endif
 		// input assembler
 		std::shared_ptr<VertexProcInputStream> vpInput = m_inputAssembler->Process( mesh );
+
+		printf( "VertexProcInputStream Size: %d\n", vpInput->Size() );
 
 		// vertex processor
 		std::shared_ptr<RasterizerInputStream> raInput = m_vertexProcessor->Process( vpInput );
 
+		printf( "RasterizerInputStream Size: %d\n", raInput->Size() );
+
 		// rasterizer
+#ifdef FACE_SPECIFIC
+		size_t numVerticesInFace = mesh->NumVerticesInFace( face );
+		raInput->SetPrimitiveType( GetPrimitiveTypeFromNumberOfVertices( numVerticesInFace ) );
+#else
+		raInput->SetPrimitiveType( primType );
+#endif
 		std::shared_ptr<PixelProcInputStream> ppInput = m_rasterizer->Process( raInput );
+
+		printf( "PixelProcInputStream Size: %d\n", ppInput->Size() );
 
 		// pixel processor
 		std::shared_ptr<OutputMergerInputStream> omInput = m_pixelProcessor->Process( ppInput );
 
 		// output merger
 		omInput = m_outputMerger->Process( omInput );
+#ifdef FACE_SPECIFIC
+		}
+#endif
 	}
 
 
@@ -706,8 +760,8 @@ namespace kih
 	*/
 	std::shared_ptr<RenderingContext> RenderingDevice::CreateRenderingContext()
 	{
-		RenderingContext* pRenderingContext = new RenderingContext( 4 /* the number of render targets */ );
-		m_renderingContexts.emplace_back( pRenderingContext );
-		return m_renderingContexts.at( m_renderingContexts.size() - 1 );
+		auto context = std::make_shared<RenderingContext>( 4 /* the number of render targets */ );
+		m_renderingContexts.emplace_back( context );
+		return context;
 	}
 }
