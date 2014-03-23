@@ -21,8 +21,8 @@ namespace xtozero
 		float m_minX;
 		float m_gradient;
 
-		Edge(int minY, int maxY, float minX, float gradient) 
-			: m_minY(minY), m_maxY(maxY), m_minX(minX), m_gradient(gradient) {}
+		Edge( int minY, int maxY, float minX, float gradient )
+			: m_minY( minY ), m_maxY( maxY ), m_minX( minX ), m_gradient( gradient ) {}
 		~Edge() {}
 	};
 
@@ -32,15 +32,21 @@ namespace xtozero
 		std::vector<Vertex<int>> m_pixels;
 		std::map<int, std::vector<Edge>> m_edgeTable;
 		std::vector<Edge> m_activeEdgeTable;
-		std::vector<PS_ELEMENT_DESC> m_outputRS;
+		std::vector<CPsElementDesc> m_outputRS;
 
-		void CreateEdgeTable(const std::shared_ptr<CMesh> pVertex, int faceNumber);
-		void UpdateActiveEdgeTable(int scanline);
-		float GetIntersectXpos( int minY, int scanlineY, float minX, float gradient) const;
-		void ProcessScanline();
+		void CreateEdgeTable( const std::shared_ptr<CMesh> pVertex, int faceNumber );
+		void UpdateActiveEdgeTable( int scanline );
+		float GetIntersectXpos( int minY, int maxY, int scanlineY, float minX, float gradient ) const;
+		void ProcessScanline( int scanline, unsigned int facecolor );
 	public:
-		explicit CRasterizer(const std::shared_ptr<CMesh> pMesh);
-		~CRasterizer(void);
+		explicit CRasterizer( const std::shared_ptr<CMesh> pMesh );
+		~CRasterizer( void );
+
+		//Å×½ºÆ®
+		std::vector<CPsElementDesc>& Getoutput()
+		{
+			return m_outputRS;
+		}
 	};
 }
 

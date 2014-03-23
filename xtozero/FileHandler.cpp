@@ -8,14 +8,14 @@ CFileHandler::CFileHandler( const char* pfilepath )
 	{
 		m_file.open( pfilepath );
 	}
-	catch( std::exception e )
+	catch ( std::exception e )
 	{
 
 	}
 }
 
 
-CFileHandler::~CFileHandler(void)
+CFileHandler::~CFileHandler( void )
 {
 	m_file.close();
 }
