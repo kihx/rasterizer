@@ -10,7 +10,7 @@
 #include "Mesh.h"
 #include "Rasterizer.h"
 
-std::unique_ptr<xtozero::CMeshManager> gMeshManager(new xtozero::CMeshManager());
+std::unique_ptr<xtozero::CMeshManager> gMeshManager( new xtozero::CMeshManager() );
 
 XTZ_API void XtzRenderToBuffer( void* buffer, int width, int height, int dpp );
 

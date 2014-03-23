@@ -7,7 +7,7 @@ class CFileHandler
 {
 public:
 	explicit CFileHandler( const char* pfilepath );
-	~CFileHandler(void);
+	~CFileHandler( void );
 
 	bool is_open()
 	{
@@ -19,19 +19,19 @@ public:
 		return m_file.good();
 	}
 
-	std::ifstream& operator>>( char* buffer )
+	std::ifstream& operator>>(char* buffer)
 	{
 		m_file >> buffer;
 		return m_file;
 	}
 
-	std::ifstream& operator>>( int& buffer )
+	std::ifstream& operator>>(int& buffer)
 	{
 		m_file >> buffer;
 		return m_file;
 	}
 
-	std::ifstream& operator>>( float& buffer )
+	std::ifstream& operator>>(float& buffer)
 	{
 		m_file >> buffer;
 		return m_file;

@@ -9,8 +9,8 @@
 #include <memory>
 #include <iostream>
 
-#define VETEX_ELEMENT_COUNT 3
-#define COLOR_ELEMENT_COUNT 3
+const int VETEX_ELEMENT_COUNT = 3;
+const int COLOR_ELEMENT_COUNT = 3;
 
 namespace xtozero
 {
@@ -67,7 +67,7 @@ namespace xtozero
 
 		static CMeshManager* GetInstance( void );
 		static void ReleaseInstance( void );
-		
+
 		std::shared_ptr<CMesh> LoadMeshFromFile( const char* pfilename );
 		std::shared_ptr<CMesh> LoadRecentMesh();
 	};
