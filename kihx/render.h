@@ -6,31 +6,8 @@
 #include <vector>
 
 
-//class IInputOutputStream
-//{
-//public:
-//	//virtual ~IInputOutputStream() = 0;
-//};
-
-
-namespace kih
+namespace kih 
 {
-	/* class IRenderingProcessor
-	*/
-	template<class InputStream, class OutputStream>
-	class IRenderingProcessor
-	{
-	public:
-		//virtual ~IRenderingProcessor() = 0;
-
-		virtual std::shared_ptr<OutputStream> Process( std::shared_ptr<InputStream> inputStream ) = 0;
-
-		//virtual IOutputStream* Process( IInputStream* inputStream ) = 0;
-		//bool SetInputStream( IInputStream* inputStream );
-		//IOutputStream* GetOutputStream();
-	};
-
-
 	class Mesh;
 
 	class ConstantBuffer;
@@ -55,6 +32,67 @@ namespace kih
 	class PixelProcessor;
 	class OutputMerger;
 	class RenderingContext;
+
+
+	/* class IRenderingProcessor
+	*/
+	template<class InputStream, class OutputStream>
+	class IRenderingProcessor
+	{
+	public:
+		virtual std::shared_ptr<OutputStream> Process( std::shared_ptr<InputStream> inputStream ) = 0;
+	};
+
+
+	/* class BaseInputOutputStream
+	*/
+	template<class Data>
+	class BaseInputOutputStream
+	{
+		NONCOPYABLE_CLASS( BaseInputOutputStream );
+
+	public:
+		BaseInputOutputStream() = default;
+		virtual ~BaseInputOutputStream() = default;
+
+		template <typename... Args>
+		void Push( Args&&... args )
+		{
+			m_streamSource.emplace_back( std::forward<Args>( args )... );
+		}
+
+		const Data* GetStreamSource() const
+		{
+			if ( m_streamSource.empty() )
+			{
+				return nullptr;
+			}
+			else
+			{
+				return &m_streamSource[0];
+			}
+		}
+
+		const Data& GetData( size_t index ) const
+		{
+			assert( ( index >= 0 && index < Size() ) && "out of ranged index" );
+			return m_streamSource[index];
+		}
+
+		size_t Size() const
+		{
+			return m_streamSource.size();
+		}
+
+		void Reserve( size_t capacity )
+		{
+			m_streamSource.reserve( capacity );
+		}
+
+	private:
+		std::vector<Data> m_streamSource;
+	};
+
 
 
 	enum class ColorFormat : unsigned int
@@ -223,37 +261,10 @@ namespace kih
 		void* m_pMemory;
 	};
 
-	/* class LockGuard<Texture>
-	*/
-	template<>
-	class LockGuard<Texture>
-	{
-	public:
-		LockGuard( Texture* obj ) :
-			m_obj( obj )
-		{
-			m_obj->Lock( &m_p );
-		}
-
-		~LockGuard()
-		{
-			m_obj->Unlock();
-		}
-
-		void* Ptr()
-		{
-			return m_p;
-		}
-
-	private:
-		Texture* m_obj;
-		void* m_p;
-	};
-
 
 	/* class RenderingContext
 	*/
-	class RenderingContext
+	class RenderingContext final
 	{
 		NONCOPYABLE_CLASS( RenderingContext )
 
@@ -289,7 +300,7 @@ namespace kih
 
 	/* class RenderingDevice
 	*/
-	class RenderingDevice : public Singleton<RenderingDevice>
+	class RenderingDevice final : public Singleton<RenderingDevice>
 	{
 		friend class Singleton<RenderingDevice>;
 

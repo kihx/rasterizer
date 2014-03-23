@@ -31,333 +31,146 @@ namespace kih
 	}
 
 
-	/* class VertexProcInputStream
-	*/
-	class VertexProcInputStream
+	struct VertexProcData
 	{
-	public:
-		struct Data
+		// object-space position
+		union
 		{
-			union
+			struct
 			{
-				struct
-				{
-					// object-space position
-					float X;
-					float Y;
-					float Z;
-
-					// vertex color
-					byte R;
-					byte G;
-					byte B;
-					byte A;
-				};
-
-				float Position[3];
-				byte Color[4];
+				float X;
+				float Y;
+				float Z;
 			};
 
-			Data() :
-				X( 0.0f ),
-				Y( 0.0f ),
-				Z( 0.0f ),
-				R( 0 ),
-				G( 0 ),
-				B( 0 ),
-				A( 0 )
-			{
-			}
-
-			Data( const float position[3], const byte color[4] ) :
-				X( position[0] ),
-				Y( position[1] ),
-				Z( position[2] ),
-				R( color[0] ),
-				G( color[1] ),
-				B( color[2] ),
-				A( color[3] )
-			{
-			}
-
-			//Data( const Data& data )
-			//{
-			//	Assign( data.Position, data.Color );
-			//}
-
-			void Assign( const float position[3], const byte color[4] )
-			{
-				for ( int i = 0; i < 3; ++i )
-				{
-					Position[i] = position[i];
-				}
-
-				for ( int i = 0; i < 4; ++i )
-				{
-					Color[i] = color[i];
-				}
-			}
+			float Position[3];
 		};
 
+		// vertex color
+		Color32 Color;
+
+		VertexProcData() :
+			X( 0.0f ),
+			Y( 0.0f ),
+			Z( 0.0f )			
+		{
+		}
+
+		VertexProcData( const float position[3], const Color32& color) :
+			X( position[0] ),
+			Y( position[1] ),
+			Z( position[2] ),
+			Color( color )
+		{
+		}
+
+		VertexProcData( const VertexProcData& data ) = default;
+	};
+
+	/* class VertexProcInputStream
+	*/
+	class VertexProcInputStream : public BaseInputOutputStream<VertexProcData>
+	{
+	public:
 		VertexProcInputStream()
 		{
 		}
-
-		template <typename... Args>
-		void Push( Args&&... args )
-		{
-			m_streamSource.emplace_back( std::forward<Args>( args )... );
-		}
-
-		//void Push( const float position[3], const byte color[4] )
-		//{
-		//	m_streamSource.emplace_back( position, color );
-		//}
-
-		const Data& GetData( size_t index ) const
-		{
-			assert( ( index >= 0 && index < Size() ) && "Out of ranged index" );
-			return m_streamSource[index];
-		}
-
-		const float* GetStreamSource() const
-		{
-			if ( m_streamSource.empty() )
-			{
-				return nullptr;
-			}
-			else
-			{
-				return &m_streamSource[0].X;
-			}
-		}
-
-		size_t Size() const
-		{
-			return m_streamSource.size();
-		}
-
-		void Reserve( size_t capacity )
-		{
-			m_streamSource.reserve( capacity );
-		}
-
-	private:
-		std::vector<Data> m_streamSource;
 	};
 
+
+	struct RasterizerData
+	{
+		// in NDC coordinates
+		union
+		{
+			struct
+			{
+				float X;
+				float Y;
+				float Z;
+				float W;
+			};
+
+			float Position[4];
+		};
+
+		// vertex color
+		Color32 Color;
+
+		RasterizerData() :
+			X( 0.0f ),
+			Y( 0.0f ),
+			Z( 0.0f ),
+			W( 1.0f )			
+		{
+		}
+
+		RasterizerData( const float position[4], const Color32& color ) :
+			X( position[0] ),
+			Y( position[1] ),
+			Z( position[2] ),
+			W( position[3] ),
+			Color( color )
+		{
+		}
+
+		RasterizerData( const RasterizerData& data ) = default;
+	};
 
 	/* class RasterizerInputStream
 	*/
-	class RasterizerInputStream
+	class RasterizerInputStream : public BaseInputOutputStream<RasterizerData>
 	{
 	public:
-		struct Data
-		{
-			union
-			{
-				struct
-				{
-					// in NDC coordinates
-					float X;
-					float Y;
-					float Z;
-					float W;
-
-					byte R;
-					byte G;
-					byte B;
-					byte A;
-				};
-
-				float Position[4];
-				byte Color[4];
-			};
-
-			Data() :
-				X( 0.0f ),
-				Y( 0.0f ),
-				Z( 0.0f ),
-				W( 1.0f ),
-				R( 0 ),
-				G( 0 ),
-				B( 0 ),
-				A( 0 )
-			{
-			}
-
-			Data( const float position[4], const byte color[4] ) :
-				X( position[0] ),
-				Y( position[1] ),
-				Z( position[2] ),
-				W( position[3] ),
-				R( color[0] ),
-				G( color[1] ),
-				B( color[2] ),
-				A( color[3] )
-			{
-			}
-
-			Data( const Data& data ) = default;
-		};
-
 		RasterizerInputStream()
 		{
 		}
-
-		template <typename... Args>
-		void Push( Args&&... args )
-		{
-			m_streamSource.emplace_back( std::forward<Args>( args )... );
-		}
-
-		//void Push( const float position[4] )
-		//{
-		//	m_streamSource.emplace_back( position );
-		//}
-
-		const float* GetStreamSource() const
-		{
-			if ( m_streamSource.empty() )
-			{
-				return nullptr;
-			}
-			else
-			{
-				return &m_streamSource[0].X;
-			}
-		}
-
-		const float* GetPosition( size_t index ) const
-		{
-			assert( ( index >= 0 && index < Size() ) && "Out of ranged index" );
-			return m_streamSource[index].Position;
-		}
-
-		const Data& GetData( size_t index ) const
-		{
-			assert( ( index >= 0 && index < Size() ) && "Out of ranged index" );
-			return m_streamSource[index];
-		}
-
-		size_t Size() const
-		{
-			return m_streamSource.size();
-		}
-
-		void Reserve( size_t capacity )
-		{
-			m_streamSource.reserve( capacity );
-		}
-
-	private:
-		std::vector<Data> m_streamSource;
 	};
 
 
+	struct PixelProcData
+	{
+		// x and y coordinates of a pixel
+		unsigned short PX;
+		unsigned short PY;
+		// z of a pixel
+		float PZ;
+
+		// interpolated color
+		Color32 Color;
+
+		PixelProcData() :
+			PX( 0 ),
+			PY( 0 ),
+			PZ( 1.0f ) // farthest
+		{
+		}
+
+		PixelProcData( unsigned short px, unsigned short py, float pz, const Color32& color ) :
+			PX( px ),
+			PY( py ),
+			PZ( pz ),
+			Color( color )
+		{
+		}
+
+		PixelProcData( const PixelProcData& data ) = default;
+	};
+
 	/* class PixelProcInputStream
 	*/
-	class PixelProcInputStream
+	class PixelProcInputStream : public BaseInputOutputStream<PixelProcData>
 	{
 	public:
-		struct Data
-		{
-			// x and y coordinates of a pixel
-			unsigned short PX;
-			unsigned short PY;
-			// z of a pixel
-			float PZ;
-
-			union
-			{
-				struct
-				{
-					// interpolated color
-					byte R;
-					byte G;
-					byte B;
-					byte A;
-				};
-
-				byte Color[4];
-			};
-
-			Data() :
-				PX( 0 ),
-				PY( 0 ),
-				PZ( 1.0f ), // farthest
-				R( 0 ),
-				G( 0 ),
-				B( 0 ),
-				A( 0 )
-			{
-			}
-
-			Data( unsigned short px, unsigned short py, float pz, const byte color[4] ) :
-				PX( px ),
-				PY( py ),
-				PZ( pz ),
-				R( color[0] ),
-				G( color[1] ),
-				B( color[2] ),
-				A( color[3] )
-			{
-			}
-
-			Data( const Data& data ) = default;
-		};
-
 		PixelProcInputStream()
 		{
 		}
-
-		template <typename... Args>
-		void Push( Args&&... args )
-		{
-			m_streamSource.emplace_back( std::forward<Args>( args )... );
-		}
-
-		//void Push( const float position[4] )
-		//{
-		//	m_streamSource.emplace_back( position );
-		//}
-
-		//__UNDONE( change return type of const void* );
-		//const void* GetStreamSource() const
-		//{
-		//	if ( m_streamSource.empty() )
-		//	{
-		//		return nullptr;
-		//	}
-		//	else
-		//	{
-		//		return &m_streamSource[0].PX;
-		//	}
-		//}
-
-		const Data& GetData( size_t index ) const
-		{
-			assert( ( index >= 0 && index < Size() ) && "Out of ranged index" );
-			return m_streamSource[index];
-		}
-
-		size_t Size() const
-		{
-			return m_streamSource.size();
-		}
-
-		void Reserve( size_t capacity )
-		{
-			m_streamSource.reserve( capacity );
-		}
-
-	private:
-		std::vector<Data> m_streamSource;
 	};
 
 
 	/* class OutputMergerInputStream
 	*/
+	__UNDONE( Need output merger stream );
 	class OutputMergerInputStream
 	{
 	public:
@@ -366,7 +179,7 @@ namespace kih
 		}
 
 	private:
-		void* m_pRenderBuffer;
+
 	};
 
 
@@ -527,8 +340,8 @@ namespace kih
 			float Slope;
 			// float PZ;	// depth
 
-			const byte* ColorL;
-			const byte* ColorR;
+			const Color32& ColorL;
+			const Color32& ColorR;
 		};	
 
 		struct ActiveEdgeTableElement
@@ -653,7 +466,7 @@ namespace kih
 					// is inside?
 					if ( elem.YMax <= height )
 					{
-						aet.push_back( ActiveEdgeTableElement( elem ) );
+						aet.emplace_back( elem );
 					}
 				}				
 				aet.sort();
@@ -748,7 +561,7 @@ namespace kih
 				if ( void* p = guard.Ptr() )
 				{
 					// TODO: pixel shading
-					rt->WriteTexel( fragment.PX, fragment.PY, fragment.Color );
+					rt->WriteTexel( fragment.PX, fragment.PY, fragment.Color.Value );
 				}				
 			}
 
@@ -877,8 +690,8 @@ namespace kih
 	*/
 	std::shared_ptr<RenderingContext> RenderingDevice::CreateRenderingContext()
 	{
-		RenderingContext* pRenderingContext = new RenderingContext( 4 /* the number of render targets */ );
-		m_renderingContexts.emplace_back( pRenderingContext );
-		return m_renderingContexts.at( m_renderingContexts.size() - 1 );
+		auto context = std::make_shared<RenderingContext>( 4 /* the number of render targets */ );
+		m_renderingContexts.push_back( context );
+		return context;
 	}
 }

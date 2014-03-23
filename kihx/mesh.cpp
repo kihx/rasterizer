@@ -78,14 +78,14 @@ namespace kih
 
 	std::shared_ptr<Mesh> Mesh::CreateFromFile( const char* filename )
 	{
-		Mesh* pMesh = new Mesh();
-		if ( !pMesh->LoadMshFile( filename ) )
+		// cannot use std::make_shared<>() by the protected access modifier
+		auto mesh = std::shared_ptr<Mesh>( new Mesh() );
+		if ( !mesh->LoadMshFile( filename ) )
 		{
-			delete pMesh;
-			pMesh = nullptr;
+			mesh.reset();
 		}
 
-		return std::shared_ptr<Mesh>( pMesh );
+		return mesh;
 	}
 
 
