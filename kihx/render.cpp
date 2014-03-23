@@ -11,7 +11,7 @@ namespace kih
 	*/
 	std::shared_ptr<Texture> Texture::Create( int width, int height, ColorFormat format, void* pExternalMemory )
 	{
-		// cannot use std::make_shared<>() by the protected access modifier
+		// Cannot use std::make_shared<>() by the protected access modifier.
 		auto texture = std::shared_ptr<Texture>( new Texture() );
 		texture->m_width = width;
 		texture->m_height = height;
@@ -125,6 +125,19 @@ namespace kih
 		RasterizerInputStream()
 		{
 		}
+
+		PrimitiveType GetPrimitiveType() const
+		{
+			return m_primType;
+		}
+
+		void SetPrimitiveType( PrimitiveType primType )
+		{
+			m_primType = primType;
+		}
+
+	private:
+		PrimitiveType m_primType;
 	};
 
 
@@ -133,8 +146,9 @@ namespace kih
 		// x and y coordinates of a pixel
 		unsigned short PX;
 		unsigned short PY;
+		
 		// z of a pixel
-		float PZ;
+		float Depth;
 
 		// interpolated color
 		Color32 Color;
@@ -142,14 +156,14 @@ namespace kih
 		PixelProcData() :
 			PX( 0 ),
 			PY( 0 ),
-			PZ( 1.0f ) // farthest
+			Depth( 1.0f ) // farthest
 		{
 		}
 
-		PixelProcData( unsigned short px, unsigned short py, float pz, const Color32& color ) :
+		PixelProcData( unsigned short px, unsigned short py, float Depth, const Color32& color ) :
 			PX( px ),
 			PY( py ),
-			PZ( pz ),
+			Depth( Depth ),
 			Color( color )
 		{
 		}
@@ -204,7 +218,7 @@ namespace kih
 		{
 			auto outputStream = std::make_shared<InputAssemblerOutputStream>();
 
-			// Count the number of vertices in the mesh
+			// Count the number of vertices in the mesh.
 #ifdef SUPPORT_MSH
 			size_t capacity = 0;
 			size_t numFaces = inputStream->NumFaces();
@@ -214,7 +228,7 @@ namespace kih
 			}
 			outputStream->Reserve( capacity );
 
-			// Convert the mesh to an input stream of the vertex processor
+			// Convert the mesh to an input stream of the vertex processor.
 			for ( size_t face = 0; face < numFaces; ++face )
 			{
 				const byte* color = inputStream->GetFaceColor( face );
@@ -282,11 +296,6 @@ namespace kih
 			outPosition[3] = 1.0f;
 		}
 
-		//IOutputStream* Process( IInputStream* inputStream )
-		//{
-		//	return nullptr;
-		//}
-
 	private:
 		std::shared_ptr<RenderingContext> m_renderingContext;
 	};
@@ -322,12 +331,7 @@ namespace kih
 			int width = rt->Width();
 			int height = rt->Height();
 
-			// do scanline conversion
-			size_t edgeCount = BuildEdgeTable( inputStream, width, height );
-			if ( edgeCount > 0 )
-			{
-				size_t drawCount = GatherPixelsBeingDrawnFromScanlines( outputStream, width, height );
-			}
+			DoScanlineConversion( inputStream, outputStream, width, height );
 
 			return outputStream;
 		}
@@ -335,13 +339,26 @@ namespace kih
 	private:
 		struct EdgeTableElement
 		{
-			unsigned short YMax;
-			unsigned short XMin;
+			float YMax;
+			float XMin;
+			float XMax;
 			float Slope;
-			// float PZ;	// depth
+			// float Depth;	// depth
 
 			const Color32& ColorL;
 			const Color32& ColorR;
+
+			EdgeTableElement() = default;
+
+			EdgeTableElement( float yMax, float xMin, float xMax, float slope, const Color32& colorL, const Color32& colorR ) :
+				YMax( yMax ),
+				XMin( xMin ),
+				XMax( xMax ),
+				Slope( slope ),
+				ColorL( colorL ),
+				ColorR( colorR )
+			{
+			}
 		};	
 
 		struct ActiveEdgeTableElement
@@ -351,43 +368,98 @@ namespace kih
 
 			ActiveEdgeTableElement( const EdgeTableElement& etElem ) :
 				ETElement( etElem ),
-				CurrentX( etElem.XMin )
+				CurrentX( etElem.Slope > 0.0f ? etElem.XMin : etElem.XMax )
 			{
 			}
 
 			// sortable by XMin ascending order
 			bool operator<( const ActiveEdgeTableElement& rhs )
 			{
-				return ETElement.XMin < rhs.ETElement.XMin;
+				return CurrentX < rhs.CurrentX;
 			}
 		};	
 
-		size_t BuildEdgeTable( std::shared_ptr<RasterizerInputStream> inputStream, int width, int height )
+		void DoScanlineConversion( std::shared_ptr<RasterizerInputStream> inputStream, std::shared_ptr<RasterizerOutputStream> outputStream, int width, int height )
 		{
 			assert( inputStream );
 
 			size_t numVertices = inputStream->Size();
 
-			// ignore uncirculated vertices
-			if ( numVertices < 3 )
+			// Determine the number of vertices for the specified primitive.
+			PrimitiveType primType = inputStream->GetPrimitiveType();
+			size_t numberOfPrimitive = 0;
+			switch ( primType )
 			{
-				return 0;
+			case PrimitiveType::POINTS:
+				throw std::runtime_error( "unsupported primitive type" );
+				return;
+
+			//case PrimitiveType::LINES:
+			//	numberOfPrimitive = 2;
+			//	break;
+
+			case PrimitiveType::TRIANGLES:
+			default:
+				numberOfPrimitive = 3;
+				break;
 			}
 
-			size_t edgeCount = 0;
-			
-			// reserve scanlines
+			// Validate the number of vertices.
+			if ( numVertices < numberOfPrimitive )
+			{
+				return;
+			}
+			else if ( numVertices % numberOfPrimitive != 0 )
+			{				
+				LOG_WARNING( "incomplete primitive" );
+				return;
+			}
+
+			// Reserve ET space based on scanlines.
+			m_edgeTable.clear();
 			m_edgeTable.resize( height );
 
-			size_t lastVertIndex = numVertices - 1;
+			// statistics
+			size_t rasterCount = 0;
+			size_t pixelCount = 0;
+
+			// Build an edge table by traversing each primitive in vertices,
+			// and draw each primitive.
+			bool flushRequired = false;
 			for ( size_t i = 0; i < numVertices; ++i )
 			{
-				// select an edge
-				size_t v1Index = ( i == lastVertIndex ) ? 0 : i + 1;				
+				// edge: v0 -> v1
+				// v0 = i'th vertex
+				// v1 = (i + 1)'th vertex
+
+				size_t v1Index = i + 1;
+
+				// If v1 is a vertex of the next primitive,
+				// hold the first vertex of the current primitive to v1.
+				// And then reserve flushing the ET to draw the primitive.
+				if ( ( v1Index % numberOfPrimitive ) == 0 )
+				{
+					v1Index -= numberOfPrimitive;
+					flushRequired = true;
+				}
+
 				const auto& v0 = inputStream->GetData( i );
 				const auto& v1 = inputStream->GetData( v1Index );
 
-				// make an ET element
+				// Make an ET element.
+				float xMax = 0.0f;
+				float xMin = 0.0f;
+				if ( v0.X >= v1.X )
+				{
+					xMax = v0.X;
+					xMin = v1.X;
+				}
+				else
+				{
+					xMax = v1.X;
+					xMin = v0.X;
+				}
+
 				float yMax = 0.0f;
 				float yMin = 0.0f;
 				if ( v0.Y >= v1.Y )
@@ -401,34 +473,25 @@ namespace kih
 					yMin = v0.Y;
 				}
 
-				EdgeTableElement elem
-				{ 
-					// YMax
-					FloatToInteger<float, unsigned short>( yMax ),
-					// XMin
-					FloatToInteger<float, unsigned short>( Min<float>( v0.X, v1.X ) ), 
-					// Slope
-					0.0f,
-					// Colors
-					v0.Color,
-					v1.Color,
-				};
-
 				float dx = v0.X - v1.X;
 				float dy = v0.Y - v1.Y;
-				elem.Slope = ( dx == 0.0f ) ? 0.0f : dy / dx;
+				float slope = ( dy == 0.0f ) ? 0.0f : ( dx / dy );
 
-				// select a start scanline with Y-axis clipping
-				unsigned short scanline = FloatToInteger<float, unsigned short>( yMin );
-				scanline = Clamp<unsigned short>( scanline, 0, height - 1 );
+				// Select a start scanline with Y-axis clipping.
+				unsigned short startY = FloatToInteger<float, unsigned short>( yMin );
+				startY = Clamp<unsigned short>( startY, 0, height - 1 );
 
-				// push this element at the selected scanline
-				m_edgeTable[scanline].push_back( elem );
+				// Push this element at the selected scanline.
+				m_edgeTable[startY].emplace_back( yMax, xMin, xMax, slope, v0.Color, v1.Color );	// is this color order ok?
 
-				++edgeCount;
+				// flush to rasterize
+				if ( flushRequired )
+				{
+					pixelCount += GatherPixelsBeingDrawnFromScanlines( outputStream, width, height );
+					++rasterCount;
+					flushRequired = false;
+				}
 			}
-
-			return edgeCount;
 		}
 
 		size_t GatherPixelsBeingDrawnFromScanlines( std::shared_ptr<RasterizerOutputStream> outputStream, int width, int height )
@@ -438,18 +501,17 @@ namespace kih
 
 			size_t drawnCount = 0;
 
-			// active edge table
 			std::list<ActiveEdgeTableElement> aet;
 
 			// for each scanline
 			for ( size_t y = 0; y < height; ++y )
 			{
-				// find outside elements in AET and remove them
+				// Find outside elements in the AET and remove them.
 				auto iter = aet.begin();
 				while ( iter != aet.end() )
 				{
 					const ActiveEdgeTableElement& elem = *iter;
-					if ( elem.ETElement.YMax > height )
+					if ( y > elem.ETElement.YMax )
 					{
 						iter = aet.erase( iter );
 					}
@@ -459,22 +521,23 @@ namespace kih
 					}
 				}
 
-				// for each ET element
+				// Push inside ET elements on this scanline into the AET.
 				const std::list<EdgeTableElement>& edgeList = m_edgeTable[y];
 				for ( const auto& elem : edgeList )
 				{
-					// is inside?
-					if ( elem.YMax <= height )
+					if ( y <= elem.YMax )
 					{
 						aet.emplace_back( elem );
 					}
 				}				
+
+				// Sort AET elements from left to right.
 				aet.sort();
 
-				// for each AET element
+				// Gather pixels being drawn using the AET.
 				for ( auto iter = aet.begin(); iter != aet.end(); ++iter )
 				{
-					// select left (=current) and right (=next) elements
+					// First, select left (=current) and right (=next) edge elements.
 					ActiveEdgeTableElement& elemLeft = *iter;
 					if ( ++iter == aet.end() )
 					{
@@ -482,20 +545,15 @@ namespace kih
 					}
 					ActiveEdgeTableElement& elemRight = *iter;
 
-					// approximate the intersection of x-coordinates
+					// Approximate intersection pixels betweeen each edge and the scanline.
 					unsigned short xLeft = FloatToInteger<float, unsigned short>( elemLeft.CurrentX );
 					unsigned short xRight = FloatToInteger<float, unsigned short>( elemRight.CurrentX );
 
-					if ( xLeft > xRight )
-					{
-						Swap<unsigned short>( xLeft, xRight );
-					}
-
 					// clipping on RT
-					xLeft = Min<unsigned short>( xLeft, 0 );
+					xLeft = Max<unsigned short>( xLeft, 0 );
 					xRight = Min<unsigned short>( xRight, width );
 
-					// push inside pixels into the output stream from left-x to right-x
+					// Push inside pixels between intersections into the output stream.
 					for ( unsigned short x = xLeft; x < xRight; ++x )
 					{
 						__TODO( write the pixel Z value );
@@ -505,13 +563,16 @@ namespace kih
 						++drawnCount;
 					}
 
-					// update the next position incrementally
+					// Update the next position incrementally
 					elemLeft.CurrentX += elemLeft.ETElement.Slope;
 					elemRight.CurrentX += elemRight.ETElement.Slope;
 				}
 			}
 
-			m_edgeTable.clear();
+			for ( size_t y = 0; y < height; ++y )
+			{
+				m_edgeTable[y].clear();
+			}
 
 			return drawnCount;
 		}
@@ -614,7 +675,7 @@ namespace kih
 		m_outputMerger( std::make_unique<OutputMerger>( this ) )
 	{
 		m_renderTargets.resize( numRenderTargets );
-		/* nullptr initialization is not necessary
+		/* nullptr initialization is not necessary.
 		for ( auto& rt : m_renderTargets )
 		{
 			rt = nullptr;
@@ -669,6 +730,10 @@ namespace kih
 		assert( m_pixelProcessor );
 		assert( m_outputMerger );
 
+		// If a source is the Mesh class
+		// we assume that the primitive type is 'triangles'.
+		PrimitiveType primType = PrimitiveType::TRIANGLES;
+
 		// input assembler
 		std::shared_ptr<VertexProcInputStream> vpInput = m_inputAssembler->Process( mesh );
 
@@ -676,6 +741,7 @@ namespace kih
 		std::shared_ptr<RasterizerInputStream> raInput = m_vertexProcessor->Process( vpInput );
 
 		// rasterizer
+		raInput->SetPrimitiveType( primType );
 		std::shared_ptr<PixelProcInputStream> ppInput = m_rasterizer->Process( raInput );
 
 		// pixel processor

@@ -27,8 +27,8 @@ KIHX_API void kiRenderToBuffer( void* buffer, int width, int height, int bpp )
 	}
 
 	// clear buffer
-	size_t bufferSize = width * height * ( bpp / 8 );
-	::memset( buffer, 255, bufferSize );
+	//size_t bufferSize = width * height * ( bpp / 8 );
+	//::memset( buffer, 255, bufferSize );
 
 
 	__UNDONE( temporal testing code );
@@ -37,7 +37,7 @@ KIHX_API void kiRenderToBuffer( void* buffer, int width, int height, int bpp )
 
 	context->SetRenderTarget( renderTarget, 0 );
 
-	context->Clear( 222, 180, 25, 255 );
+	context->Clear( 0, 0, 0, 255 );
 
 	context->Draw( g_mesh );
 }

@@ -93,6 +93,12 @@ namespace kih
 		std::vector<Data> m_streamSource;
 	};
 
+	enum class PrimitiveType : unsigned int
+	{
+		POINTS = 0,
+
+		TRIANGLES
+	};
 
 
 	enum class ColorFormat : unsigned int
