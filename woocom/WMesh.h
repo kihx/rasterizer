@@ -20,7 +20,8 @@ public:
 	void DrawOutline( WModule* pPainter);
 	void DrawSolid( WModule* pPainter);
 private:
-	void DrawLine(WModule* pPainter, VERTEX* v1, VERTEX* v2, unsigned char* rgb);
+	void DrawLine(WModule* pPainter, const VERTEX* v1, const VERTEX* v2, const unsigned char* rgb);
+	void InsertLineInfo(WModule* pPainter, const VERTEX* v1, const VERTEX* v2, const unsigned char* rgb);
 
 	WTriData* m_data;
 };

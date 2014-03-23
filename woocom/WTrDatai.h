@@ -31,7 +31,7 @@ public:
 	{
 		m_vertices.reserve( num );
 	}
-	int GetVertexNum(size_t faceIndex)
+	int GetVertexNum(size_t faceIndex) const
 	{ 
 		if( faceIndex >= m_faces.size())
 		{
@@ -43,12 +43,12 @@ public:
 	{
 		m_faces.reserve( num );
 	}
-	int GetFaceNum()
+	int GetFaceNum() const
 	{
 		return m_faces.size();
 	}
 
-	unsigned char* GetFaceColor(size_t index)
+	const unsigned char* GetFaceColor(size_t index) const
 	{
 		if( index >= m_faces.size() )
 		{
@@ -57,7 +57,7 @@ public:
 		return m_faces[index]->m_rgb;
 	}
 
-	VERTEX* GetVertex(size_t faceIndex, size_t vertexIndex)
+	const VERTEX* GetVertex(size_t faceIndex, size_t vertexIndex) const
 	{
 		if( faceIndex >= m_faces.size())
 		{

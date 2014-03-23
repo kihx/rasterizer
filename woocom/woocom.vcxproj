@@ -86,6 +86,7 @@
   <ItemGroup>
     <ClInclude Include="WMesh.h" />
     <ClInclude Include="WModule.h" />
+    <ClInclude Include="woocom.h" />
     <ClInclude Include="WTrDatai.h" />
   </ItemGroup>
   <ItemGroup>
