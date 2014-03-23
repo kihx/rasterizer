@@ -196,7 +196,7 @@ namespace kih
 
 	};
 
-
+#define FACE_SPECIFIC		1
 
 	/* class InputAssembler
 	*/
@@ -218,18 +218,27 @@ namespace kih
 		{
 			auto outputStream = std::make_shared<InputAssemblerOutputStream>();
 
-			// Count the number of vertices in the mesh.
 #ifdef SUPPORT_MSH
+			// Count the number of vertices in the mesh, 
+			// and reserve space for the output stream.
 			size_t capacity = 0;
+#ifdef FACE_SPECIFIC
+			capacity += inputStream->NumVerticesInFace( m_faceIndex );
+#else
 			size_t numFaces = inputStream->NumFaces();
 			for ( size_t face = 0; face < numFaces; ++face )
 			{
 				capacity += inputStream->NumVerticesInFace( face );
 			}
+#endif
 			outputStream->Reserve( capacity );
 
 			// Convert the mesh to an input stream of the vertex processor.
+#ifdef FACE_SPECIFIC
+			size_t face = m_faceIndex;
+#else
 			for ( size_t face = 0; face < numFaces; ++face )
+#endif
 			{
 				const byte* color = inputStream->GetFaceColor( face );
 
@@ -249,6 +258,11 @@ namespace kih
 
 	private:
 		std::shared_ptr<RenderingContext> m_renderingContext;
+
+#ifdef FACE_SPECIFIC
+	public:
+		size_t m_faceIndex;
+#endif
 	};
 	
 
@@ -690,16 +704,26 @@ namespace kih
 
 	void RenderingContext::Draw( std::shared_ptr<Mesh> mesh )
 	{
+		if ( mesh == nullptr )
+		{
+			return;
+		}
+
 		assert( m_inputAssembler );
 		assert( m_vertexProcessor );
 		assert( m_rasterizer );
 		assert( m_pixelProcessor );
 		assert( m_outputMerger );
 
+#ifdef FACE_SPECIFIC
+		for ( size_t face = 0; face < mesh->NumFaces(); ++face )
+		{		
+			m_inputAssembler->m_faceIndex = face;
+#else
 		// If a source is the Mesh class
 		// we assume that the primitive type is 'triangles'.
 		PrimitiveType primType = PrimitiveType::TRIANGLES;
-
+#endif
 		// input assembler
 		std::shared_ptr<VertexProcInputStream> vpInput = m_inputAssembler->Process( mesh );
 
@@ -711,7 +735,12 @@ namespace kih
 		printf( "RasterizerInputStream Size: %d\n", raInput->Size() );
 
 		// rasterizer
+#ifdef FACE_SPECIFIC
+		size_t numVerticesInFace = mesh->NumVerticesInFace( face );
+		raInput->SetPrimitiveType( GetPrimitiveTypeFromNumberOfVertices( numVerticesInFace ) );
+#else
 		raInput->SetPrimitiveType( primType );
+#endif
 		std::shared_ptr<PixelProcInputStream> ppInput = m_rasterizer->Process( raInput );
 
 		printf( "PixelProcInputStream Size: %d\n", ppInput->Size() );
@@ -721,6 +750,9 @@ namespace kih
 
 		// output merger
 		omInput = m_outputMerger->Process( omInput );
+#ifdef FACE_SPECIFIC
+		}
+#endif
 	}
 
 
@@ -729,7 +761,7 @@ namespace kih
 	std::shared_ptr<RenderingContext> RenderingDevice::CreateRenderingContext()
 	{
 		auto context = std::make_shared<RenderingContext>( 4 /* the number of render targets */ );
-		m_renderingContexts.push_back( context );
+		m_renderingContexts.emplace_back( context );
 		return context;
 	}
 }

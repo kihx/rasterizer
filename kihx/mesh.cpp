@@ -152,8 +152,6 @@ namespace kih
 
 		// faces
 		int faceNumber;
-		__UNDONE( ignore various index count in a face );
-		int lastIndexCount = 0;
 		m_faces.resize( faceCount );
 		for ( int i = 0; i < faceCount; ++i )
 		{
@@ -166,14 +164,6 @@ namespace kih
 
 			int indexCount;
 			reader >> indexCount;
-			
-			__UNDONE( load various-sized vertices );
-			if ( lastIndexCount != 0 && lastIndexCount != indexCount )
-			{
-				m_faces.resize( i );
-				return true;
-			}
-			lastIndexCount = indexCount;
 
 			m_faces[i].m_indices.resize( indexCount );
 			for ( int j = 0; j < indexCount; ++j )
