@@ -1,6 +1,22 @@
 #include "WMesh.h"
 #include "WModule.h"
 
+int Float2Int(float f)
+{
+#ifdef _WIN32
+	int i;
+	__asm
+	{
+		fld  f
+		fistp i
+	}
+	return i;
+#else
+	return (int)(f + 0.5f);
+#endif 
+}
+
+
 void WMesh::DrawOutline(WModule* pPainter)
 {
 	int numFace = m_data->GetFaceNum();
@@ -165,24 +181,19 @@ void WMesh::InsertLineInfo(WModule* pPainter, const VERTEX* v1, const VERTEX* v2
 	// b = y - ax ( v1 ´ëÀÔ )
 	float n = v1->m_pos[1] - (gradient * v1->m_pos[0]);
 
-	float startY = 0.0f;
-	float endY = 0.0f;
+	float startY = v1->m_pos[1];
+	float endY = v2->m_pos[1];
 	if (v1->m_pos[1] > v2->m_pos[1])
 	{
 		startY = v2->m_pos[1];
 		endY = v1->m_pos[1];
 	}
-	else
-	{
-		startY = v1->m_pos[1];
-		endY = v2->m_pos[1];
-	}
 
-	float y = startY;
+	float y = roundf(startY);
 	while (y < endY)
 	{
 		float x = (y - n) / gradient;
-		pPainter->InsertLineInfo((int)y, (int)x, rgb);
+		pPainter->InsertLineInfo(Float2Int(y), Float2Int(x), rgb);
 		y += 1.0f;
 	}
 
