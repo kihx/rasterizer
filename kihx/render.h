@@ -320,11 +320,11 @@ namespace kih
 		}
 
 	private:
-		std::unique_ptr<InputAssembler> m_inputAssembler;
-		std::unique_ptr<VertexProcessor> m_vertexProcessor;
-		std::unique_ptr<Rasterizer> m_rasterizer;
-		std::unique_ptr<PixelProcessor> m_pixelProcessor;
-		std::unique_ptr<OutputMerger> m_outputMerger;
+		std::shared_ptr<InputAssembler> m_inputAssembler;
+		std::shared_ptr<VertexProcessor> m_vertexProcessor;
+		std::shared_ptr<Rasterizer> m_rasterizer;
+		std::shared_ptr<PixelProcessor> m_pixelProcessor;
+		std::shared_ptr<OutputMerger> m_outputMerger;
 		std::vector< std::shared_ptr<Texture> > m_renderTargets;
 	};
 

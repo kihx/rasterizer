@@ -648,11 +648,11 @@ namespace kih
 	/* class RenderingContext
 	*/
 	RenderingContext::RenderingContext( size_t numRenderTargets ) :
-		m_inputAssembler( std::make_unique<InputAssembler>( this ) ),
-		m_vertexProcessor( std::make_unique<VertexProcessor>( this ) ),
-		m_rasterizer( std::make_unique<Rasterizer>( this ) ),
-		m_pixelProcessor( std::make_unique<PixelProcessor>( this ) ),
-		m_outputMerger( std::make_unique<OutputMerger>( this ) )
+		m_inputAssembler( std::make_shared<InputAssembler>( this ) ),
+		m_vertexProcessor( std::make_shared<VertexProcessor>( this ) ),
+		m_rasterizer( std::make_shared<Rasterizer>( this ) ),
+		m_pixelProcessor( std::make_shared<PixelProcessor>( this ) ),
+		m_outputMerger( std::make_shared<OutputMerger>( this ) )
 	{
 		m_renderTargets.resize( numRenderTargets );
 		/* nullptr initialization is not necessary.

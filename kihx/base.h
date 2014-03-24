@@ -147,10 +147,10 @@ public:
 
 		if ( s_instance == nullptr )
 		{
-			s_instance = std::unique_ptr<T>( new T( std::forward<Args>( args )... ) );
+			s_instance = new T( std::forward<Args>( args )... );
 		}
 	
-		return s_instance.get();
+		return s_instance;
 	}
 
 	static void DestroyInstance()
@@ -160,11 +160,11 @@ public:
 	}
 
 private:
-	static std::unique_ptr<T> s_instance;
+	static T* s_instance;
 };
 
 template <class T> 
-std::unique_ptr<T> Singleton<T>::s_instance = nullptr;
+T* Singleton<T>::s_instance = nullptr;
 
 
 
