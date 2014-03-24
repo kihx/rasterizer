@@ -466,7 +466,7 @@ namespace kih
 					float slope = ( dy == 0.0f ) ? 0.0f : ( dx / dy );
 
 					// Select a start scanline with Y-axis clipping.
-					unsigned short startY = FloatToInteger<float, unsigned short>( yMin );
+					unsigned short startY = FloatToInteger<float, unsigned short>( std::round( yMin ) );
 					startY = Clamp<unsigned short>( startY, 0, height - 1 );
 
 					// Push this element at the selected scanline.
@@ -495,7 +495,7 @@ namespace kih
 				while ( iter != aet.end() )
 				{
 					const ActiveEdgeTableElement& elem = *iter;
-					if ( y > elem.ETElement.YMax )
+					if ( y >= elem.ETElement.YMax )
 					{
 						iter = aet.erase( iter );
 					}
@@ -509,7 +509,7 @@ namespace kih
 				const std::list<EdgeTableElement>& edgeList = m_edgeTable[y];
 				for ( const auto& elem : edgeList )
 				{
-					if ( y <= elem.YMax )
+					if ( y < elem.YMax )
 					{
 						aet.emplace_back( elem );
 					}
