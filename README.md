@@ -1,4 +1,4 @@
-<Rules of writing commit messages>
+"Rules of writing commit messages"
 
 
 [module name] Title (keep in short)
