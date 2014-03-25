@@ -423,27 +423,23 @@ namespace kih
 			// Build an edge table by traversing each primitive in vertices,
 			// and draw each primitive.
 			size_t numPrimitives = numVertices / numVerticesPerPrimitive;
+
 			// for each primitive
 			for ( size_t p = 0; p < numPrimitives; ++p )
 			{
+				// edge: v0 -> v1
+				// v0 = i th vertex
+				// v1 = (i + 1) th vertex
+				//
+				// But if v1 is a vertex of the next primitive,
+				// we must hold the first vertex of the current primitive to v1.
+				// To keep in simple, we step last -> first -> second -> third ... and last - 1.
+				size_t v1Index = p * numVerticesPerPrimitive;
+				size_t v0Index = v1Index + ( numVerticesPerPrimitive - 1 );
+
 				// for each vertex
 				for ( size_t v = 0; v < numVerticesPerPrimitive; ++v )
 				{
-					// edge: v0 -> v1
-					// v0 = i th vertex
-					// v1 = (i + 1) th vertex
-
-					size_t v0Index = p * numVerticesPerPrimitive + v;
-					size_t v1Index = v0Index + 1;
-
-					// If v1 is a vertex of the next primitive,
-					// hold the first vertex of the current primitive to v1.
-					// And then reserve flushing the ET to draw the primitive.
-					if ( v + 1 == numVerticesPerPrimitive )
-					{
-						v1Index -= numVerticesPerPrimitive;
-					}
-
 					const auto& v0 = inputStream->GetData( v0Index );
 					const auto& v1 = inputStream->GetData( v1Index );
 
@@ -472,6 +468,10 @@ namespace kih
 
 					// Push this element at the selected scanline.
 					m_edgeTable[startY].emplace_back( yMax, xMin, xMax, slope, v0.Color, v1.Color );	// is this color order ok?				
+
+					// Update next indices
+					++v1Index;
+					v0Index = v1Index - 1;
 				}
 
 				// rasterization
