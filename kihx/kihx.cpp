@@ -30,10 +30,11 @@ KIHX_API void kiRenderToBuffer( void* buffer, int width, int height, int bpp )
 	//size_t bufferSize = width * height * ( bpp / 8 );
 	//::memset( buffer, 255, bufferSize );
 
+	kih::ColorFormat colorFormat = kih::GetSuitableColorFormatFromBpp( bpp );
 
 	__UNDONE( temporal testing code );
 	static std::shared_ptr<kih::RenderingContext> context = kih::RenderingDevice::GetInstance()->CreateRenderingContext();
-	static std::shared_ptr<kih::Texture> renderTarget = kih::Texture::Create( width, height, kih::ColorFormat::RGB888, buffer );
+	static std::shared_ptr<kih::Texture> renderTarget = kih::Texture::Create( width, height, colorFormat, buffer );
 
 	context->SetRenderTarget( renderTarget, 0 );
 

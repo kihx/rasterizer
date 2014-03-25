@@ -24,7 +24,7 @@ namespace kih
 		}
 		else
 		{
-			texture->m_pMemory = malloc( width * height * ComputeBytesPerPixel( format ) );
+			texture->m_pMemory = malloc( width * height * GetBytesPerPixel( format ) );
 		}
 
 		return texture;
@@ -206,7 +206,7 @@ namespace kih
 
 	public:
 		explicit InputAssembler( RenderingContext* pRenderingContext ) :
-			m_renderingContext( pRenderingContext )
+			m_pRenderingContext( pRenderingContext )
 		{
 		}
 
@@ -257,7 +257,7 @@ namespace kih
 		}
 
 	private:
-		std::shared_ptr<RenderingContext> m_renderingContext;
+		RenderingContext* m_pRenderingContext;
 
 #ifdef FACE_SPECIFIC
 	public:
@@ -274,7 +274,7 @@ namespace kih
 
 	public:
 		explicit VertexProcessor( RenderingContext* pRenderingContext ) :
-			m_renderingContext( pRenderingContext )
+			m_pRenderingContext( pRenderingContext )
 		{
 		}
 
@@ -311,7 +311,7 @@ namespace kih
 		}
 
 	private:
-		std::shared_ptr<RenderingContext> m_renderingContext;
+		RenderingContext* m_pRenderingContext;
 	};
 
 	
@@ -323,7 +323,7 @@ namespace kih
 
 	public:
 		explicit Rasterizer( RenderingContext* pRenderingContext ) :
-			m_renderingContext( pRenderingContext )
+			m_pRenderingContext( pRenderingContext )
 		{
 		}
 
@@ -335,15 +335,15 @@ namespace kih
 		{
 			auto outputStream = std::make_shared<RasterizerOutputStream>();
 
-			assert( m_renderingContext );
-			std::shared_ptr<Texture> rt = m_renderingContext->GetRenderTaget( 0 );
+			assert( m_pRenderingContext );
+			std::shared_ptr<Texture> rt = m_pRenderingContext->GetRenderTaget( 0 );
 			if ( rt == nullptr )
 			{
 				return outputStream;
 			}
 
-			int width = rt->Width();
-			int height = rt->Height();
+			unsigned short width = static_cast<unsigned short>( rt->Width() );
+			unsigned short height = static_cast<unsigned short>( rt->Height() );
 
 			DoScanlineConversion( inputStream, outputStream, width, height );
 
@@ -362,9 +362,10 @@ namespace kih
 			const Color32& ColorL;
 			const Color32& ColorR;
 
-			EdgeTableElement() = default;
+			EdgeTableElement() = delete;
+			EdgeTableElement& operator=( const EdgeTableElement& ) = delete;
 
-			EdgeTableElement( float yMax, float xMin, float xMax, float slope, const Color32& colorL, const Color32& colorR ) :
+			explicit EdgeTableElement( float yMax, float xMin, float xMax, float slope, const Color32& colorL, const Color32& colorR ) :
 				YMax( yMax ),
 				XMin( xMin ),
 				XMax( xMax ),
@@ -380,7 +381,10 @@ namespace kih
 			const EdgeTableElement& ETElement;
 			float CurrentX;
 
-			ActiveEdgeTableElement( const EdgeTableElement& etElem ) :
+			ActiveEdgeTableElement() = delete;
+			ActiveEdgeTableElement& operator=( const ActiveEdgeTableElement& ) = delete;
+
+			explicit ActiveEdgeTableElement( const EdgeTableElement& etElem ) :
 				ETElement( etElem ),
 				CurrentX( etElem.Slope > 0.0f ? etElem.XMin : etElem.XMax )
 			{
@@ -393,7 +397,7 @@ namespace kih
 			}
 		};			
 
-		void DoScanlineConversion( std::shared_ptr<RasterizerInputStream> inputStream, std::shared_ptr<RasterizerOutputStream> outputStream, int width, int height )
+		void DoScanlineConversion( std::shared_ptr<RasterizerInputStream> inputStream, std::shared_ptr<RasterizerOutputStream> outputStream, unsigned short width, unsigned short height )
 		{
 			assert( inputStream );
 			
@@ -415,9 +419,6 @@ namespace kih
 			// Reserve ET space based on scanlines.
 			m_edgeTable.clear();
 			m_edgeTable.resize( height );
-
-			// statistics
-			size_t pixelCount = 0;
 
 			// Build an edge table by traversing each primitive in vertices,
 			// and draw each primitive.
@@ -478,17 +479,15 @@ namespace kih
 			}
 		}
 
-		void GatherPixelsBeingDrawnFromScanlines( std::shared_ptr<RasterizerOutputStream> outputStream, int width, int height )
+		void GatherPixelsBeingDrawnFromScanlines( std::shared_ptr<RasterizerOutputStream> outputStream, unsigned short width, unsigned short height )
 		{
 			assert( outputStream );
 			assert( height == m_edgeTable.size() && "target height and scanline are mismatched" );
-
-			size_t drawnCount = 0;
-
+			
 			std::list<ActiveEdgeTableElement> aet;
 
 			// for each scanline
-			for ( size_t y = 0; y < height; ++y )
+			for ( unsigned short y = 0; y < height; ++y )
 			{
 				// Find outside elements in the AET and remove them.
 				auto iter = aet.begin();
@@ -551,14 +550,14 @@ namespace kih
 				}
 			}
 
-			for ( size_t y = 0; y < height; ++y )
+			for ( unsigned short y = 0; y < height; ++y )
 			{
 				m_edgeTable[y].clear();
 			}
 		}
 
 	private:
-		std::shared_ptr<RenderingContext> m_renderingContext;
+		RenderingContext* m_pRenderingContext;
 		std::vector<std::list<EdgeTableElement>> m_edgeTable;
 	};
 
@@ -571,7 +570,7 @@ namespace kih
 
 	public:
 		explicit PixelProcessor( RenderingContext* pRenderingContext ) :
-			m_renderingContext( pRenderingContext )
+			m_pRenderingContext( pRenderingContext )
 		{
 		}
 
@@ -583,8 +582,8 @@ namespace kih
 		{
 			auto outputStream = std::make_shared<PixelProcOutputStream>();
 
-			assert( m_renderingContext );
-			std::shared_ptr<Texture> rt = m_renderingContext->GetRenderTaget( 0 );
+			assert( m_pRenderingContext );
+			std::shared_ptr<Texture> rt = m_pRenderingContext->GetRenderTaget( 0 );
 			if ( rt == nullptr )
 			{
 				return outputStream;
@@ -610,7 +609,7 @@ namespace kih
 		}
 
 	private:
-		std::shared_ptr<RenderingContext> m_renderingContext;
+		RenderingContext* m_pRenderingContext;
 	};
 
 
@@ -622,7 +621,7 @@ namespace kih
 
 	public:
 		explicit OutputMerger( RenderingContext* pRenderingContext ) :
-			m_renderingContext( pRenderingContext )
+			m_pRenderingContext( pRenderingContext )
 		{
 		}
 
@@ -640,7 +639,7 @@ namespace kih
 		}
 
 	private:
-		std::shared_ptr<RenderingContext> m_renderingContext;
+		RenderingContext* m_pRenderingContext;
 	};
 
 
@@ -666,6 +665,8 @@ namespace kih
 	{
 		//unsigned int color = ( r | ( ((unsigned short) g) << 8 ) | ( ((unsigned int) b) << 16 )) | ( ((unsigned int) a) << 24 );
 
+		a = 255;	// FIXME
+
 		size_t num = m_renderTargets.size();
 		for ( size_t i = 0; i < num; ++i )
 		{
@@ -686,7 +687,7 @@ namespace kih
 
 				if ( r == g && g == b )
 				{
-					int size = width * height * ComputeBytesPerPixel( rt->Format() );
+					int size = width * height * GetBytesPerPixel( rt->Format() );
 					memset( ptr, r, size );
 					return;
 				}

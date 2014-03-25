@@ -5,6 +5,8 @@
 #include <memory>
 #include <type_traits>
 
+#pragma warning( disable: 4201 )	// warning C4201: nonstandard extension used : nameless struct/union
+
 
 typedef unsigned char byte;
 

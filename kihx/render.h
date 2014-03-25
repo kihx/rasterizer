@@ -128,12 +128,12 @@ namespace kih
 
 	enum class ColorFormat : unsigned int
 	{
-		UNKNOWN = 0,
+		Unknown = 0,
 
 		RGB888 = 10,
 	};
 
-	inline  int ComputeBytesPerPixel( ColorFormat format )
+	inline int GetBytesPerPixel( ColorFormat format )
 	{
 		switch ( format )
 		{
@@ -142,6 +142,18 @@ namespace kih
 
 		default:
 			return 0;
+		}
+	}
+
+	inline ColorFormat GetSuitableColorFormatFromBpp( int bpp )
+	{
+		switch ( bpp )
+		{
+		case 24:
+			return ColorFormat::RGB888;
+
+		default:
+			return ColorFormat::Unknown;
 		}
 	}
 
@@ -165,7 +177,7 @@ namespace kih
 		Texture() :
 			m_width( -1 ),
 			m_height( -1 ),
-			m_format( ColorFormat::UNKNOWN ),
+			m_format( ColorFormat::Unknown ),
 			m_flags( 0 ),
 			m_pMemory( nullptr )
 		{
@@ -245,7 +257,7 @@ namespace kih
 			assert( ( x >= 0 && x < m_width ) && "out of ranged x-coordinate" );
 			assert( ( y >= 0 && y < m_height ) && "out of ranged y-coordinate" );
 			
-			int stride = ComputeBytesPerPixel( Format() );
+			int stride = GetBytesPerPixel( Format() );
 
 			if ( byte* buffer = static_cast< byte* >( m_pMemory ) )
 			{
