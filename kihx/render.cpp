@@ -287,14 +287,20 @@ namespace kih
 			auto outputStream = std::make_shared<VertexProcOutputStream>();
 
 			size_t inputSize = inputStream->Size();
-			for ( size_t i = 0; i < inputSize; ++i )
+			if ( inputSize > 0 )
 			{
-				const auto& vertex = inputStream->GetData( i );
-				
-				float transformedPosition[4];
-				Transform( vertex.Position, transformedPosition );
+				// Currently, input and output size is always same.
+				outputStream->Reserve( inputSize );
 
-				outputStream->Push( transformedPosition, vertex.Color );
+				for ( size_t i = 0; i < inputSize; ++i )
+				{
+					const auto& vertex = inputStream->GetData( i );
+
+					float transformedPosition[4];
+					Transform( vertex.Position, transformedPosition );
+
+					outputStream->Push( transformedPosition, vertex.Color );
+				}
 			}
 
 			return outputStream;
@@ -333,9 +339,10 @@ namespace kih
 
 		virtual std::shared_ptr<RasterizerOutputStream> Process( std::shared_ptr<RasterizerInputStream> inputStream )
 		{
+			assert( m_pRenderingContext );
+			
 			auto outputStream = std::make_shared<RasterizerOutputStream>();
 
-			assert( m_pRenderingContext );
 			std::shared_ptr<Texture> rt = m_pRenderingContext->GetRenderTaget( 0 );
 			if ( rt == nullptr )
 			{
@@ -344,6 +351,11 @@ namespace kih
 
 			unsigned short width = static_cast<unsigned short>( rt->Width() );
 			unsigned short height = static_cast<unsigned short>( rt->Height() );
+
+			assert( ( width > 0 && height > 0 ) && "invalid operation" );
+
+			// FIXME: is this ok??
+			outputStream->Reserve( width * height );
 
 			DoScanlineConversion( inputStream, outputStream, width, height );
 
@@ -363,7 +375,6 @@ namespace kih
 			const Color32& ColorR;
 
 			EdgeTableElement() = delete;
-			EdgeTableElement& operator=( const EdgeTableElement& ) = delete;
 
 			explicit EdgeTableElement( float yMax, float xMin, float xMax, float slope, const Color32& colorL, const Color32& colorR ) :
 				YMax( yMax ),
@@ -374,6 +385,8 @@ namespace kih
 				ColorR( colorR )
 			{
 			}
+
+			EdgeTableElement& operator=( const EdgeTableElement& ) = delete;
 		};	
 
 		struct ActiveEdgeTableElement
@@ -382,13 +395,14 @@ namespace kih
 			float CurrentX;
 
 			ActiveEdgeTableElement() = delete;
-			ActiveEdgeTableElement& operator=( const ActiveEdgeTableElement& ) = delete;
 
 			explicit ActiveEdgeTableElement( const EdgeTableElement& etElem ) :
 				ETElement( etElem ),
 				CurrentX( etElem.Slope > 0.0f ? etElem.XMin : etElem.XMax )
 			{
 			}
+
+			ActiveEdgeTableElement& operator=( const ActiveEdgeTableElement& ) = delete;
 
 			// sort by x-less
 			bool operator<( const ActiveEdgeTableElement& rhs )
@@ -512,9 +526,14 @@ namespace kih
 					{
 						aet.emplace_back( elem );
 					}
-				}				
+				}
 
-				// Sort AET elements from left to right.
+				if ( aet.size() <= 0 )
+				{
+					continue;
+				}
+
+				// Sort AET elements from left to right.				
 				aet.sort();
 
 				// Gather pixels being drawn using the AET.
@@ -528,20 +547,23 @@ namespace kih
 					}
 					ActiveEdgeTableElement& elemRight = *iter;
 
-					// Approximate intersection pixels betweeen each edge and the scanline.
-					unsigned short xLeft = FloatToInteger<float, unsigned short>( std::round( elemLeft.CurrentX ) );
-					unsigned short xRight = FloatToInteger<float, unsigned short>( std::round( elemRight.CurrentX ) );
-
-					// clipping on RT
-					xLeft = Max<unsigned short>( xLeft, 0 );
-					xRight = Min<unsigned short>( xRight, width );
-
-					// Push inside pixels between intersections into the output stream.
-					for ( unsigned short x = xLeft; x < xRight; ++x )
+					// Approximate intersection pixels betweeen edges on the scanline.
+					if ( elemLeft.CurrentX != elemRight.CurrentX )
 					{
-						__TODO( write the pixel Z value );
-						__TODO( interpolate colors );
-						outputStream->Push( x, y, 0.0f, elemLeft.ETElement.ColorL );
+						unsigned short xLeft = FloatToInteger<float, unsigned short>( std::round( elemLeft.CurrentX ) );
+						unsigned short xRight = FloatToInteger<float, unsigned short>( std::round( elemRight.CurrentX ) );
+
+						// clipping on RT
+						xLeft = Max<unsigned short>( xLeft, 0 );
+						xRight = Min<unsigned short>( xRight, width );
+
+						// Push inside pixels between intersections into the output stream.
+						for ( unsigned short x = xLeft; x < xRight; ++x )
+						{
+							__TODO( write the pixel Z value );
+							__TODO( interpolate colors );
+							outputStream->Push( x, y, 0.0f, elemLeft.ETElement.ColorL );	
+						}
 					}
 
 					// Update the next position incrementally
@@ -580,29 +602,43 @@ namespace kih
 		
 		virtual std::shared_ptr<PixelProcOutputStream> Process( std::shared_ptr<PixelProcInputStream> inputStream )
 		{
-			auto outputStream = std::make_shared<PixelProcOutputStream>();
-
 			assert( m_pRenderingContext );
+			assert( inputStream );
+
+			auto outputStream = std::make_shared<PixelProcOutputStream>();
+			
 			std::shared_ptr<Texture> rt = m_pRenderingContext->GetRenderTaget( 0 );
 			if ( rt == nullptr )
 			{
 				return outputStream;
 			}
 
-			assert( inputStream );
 			size_t inputStreamSize = inputStream->Size();
-			for ( size_t i = 0; i < inputStreamSize; ++i )
+			if ( inputStreamSize > 0 )
 			{
-				const auto& fragment = inputStream->GetData( i );
-
-				// TODO: Z-buffering
+				int width = rt->Width();
+				int stride = GetBytesPerPixel( rt->Format() );
 
 				LockGuardPtr<Texture> guard( rt );
-				if ( void* p = guard.Ptr() )
+				if ( byte* buffer = static_cast< byte* >( guard.Ptr() ) )
 				{
-					// TODO: pixel shading
-					rt->WriteTexel( fragment.PX, fragment.PY, fragment.Color.Value );
-				}				
+					for ( size_t i = 0; i < inputStreamSize; ++i )
+					{
+						const auto& fragment = inputStream->GetData( i );
+
+						// TODO: Z-buffering
+
+						// TODO: pixel shading
+#if 1
+						byte* base = buffer + ( ( ( width * fragment.PY ) + fragment.PX ) * stride );
+						*( base /*+ 0*/ ) = fragment.Color.R;
+						*( base + 1 ) = fragment.Color.G;
+						*( base + 2 ) = fragment.Color.B;
+#else
+						//rt->WriteTexel( fragment.PX, fragment.PY, fragment.Color.Value );
+#endif
+					}
+				}
 			}
 
 			return outputStream;
@@ -748,6 +784,8 @@ namespace kih
 
 		// pixel processor
 		std::shared_ptr<OutputMergerInputStream> omInput = m_pixelProcessor->Process( ppInput );
+
+		printf( "OutputMergerInputStream Size: %d\n", 0 );
 
 		// output merger
 		omInput = m_outputMerger->Process( omInput );
