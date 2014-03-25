@@ -14,6 +14,6 @@ Example)
 
 [kihx] Fix incomplete code
 
-- Fix module unloading crash.
+- Fix a module unloading crash.
 - Remove compile warnings.
-- Raise the warning level of the debug build (1 -> 4)
+- Raise the warning level of a debug build (1 to 4)
