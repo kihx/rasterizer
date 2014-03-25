@@ -95,7 +95,9 @@
     <ClInclude Include="glut.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="cube.ply" />
     <None Include="input.msh" />
+    <None Include="object.ply" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -9,6 +9,7 @@
 #include <windows.h>
 #include <memory.h>
 #include <type_traits>
+#include <string>
 
 #include "glut.h"
 
@@ -30,6 +31,7 @@ byte g_pppScreenImage[SCREEN_HEIGHT][SCREEN_WIDTH][COLOR_DEPTH];
 //
 static GLdouble g_dZoomFactor = 1.0;
 static GLint g_iHeight;
+std::string g_meshFileName = "input.msh";
 
 // Customization 
 //
@@ -121,7 +123,7 @@ namespace
 		{
 			m_fnLoadMeshFromFile = GetFunctionFromModule<FnLoadMeshFromFile>( m_hModule, functionName );
 
-			LoadMeshFromFile( "input.msh" );
+			LoadMeshFromFile( g_meshFileName.c_str() );
 		}
 
 		void InstallFunctionRenderToBuffer( const char* functionName )
@@ -303,6 +305,11 @@ void motion( int x, int y)
 	glFlush();
 }
 
+void ReloadMesh()
+{
+	g_ModuleContext.LoadMeshFromFile( g_meshFileName.c_str() );
+}
+
 void keyboard( unsigned char key, int x, int y)
 {
 	printf( "[keyboard] key: %c\n", key );
@@ -324,9 +331,22 @@ void keyboard( unsigned char key, int x, int y)
 		break;
 
 	case '4':
-		{				
-			LoadModuleCoolD();			
-		}
+		LoadModuleCoolD();
+		break;
+
+	case '8':
+		g_meshFileName = "input.msh";
+		ReloadMesh();
+		break;
+
+	case '9':
+		g_meshFileName = "cube.ply";
+		ReloadMesh();
+		break;
+
+	case '0':
+		g_meshFileName = "object.ply";
+		ReloadMesh();
 		break;
 
 	case 'r':
