@@ -88,6 +88,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="coold.h" />
+    <ClInclude Include="CoolD_AreaFilling.h" />
     <ClInclude Include="CoolD_Defines.h" />
     <ClInclude Include="CoolD_Inlines.h" />
     <ClInclude Include="CoolD_SubFunction.h" />
@@ -96,6 +97,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="coold.cpp" />
+    <ClCompile Include="CoolD_AreaFilling.cpp" />
     <ClCompile Include="CoolD_CustomMesh.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

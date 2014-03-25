@@ -14,4 +14,9 @@
 #define BLACK	0x000000ff
 
 //¹Ý¿Ã¸²
-#define RoundOff(x, dig) (float)(floor((x) * pow(10,dig) + 0.5) / pow(10,dig))
+#define ROUND_Off(x, dig) (float)(floor((x) * pow(10,dig) + 0.5) / pow(10,dig))
+
+//std macro
+#define STD_FIND_IF(type, func) find_if(type.begin(), type.end(), func)
+#define STD_REMOVE_IF(type, func) remove_if(type.begin(), type.end(), func)
+#define STD_ERASE(type, iter) type.erase(iter, type.end())
