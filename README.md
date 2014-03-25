@@ -1,6 +1,19 @@
-Migrate to Visual Studio 2013!
+"Rules of writing commit messages"
 
-Visual Studio 2013 supports more C++11 features, and supports some C++14 features. 
-For example, varidatics, emplacements, and std::make_unique<>.
 
-See details in http://msdn.microsoft.com/en-us/library/hh567368.aspx.
+[module name] Title (keep in short)
+
+- What.
+- did.
+- you.
+- do? (in detail)
+
+
+
+Example)
+
+[kihx] Fix incomplete code
+
+- Fix a module unloading crash.
+- Remove compile warnings.
+- Raise the warning level of a debug build (1 to 4)
