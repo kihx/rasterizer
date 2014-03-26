@@ -27,12 +27,12 @@ struct EdgeInfo
 	EdgeInfo(){}
 	EdgeInfo(int x, const unsigned char* rgb)
 	{
-		m_edgeData.emplace_back(PixelInfo(x, rgb));
+		m_edgeData.emplace_back(x, rgb);
 	}
 
 	void Insert(int x, const unsigned char* rgb)
 	{
-		m_edgeData.emplace_back(PixelInfo(x, rgb));
+		m_edgeData.emplace_back(x, rgb);
 	}
 	void Sort()
 	{
@@ -66,5 +66,5 @@ private:
 	int m_colorDepth;
 
 	bool m_isSorted;
-	std::map< int, EdgeInfo >	m_fillInfo;
+	std::vector< EdgeInfo >	m_fillInfo;
 };
