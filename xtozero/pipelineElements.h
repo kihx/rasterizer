@@ -1,7 +1,18 @@
 #ifndef _PIPELINEELEMENTS_H_
 #define _PIPELINEELEMENTS_H_
 
-#include "Mesh.h"
+#include "..//utility/math3d.h"
+
+class CRsElementDesc
+{
+public:
+	CRsElementDesc(Vector3 vertex, Vector3 color)
+		: m_Vertex(vertex), m_Color(color) {}
+	~CRsElementDesc() {}
+
+	Vector3 m_Vertex;
+	Vector3 m_Color;
+};
 
 class CPsElementDesc
 {
