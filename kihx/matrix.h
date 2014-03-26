@@ -104,35 +104,7 @@ namespace kih
 			return ret;
 		}
 
-		Matrix4 operator*( float rhs ) const
-		{
-			Matrix4 ret;
-			for ( int i = 0; i < 16; ++i )
-			{
-				ret.Value[i] = ret.Value[i] * rhs;
-			};
-			return ret;
-		}
-
-		const Matrix4& operator*=( const Matrix4& rhs )
-		{
-			for ( int i = 0; i < 16; ++i )
-			{
-				Value[i] *= rhs.Value[i];
-			};
-			return *this;
-		}
-
-		const Matrix4& operator*=( float rhs )
-		{
-			for ( int i = 0; i < 16; ++i )
-			{
-				Value[i] *= rhs;
-			};
-			return *this;
-		}
-
-		const Matrix4& operator=( const Matrix4& rhs )
+		Matrix4& operator=( const Matrix4& rhs )
 		{
 			if ( this == &rhs )
 			{

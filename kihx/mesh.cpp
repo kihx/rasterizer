@@ -78,11 +78,33 @@ namespace kih
 
 	std::shared_ptr<Mesh> Mesh::CreateFromFile( const char* filename )
 	{
+		if ( filename == nullptr )
+		{
+			return nullptr;
+		}
+
+		// Extract an extention of the specified file.
+		// We assume that the extention's length is three characters.
+		size_t length = strlen( filename );
+		const char* ext = filename + length - 3;
+
 		// cannot use std::make_shared<>() by the protected access modifier
 		auto mesh = std::shared_ptr<Mesh>( new Mesh() );
-		if ( !mesh->LoadMshFile( filename ) )
+
+		bool succeeded = false;
+		if ( strcmp( ext, "msh" ) == 0 )
 		{
-			mesh.reset();
+			succeeded = mesh->LoadMshFile( filename );
+		}
+		else if ( strcmp( ext, "ply" ) == 0 )
+		{
+			succeeded = mesh->LoadPlyFile( filename );
+		}
+
+		if ( !succeeded )
+		{
+			//mesh.reset();
+			return nullptr;
 		}
 
 		return mesh;
@@ -175,4 +197,77 @@ namespace kih
 		return true;
 	}
 
+	bool Mesh::LoadPlyFile( const char* filename )
+	{
+		if ( filename == nullptr )
+		{
+			LOG_WARNING( "nullptr filename" );
+			return false;
+		}
+
+		RAIIStreamReader reader( filename );
+		if ( !reader.IsOpened() )
+		{
+			LOG_WARNING( "File open failure" );
+			return false;
+		}
+
+		// for tags
+		char trash[256];
+
+		// read a header
+		reader >> trash;	// #$Vertices
+		int vertexCount;
+		reader >> vertexCount;
+		if ( vertexCount <= 0 )
+		{
+			LOG_WARNING( "Has no vertex" );
+			return false;
+		}
+
+		reader >> trash;	// #$Faces
+		int faceCount;
+		reader >> faceCount;
+		if ( faceCount <= 0 )
+		{
+			LOG_WARNING( "Has no face" );
+			return false;
+		}
+
+		// vertices
+		int vertexNumber;
+		m_vertices.resize( vertexCount );
+		for ( int i = 0; i < vertexCount; ++i )
+		{
+			reader >> trash;			// Vertex
+			reader >> vertexNumber;	// = index + 1
+			reader >> m_vertices[i].x;
+			reader >> m_vertices[i].y;
+			reader >> m_vertices[i].z;
+		}
+
+		// faces
+		int faceNumber;
+		m_faces.resize( faceCount );
+		for ( int i = 0; i < faceCount; ++i )
+		{
+			reader >> trash;		// Face
+			reader >> faceNumber;	// = index + 1
+			
+			m_faces[i].r = 255;
+			m_faces[i].g = 255;
+			m_faces[i].b = 255;
+			m_faces[i].a = 255;
+
+			// .ply has always three vertices per face.
+			const int NumVertices = 3;
+			m_faces[i].m_indices.resize( NumVertices );
+			for ( int j = 0; j < NumVertices; ++j )
+			{
+				reader >> m_faces[i].m_indices[j];
+			}
+		}
+
+		return true;
+	}
 };

@@ -94,7 +94,64 @@ namespace kih
 		std::vector<Data> m_streamSource;
 	};
 
-	
+
+	/* class ConstantBuffer
+	*/
+	class ConstantBuffer final
+	{
+	public:
+		static const int Capacity = 128;
+
+		enum NamedIndex
+		{
+			WorldMatrix = 0,
+			ViewMatrix = WorldMatrix + 4,
+			ProjectionMatrix = ViewMatrix + 4,
+			WVPMatrix = ProjectionMatrix + 4
+		};
+
+		ConstantBuffer() = default;
+
+		const Vector4& GetVector4( int index )
+		{
+			assert( index >= 0 && index < Capacity );
+			return m_constantBuffer[index];
+		}
+
+		const Matrix4& GetMatrix4( int index )
+		{
+			assert( index >= 0 && index < Capacity );
+			// FIXME: is safe such type casting?
+			return *( reinterpret_cast< Matrix4* >( &m_constantBuffer[index] ) );
+		}
+
+		void SetFloat4( int index, const float* value )
+		{
+			assert( index >= 0 && index < Capacity );
+			m_constantBuffer[index].X = value[0];
+			m_constantBuffer[index].Y = value[1];
+			m_constantBuffer[index].Z = value[2];
+			m_constantBuffer[index].W = value[3];
+		}
+
+		void SetVector4( int index, const Vector4& value )
+		{
+			assert( index >= 0 && index < Capacity );
+			m_constantBuffer[index] = value;
+		}
+
+		void SetMatrix4( int index, const Matrix4& value )
+		{
+			SetFloat4( index, value.A[0] );
+			SetFloat4( index + 1, value.A[1] );
+			SetFloat4( index + 2, value.A[2] );
+			SetFloat4( index + 3, value.A[3] );
+		}
+
+	private:
+		Vector4 m_constantBuffer[Capacity];
+	};
+
 
 	/* class RenderingContext
 	*/
@@ -122,13 +179,21 @@ namespace kih
 			return true;
 		}
 
+		ConstantBuffer& GetSharedConstantBuffer()
+		{
+			return m_sharedConstantBuffer;
+		}
+
 	private:
 		std::shared_ptr<InputAssembler> m_inputAssembler;
 		std::shared_ptr<VertexProcessor> m_vertexProcessor;
 		std::shared_ptr<Rasterizer> m_rasterizer;
 		std::shared_ptr<PixelProcessor> m_pixelProcessor;
 		std::shared_ptr<OutputMerger> m_outputMerger;
+		
 		std::vector< std::shared_ptr<Texture> > m_renderTargets;
+
+		ConstantBuffer m_sharedConstantBuffer;
 	};
 
 
@@ -155,30 +220,21 @@ namespace kih
 			return m_worldMatrix;
 		}
 		
-		void SetWorldMatrix( const Matrix4& m )
-		{
-			m_worldMatrix = m;
-		}
+		void SetWorldMatrix( const Matrix4& m );
 
 		const Matrix4& GetViewMatrix() const
 		{
 			return m_viewMatrix;
 		}
 
-		void SetViewMatrix( const Matrix4& m )
-		{
-			m_viewMatrix = m;
-		}
+		void SetViewMatrix( const Matrix4& m );
 
 		const Matrix4& GetProjectionMatrix() const
 		{
 			return m_projMatrix;
 		}
 
-		void SetProjectionMatrix( const Matrix4& m )
-		{
-			m_projMatrix = m;
-		}
+		void SetProjectionMatrix( const Matrix4& m );
 
 	private:
 		std::vector<std::shared_ptr<RenderingContext>> m_renderingContexts;
