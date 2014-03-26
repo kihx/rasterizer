@@ -1,6 +1,7 @@
 #pragma once
 
 #include "base.h"
+#include "matrix.h"
 
 #include <memory>
 #include <vector>
@@ -149,8 +150,41 @@ namespace kih
 
 		std::shared_ptr<RenderingContext> CreateRenderingContext();
 
+		const Matrix4& GetWorldMatrix() const
+		{
+			return m_worldMatrix;
+		}
+		
+		void SetWorldMatrix( const Matrix4& m )
+		{
+			m_worldMatrix = m;
+		}
+
+		const Matrix4& GetViewMatrix() const
+		{
+			return m_viewMatrix;
+		}
+
+		void SetViewMatrix( const Matrix4& m )
+		{
+			m_viewMatrix = m;
+		}
+
+		const Matrix4& GetProjectionMatrix() const
+		{
+			return m_projMatrix;
+		}
+
+		void SetProjectionMatrix( const Matrix4& m )
+		{
+			m_projMatrix = m;
+		}
+
 	private:
 		std::vector<std::shared_ptr<RenderingContext>> m_renderingContexts;
+		Matrix4 m_worldMatrix;
+		Matrix4 m_viewMatrix;
+		Matrix4 m_projMatrix;
 	};
 };
 

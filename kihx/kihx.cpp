@@ -46,5 +46,21 @@ KIHX_API void kiRenderToBuffer( void* buffer, int width, int height, int bpp )
 
 KIHX_API void kiSetTransform( int transformType, const float* matrix4x4 )
 {
+	switch ( transformType )
+	{
+	case 0:
+		RenderingDevice::GetInstance()->SetWorldMatrix( Matrix4( matrix4x4 ) );
+		break;
+
+	case 2:
+		RenderingDevice::GetInstance()->SetViewMatrix( Matrix4( matrix4x4 ) );
+		break;
+
+	case 1:
+		RenderingDevice::GetInstance()->SetProjectionMatrix( Matrix4( matrix4x4 ) );
+		break;
 	
+	default:
+		LOG_WARNING( "invalid parameter" );
+	}
 }
