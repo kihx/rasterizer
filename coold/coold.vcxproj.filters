@@ -33,12 +33,18 @@
     <ClInclude Include="CoolD_Type.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CoolD_AreaFilling.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="coold.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="CoolD_CustomMesh.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CoolD_AreaFilling.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

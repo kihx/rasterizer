@@ -117,7 +117,7 @@ namespace xtozero
 		}
 	}
 
-	CMeshManager* CMeshManager::m_instance = NULL;
+	CMeshManager* CMeshManager::m_instance = nullptr;
 
 	CMeshManager* CMeshManager::GetInstance( void )
 	{
@@ -136,14 +136,14 @@ namespace xtozero
 	void CMeshManager::ReleaseInstance( void )
 	{
 		delete m_instance;
-		m_instance = NULL;
+		m_instance = nullptr;
 	}
 
 	std::shared_ptr<CMesh> CMeshManager::LoadMeshFromFile( const char* pfilename )
 	{
-		if ( pfilename == NULL )
+		if ( pfilename == nullptr )
 		{
-			return NULL;
+			return nullptr;
 		}
 
 		std::string filename( pfilename );
@@ -161,7 +161,7 @@ namespace xtozero
 			else
 			{
 				delete pMesh;
-				return NULL;
+				return nullptr;
 			}
 		}
 		else

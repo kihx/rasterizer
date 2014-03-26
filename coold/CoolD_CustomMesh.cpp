@@ -69,11 +69,11 @@ namespace CoolD
 
 				BaseVertex v; 
 				sstream >> v.x >> v.y >> v.z;
-				v.x = RoundOff(v.x, 0);
-				v.y = RoundOff(v.y, 0);
-				v.z = RoundOff(v.z, 0);
+				v.x = ROUND_Off(v.x, 0);
+				v.y = ROUND_Off(v.y, 0);
+				v.z = ROUND_Off(v.z, 0);
 
-				m_vecVertex.push_back(v);				
+				m_vecVertex.emplace_back(v);							
 			}
 			else if( strToken == "Face" )
 			{
@@ -103,7 +103,7 @@ namespace CoolD
 					f.vecIndex.push_back( vertexNum );
 				}
 
-				m_vecFace.push_back(f);
+				m_vecFace.emplace_back(f);
 			}		
 		}
 		return true;
