@@ -3,6 +3,7 @@
 #include "../kihx/kihx.h"
 #include "../woocom/WModule.h"
 #include "../xtozero/xtozero.h"
+#include "../utility/math3d.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -37,9 +38,17 @@ std::string g_meshFileName = "input.msh";
 //
 namespace
 {
+	enum class TransformType
+	{
+		World = 0,
+		View = 1,
+		Projection = 2
+	};
+	
+
 	typedef void( *FnLoadMeshFromFile)( const char* filename );
 	typedef void( *FnRenderToBuffer)( void* buffer, int width, int height, int bpp );
-	typedef void( *FnClearColorBuffer)( void* pImage, int width, int height, unsigned long clearColor );
+	typedef void( *FnSetTransform)( int transformType, const float* matrix4x4 );
 
 
 	// 지정된 모듈로부터 함수 주소 얻어오기
@@ -71,7 +80,8 @@ namespace
 		ModuleContext() : 
 			m_hModule( NULL ),
 			m_fnLoadMeshFromFile( NULL ),
-			m_fnRenderToBuffer( NULL )
+			m_fnRenderToBuffer( NULL ),
+			m_fnSetTransform( NULL )
 		{
 		}
 
@@ -119,19 +129,25 @@ namespace
 			}
 		}
 
-		void InstallFunctionLoadMeshFromFile( const char* functionName )
+		void SetTransform( TransformType transformType, const float* matrix4x4 )
 		{
-			m_fnLoadMeshFromFile = GetFunctionFromModule<FnLoadMeshFromFile>( m_hModule, functionName );
-
-			LoadMeshFromFile( g_meshFileName.c_str() );
+			if ( m_fnSetTransform )
+			{
+				m_fnSetTransform( static_cast<int>( transformType ), matrix4x4 );
+			}
 		}
 
-		void InstallFunctionRenderToBuffer( const char* functionName )
-		{
-			m_fnRenderToBuffer = GetFunctionFromModule<FnRenderToBuffer>( m_hModule, functionName );
+		// install module function
+#define SETUP_FUNC( func_name )	\
+		void InstallFunction##func_name( const char* functionName )	\
+		{	\
+			m_fn##func_name = GetFunctionFromModule<Fn##func_name>( m_hModule, functionName );	\
+			glutPostRedisplay();	\
+		}
 
-			glutPostRedisplay();
-		}	
+		SETUP_FUNC( LoadMeshFromFile );
+		SETUP_FUNC( RenderToBuffer );
+		SETUP_FUNC( SetTransform );
 
 	private:
 		void AssignOrReplace( HMODULE h )
@@ -153,12 +169,14 @@ namespace
 			FreeLibrary( m_hModule );
 			m_fnLoadMeshFromFile = NULL;
 			m_fnRenderToBuffer = NULL;	
+			m_fnSetTransform = NULL;
 		}
 
 	private:
 		HMODULE m_hModule;
 		FnLoadMeshFromFile m_fnLoadMeshFromFile;
 		FnRenderToBuffer m_fnRenderToBuffer;
+		FnSetTransform m_fnSetTransform;
 	};
 
 	ModuleContext g_ModuleContext;
@@ -250,8 +268,49 @@ static void LoadModuleCoolD()
 // TODO THIS...
 //
 //-----------------------------------------------------------------------------------------------------------------------
+void SetupTransform()
+{
+	const float PI = 3.141592653589f;
+
+    // For our world matrix, we will just rotate the object about the y-axis.
+    Matrix4 matWorld;
+
+    // Set up the rotation matrix to generate 1 full rotation (2*PI radians) 
+    // every 1000 ms. To avoid the loss of precision inherent in very high 
+    // floating point numbers, the system time is modulated by the rotation 
+    // period before conversion to a radian angle.
+    unsigned int iTime = timeGetTime() % 1000;
+    float fAngle = iTime * ( 2.0f * PI ) / 1000.0f;
+	matWorld.RotateY( fAngle );
+
+    g_ModuleContext.SetTransform( TransformType::World, matWorld.M );
+
+    // Set up our view matrix. A view matrix can be defined given an eye point,
+    // a point to lookat, and a direction for which way is up. Here, we set the
+    // eye five units back along the z-axis and up three units, look at the
+    // origin, and define "up" to be in the y-direction.
+    Vector3 vEyePt( 0.0f, 3.0f,-5.0f );
+    Vector3 vLookatPt( 0.0f, 0.0f, 0.0f );
+    Vector3 vUpVec( 0.0f, 1.0f, 0.0f );
+    Matrix4 matView;
+    matView.LookAt( vEyePt, vLookatPt, vUpVec );
+    g_ModuleContext.SetTransform( TransformType::View, matView.M );
+
+    // For the projection matrix, we set up a perspective transform (which
+    // transforms geometry from 3D view space to 2D viewport space, with
+    // a perspective divide making objects smaller in the distance). To build
+    // a perpsective transform, we need the field of view (1/4 pi is common),
+    // the aspect ratio, and the near and far clipping planes (which define at
+    // what distances geometry should be no longer be rendered).
+    Matrix4 matProj;
+    matProj.Perspective( PI / 4.0f, 1.0f, 1.0f, 100.0f );
+    g_ModuleContext.SetTransform( TransformType::Projection, matProj.M );
+}
+
 void makeCheckImage( void)
 {
+	SetupTransform();
+
 	g_ModuleContext.RenderToBuffer( (byte*) g_pppScreenImage );
 }
 
@@ -320,18 +379,22 @@ void keyboard( unsigned char key, int x, int y)
 	{
 	case '1':
 		LoadModuleKihx();
+		ReloadMesh();
 		break;
 
 	case '2':
 		LoadModuleWoocom();
+		ReloadMesh();
 		break;
 
 	case '3':
 		LoadModuleXTZ();
+		ReloadMesh();
 		break;
 
 	case '4':
 		LoadModuleCoolD();
+		ReloadMesh();
 		break;
 
 	case '8':

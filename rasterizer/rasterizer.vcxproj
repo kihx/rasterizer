@@ -89,9 +89,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\utility\math3d.cpp" />
     <ClCompile Include="program.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\utility\math3d.h" />
     <ClInclude Include="glut.h" />
   </ItemGroup>
   <ItemGroup>
