@@ -9,6 +9,40 @@
 
 namespace kih
 {
+	enum class PrimitiveType : unsigned int
+	{
+		POINTS = 1,
+		LINES = 2,
+		TRIANGLES = 3,
+		QUADS = 4,
+		PENTAGONS = 5,
+	};
+
+	inline PrimitiveType GetPrimitiveTypeFromNumberOfVertices( size_t num )
+	{
+		return static_cast< PrimitiveType >( num );
+	}
+
+	inline size_t ComputeNumberOfVerticesPerPrimitive( PrimitiveType type )
+	{	
+		return static_cast< size_t >( type );
+		//switch ( type )
+		//{
+		//case PrimitiveType::POINTS:
+		//	throw std::runtime_error( "unsupported primitive type" );
+		//	return 1;
+
+		////case PrimitiveType::LINES:
+		////	numVerticesPerPrimitive = 2;
+		////	break;
+
+		//case PrimitiveType::TRIANGLES:
+		//default:
+		//	return 3;
+		//}
+	}
+	
+
 	template<typename VertexType>
 	struct Vertex
 	{
@@ -126,3 +160,6 @@ namespace kih
 		std::vector<FaceS> m_faces;
 	};
 };
+
+using kih::Mesh;
+
