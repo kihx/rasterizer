@@ -56,12 +56,12 @@ namespace xtozero
 			}
 			else
 			{
-				const Vertex<float>& start = pMesh->m_vertices[*index];
-				const Vertex<float>& end = pMesh->m_vertices[*(index + 1)];
+				const Vector3& start = pMesh->m_vertices[*index];
+				const Vector3& end = pMesh->m_vertices[*(index + 1)];
 
 				//기울기를 구함
-				dy = end.m_element[y] - start.m_element[y];
-				dx = end.m_element[x] - start.m_element[x];
+				dy = end.Y - start.Y;
+				dx = end.X - start.X;
 
 				if ( dy == 0 ) // 무조건 닫힌 도형이라면 x축에 평행한다면 빼도 될텐데...
 				{
@@ -73,18 +73,18 @@ namespace xtozero
 				}
 
 				//minY, minX를 구함
-				if ( start.m_element[y] > end.m_element[y] )
+				if ( start.Y > end.Y )
 				{
-					maxY = static_cast<int>(start.m_element[y]);
-					minY = static_cast<int>(end.m_element[y]);
+					maxY = static_cast<int>(start.Y);
+					minY = static_cast<int>(end.Y);
 				}
 				else
 				{
-					maxY = static_cast<int>(end.m_element[y]);
-					minY = static_cast<int>(start.m_element[y]);
+					maxY = static_cast<int>(end.Y);
+					minY = static_cast<int>(start.Y);
 				}
 
-				minX = min( start.m_element[x], end.m_element[x] );
+				minX = min( start.X, end.X );
 
 				//edgeTable에 삽입
 				if ( m_edgeTable.find( minY ) == m_edgeTable.end() )

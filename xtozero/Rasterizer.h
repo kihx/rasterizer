@@ -10,6 +10,7 @@
 #include <vector>
 #include <set>
 #include <algorithm>
+#include "..//utility/math3d.h"
 
 namespace xtozero
 {
@@ -29,7 +30,7 @@ namespace xtozero
 	class CRasterizer
 	{
 	private:
-		std::vector<Vertex<int>> m_pixels;
+		std::vector<Vector3> m_pixels;
 		std::map<int, std::vector<Edge>> m_edgeTable;
 		std::vector<Edge> m_activeEdgeTable;
 		std::vector<CPsElementDesc> m_outputRS;

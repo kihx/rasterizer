@@ -8,24 +8,25 @@
 #include <string>
 #include <memory>
 #include <iostream>
+#include "..//utility/math3d.h"
 
 const int VETEX_ELEMENT_COUNT = 3;
 const int COLOR_ELEMENT_COUNT = 3;
 
 namespace xtozero
 {
-	enum VERTEX_ELEMENT
-	{
-		x = 0,
-		y,
-		z
-	};
+	//enum VERTEX_ELEMENT
+	//{
+	//	x = 0,
+	//	y,
+	//	z
+	//};
 
-	template<typename T>
-	struct Vertex
-	{
-		T m_element[VETEX_ELEMENT_COUNT];
-	};
+	//template<typename T>
+	//struct Vertex
+	//{
+	//	T m_element[VETEX_ELEMENT_COUNT];
+	//};
 
 	enum COLOR_ELEMENT
 	{
@@ -40,12 +41,12 @@ namespace xtozero
 		std::vector<int> m_indices;
 	};
 
-	typedef Vertex<float> VERTEXF;
+	//typedef Vertex<float> VERTEXF;
 
 	class CMesh
 	{
 	public:
-		std::vector<VERTEXF> m_vertices;
+		std::vector<Vector3> m_vertices;
 		std::vector<Face> m_faces;
 
 		CMesh( void ){}

@@ -46,12 +46,9 @@ namespace xtozero
 					if ( strncmp( token, "Vertex", sizeof("Vertex") ) == 0 )
 					{
 						meshfile >> token;
-						Vertex<float> vertex;
+						Vector3 vertex;
 
-						for ( int i = 0; i < VETEX_ELEMENT_COUNT; ++i )
-						{
-							meshfile >> vertex.m_element[i];
-						}
+						meshfile >> vertex.X >> vertex.Y >> vertex.Z;
 
 						m_vertices.emplace_back( vertex );
 					}
@@ -92,12 +89,12 @@ namespace xtozero
 
 	void CMesh::PrintMeshInfo( void )
 	{
-		for ( std::vector<Vertex<float>>::iterator& iter = m_vertices.begin(); iter != m_vertices.end(); ++iter )
+		for (std::vector<Vector3>::iterator& iter = m_vertices.begin(); iter != m_vertices.end(); ++iter)
 		{
 			std::cout << "[VERTEX] ";
 			for ( int i = 0; i < VETEX_ELEMENT_COUNT; ++i )
 			{
-				std::cout << iter->m_element[i] << " | ";
+				std::cout << iter->X << " | " << iter->Y << " | " << iter->Z << " | ";
 			}
 			std::cout << std::endl;
 		}
