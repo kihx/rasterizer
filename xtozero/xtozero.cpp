@@ -50,3 +50,8 @@ XTZ_API void XtzLoadMeshFromFile( const char* pfilename )
 {
 	gMeshManager->LoadMeshFromFile( pfilename );
 }
+
+XTZ_API void XtzSetTransform(int transformType, const float* matrix4x4)
+{
+
+}
