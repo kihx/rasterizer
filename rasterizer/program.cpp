@@ -58,11 +58,12 @@ namespace
 		static_assert( std::is_pointer<FuncPtr>::value, "not pointer" );
 		static_assert( sizeof( FuncPtr ) > 0, "unknown type" );
 
+		FuncPtr func = nullptr;
 		__try
 		{
 			if ( hModule && functionName )
 			{
-				return (FuncPtr) GetProcAddress( hModule, functionName );
+				func = reinterpret_cast<FuncPtr>( GetProcAddress( hModule, functionName ) );
 			}
 		}
 		__except ( EXCEPTION_EXECUTE_HANDLER )
@@ -70,7 +71,7 @@ namespace
 			// do nothing
 		}
 
-		return NULL;
+		return func;
 	};	
 			
 	// 모듈별 작업 수행
@@ -78,10 +79,10 @@ namespace
 	{
 	public:
 		ModuleContext() : 
-			m_hModule( NULL ),
-			m_fnLoadMeshFromFile( NULL ),
-			m_fnRenderToBuffer( NULL ),
-			m_fnSetTransform( NULL )
+			m_hModule( nullptr ),
+			m_fnLoadMeshFromFile( nullptr ),
+			m_fnRenderToBuffer( nullptr ),
+			m_fnSetTransform( nullptr )
 		{
 		}
 
@@ -94,12 +95,12 @@ namespace
 		bool Load( const char* moduleName )
 		{
 			HMODULE h = GetModuleHandle( moduleName );
-			if ( h == NULL )
+			if ( h == nullptr )
 			{
 				h = LoadLibrary( moduleName );
 			}
 			AssignOrReplace( h );
-			return h != NULL;
+			return h != nullptr;
 		}
 
 		HMODULE& operator=( HMODULE h )
@@ -167,9 +168,9 @@ namespace
 		void Release() 
 		{
 			FreeLibrary( m_hModule );
-			m_fnLoadMeshFromFile = NULL;
-			m_fnRenderToBuffer = NULL;	
-			m_fnSetTransform = NULL;
+			m_fnLoadMeshFromFile = nullptr;
+			m_fnRenderToBuffer = nullptr;	
+			m_fnSetTransform = nullptr;
 		}
 
 	private:
@@ -199,6 +200,7 @@ static void LoadModuleKihx()
 	
 	g_ModuleContext.InstallFunctionLoadMeshFromFile( "kiLoadMeshFromFile" );
 	g_ModuleContext.InstallFunctionRenderToBuffer( "kiRenderToBuffer" );
+	g_ModuleContext.InstallFunctionSetTransform( "kiSetTransform" );
 
 	printf( "\n<kihx>\n\n" );
 }
@@ -373,7 +375,7 @@ void keyboard( unsigned char key, int x, int y)
 {
 	printf( "[keyboard] key: %c\n", key );
 	
-	HMODULE hCurrentModule = NULL;
+	HMODULE hCurrentModule = nullptr;
 
 	switch( key )
 	{

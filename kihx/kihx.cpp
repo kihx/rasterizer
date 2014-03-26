@@ -43,3 +43,8 @@ KIHX_API void kiRenderToBuffer( void* buffer, int width, int height, int bpp )
 
 	context->Draw( g_mesh );
 }
+
+KIHX_API void kiSetTransform( int transformType, const float* matrix4x4 )
+{
+	
+}
