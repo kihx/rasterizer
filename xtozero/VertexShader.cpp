@@ -1,12 +1,20 @@
 #include "stdafx.h"
 #include "VertexShader.h"
 
-
-CVertexShader::CVertexShader()
+namespace xtozero
 {
-}
+	CVertexShader::CVertexShader()
+	{
+	}
 
 
-CVertexShader::~CVertexShader()
-{
+	CVertexShader::~CVertexShader()
+	{
+	}
+
+	std::vector<CRsElementDesc> CVertexShader::Process( const std::shared_ptr<CMesh> pMesh )
+	{
+		std::vector<CRsElementDesc> vsOutput;
+		return vsOutput;
+	}
 }
