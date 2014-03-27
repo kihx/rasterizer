@@ -94,6 +94,7 @@
     <ClInclude Include="CoolD_SubFunction.h" />
     <ClInclude Include="CoolD_CustomMesh.h" />
     <ClInclude Include="CoolD_Type.h" />
+    <ClInclude Include="CoolD_DMatrix.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="coold.cpp" />

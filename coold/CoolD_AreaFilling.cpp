@@ -29,8 +29,7 @@ namespace CoolD
 		for( auto& mesh : m_ListMesh )
 		{			
 			TimeForm start = chrono::system_clock::now();
-
-
+			
 			for( Duint faceNum = 1; faceNum <= mesh->GetFaceSize(); ++faceNum )
 			{
 				const BaseFace& face = CreatePointsToLines(mesh, faceNum);	//메쉬에서 어떤 면을 그릴 것 인지
@@ -67,7 +66,7 @@ namespace CoolD
 			}
 			BaseVertex endVertex = pMesh->GetVertex(lineKey.endIndex);
 
-			m_ListLine.emplace_back( lineKey, beginVertex, endVertex );	//임시 객체 생성하면서 삽입
+			m_ListLine.emplace_back( lineKey, beginVertex, endVertex );
 		}
 
 		return face;

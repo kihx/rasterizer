@@ -7,7 +7,9 @@
 #include "CoolD_Defines.h"
 #include "CoolD_Inlines.h"
 #include "CoolD_AreaFilling.h"
+#include "CoolD_DMatrix.h"
 
+using namespace CoolD;
 
 //BOOL WINAPI DllMain( HINSTANCE hInstDll, DWORD fdwReason, LPVOID fImpLoad )
 //{
@@ -18,7 +20,8 @@ list<Line*> listLine;
 map<Dint, list<Line*>> chainTable;
 map<LineKey, EdgeNode*> edgeTable;
 
-CoolD::CustomMesh* g_pMesh = nullptr;
+CustomMesh* g_pMesh = nullptr;
+
 EXTERN_FORM DLL_API void __cdecl coold_LoadMeshFromFile( const Dchar* filename )
 {
 	if( g_pMesh )
@@ -38,3 +41,20 @@ EXTERN_FORM DLL_API void __cdecl coold_RenderToBuffer( void* buffer, Dint width,
 	areaFilling.Render();
 }
 
+EXTERN_FORM DLL_API void __cdecl coold_SetTransform(Dint transformType, const Dfloat* matrix4x4)
+{
+	switch( transformType )
+	{
+	case 0 :	//World
+		
+		break;
+	case 1:	//View
+		{
+			DMatrix<Dfloat> test( 4, 4, matrix4x4 );			
+		}
+		break;
+	case 2 :	//Projection
+
+		break;
+	}
+}

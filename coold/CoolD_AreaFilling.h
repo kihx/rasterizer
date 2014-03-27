@@ -26,17 +26,17 @@ namespace CoolD
 		void AddMesh( CustomMesh* const pMesh );
 		void Render();
 
-	private:
+	private:	//렌더 관련 데이터 생성부	
 		const BaseFace& CreatePointsToLines(const CustomMesh* pMesh, Duint faceNum);
 		void CreateEdgeTable();
 		void CreateChainTable( );	
 
-	private:
+	private:	//그려지는 단계
 		void DrawDot(const Duint x, const Duint y, const Dulong DotColor);
 		void DrawLine(list<EdgeNode>& renderLine, const Dint currentHeight, const Dulong dotColor);
 		void DrawFace(const Dulong dotColor);
 
-	private:		
+	private:	//그 외 보조 함수
 		Dulong MixDotColor( const BaseColor& color );
 		bool CheckContinueLine( const LineKey& lhs, const LineKey& rhs ) const;		
 	};

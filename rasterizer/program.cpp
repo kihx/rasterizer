@@ -261,6 +261,7 @@ static void LoadModuleCoolD()
 
 	g_ModuleContext.InstallFunctionLoadMeshFromFile( "coold_LoadMeshFromFile" );
 	g_ModuleContext.InstallFunctionRenderToBuffer( "coold_RenderToBuffer" );
+	g_ModuleContext.InstallFunctionSetTransform( "coold_SetTransform" );
 
 	printf( "\n<CoolD>\n\n" );
 }
