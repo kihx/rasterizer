@@ -312,11 +312,11 @@ public:
 
 	Matrix4& Rotate( const Vector3& axis, float angle );
 
-	Matrix4& LookAt( const Vector3& eye, const Vector3& at, const Vector3& up );
+	Matrix4& LookAtLH( const Vector3& eye, const Vector3& at, const Vector3& up );
 
 	Matrix4& PerspectiveOffCenter( float l, float r, float b, float t, float zn, float zf );
 
-	Matrix4& Perspective( float fovY, float aspect, float zn, float zf );
+	Matrix4& PerspectiveLH( float fovY, float aspect, float zn, float zf );
 
 	Matrix4& Ortho( float l, float r, float b, float t, float zn, float zf );
 
