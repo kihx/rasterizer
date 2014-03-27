@@ -94,6 +94,7 @@
     <ClInclude Include="VertexShader.h" />
     <ClInclude Include="xtozero.h" />
     <ClInclude Include="pipelineElements.h" />
+    <ClInclude Include="XtzMath.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
@@ -105,6 +106,7 @@
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="FileHandler.cpp" />
+    <ClCompile Include="XtzMath.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="Rasterizer.cpp" />
     <ClCompile Include="stdafx.cpp">

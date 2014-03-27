@@ -35,27 +35,25 @@ namespace xtozero
 				{
 					if ( strncmp( token + symbollen, "Vertices", sizeof("Vertices") ) == 0 )
 					{
-						int vertices;
-						meshfile >> vertices;
+						meshfile >> m_nVerties;
 
-						if ( vertices <= 0 )
+						if ( m_nVerties <= 0 )
 						{
 							return false;
 						}
 
-						m_vertices.reserve( vertices );
+						m_vertices.reserve( m_nVerties );
 					}
 					else if ( strncmp( token + symbollen, "Faces", sizeof("Faces") ) == 0 )
 					{
-						int faces;
-						meshfile >> faces;
+						meshfile >> m_nfaces;
 
-						if ( faces <= 0 )
+						if ( m_nfaces <= 0 )
 						{
 							return false;
 						}
 
-						m_faces.reserve( faces );
+						m_faces.reserve( m_nfaces );
 					}
 				}
 				else
@@ -119,27 +117,25 @@ namespace xtozero
 				{
 					if ( strncmp( token + symbollen, "Vertices", sizeof("Vertices") ) == 0 )
 					{
-						int vertices;
-						meshfile >> vertices;
+						meshfile >> m_nVerties;
 
-						if ( vertices <= 0 )
+						if ( m_nVerties <= 0 )
 						{
 							return false;
 						}
 
-						m_vertices.reserve( vertices );
+						m_vertices.reserve( m_nVerties );
 					}
 					else if ( strncmp( token + symbollen, "Faces", sizeof("Faces") ) == 0 )
 					{
-						int faces;
-						meshfile >> faces;
+						meshfile >> m_nfaces;
 
-						if ( faces <= 0 )
+						if ( m_nfaces <= 0 )
 						{
 							return false;
 						}
 
-						m_faces.reserve( faces );
+						m_faces.reserve( m_nfaces );
 					}
 				}
 				else
@@ -160,11 +156,11 @@ namespace xtozero
 
 						//Color 값이 없다.
 						//int color;
-						//for ( int i = 0; i < COLOR_ELEMENT_COUNT; ++i )
-						//{
-						//	meshfile >> color;
-						//	face.m_color[i] = color;
-						//}
+						for ( int i = 0; i < COLOR_ELEMENT_COUNT; ++i )
+						{
+							//	meshfile >> color;
+							face.m_color[i] = 255;
+						}
 
 						int index;
 						face.m_indices.reserve( VERTEX_ELEMENT_COUNT );

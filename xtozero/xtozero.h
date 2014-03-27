@@ -11,10 +11,6 @@
 #include "Rasterizer.h"
 #include "VertexShader.h"
 
-std::unique_ptr<xtozero::CMeshManager> gMeshManager( new xtozero::CMeshManager() );
-std::unique_ptr<xtozero::CVertexShader> gVertexShader( new xtozero::CVertexShader( ) );
-std::unique_ptr<xtozero::CRasterizer> gRasterizer( new xtozero::CRasterizer() );
-
 XTZ_API void XtzRenderToBuffer( void* buffer, int width, int height, int dpp );
 
 XTZ_API void XtzClearBuffer( void* buffer, int width, int height, int color );
