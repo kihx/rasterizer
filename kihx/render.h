@@ -74,7 +74,13 @@ namespace kih
 			}
 		}
 
-		const Data& GetData( size_t index ) const
+		const Data& GetDataConst( size_t index ) const
+		{
+			assert( ( index >= 0 && index < Size() ) && "out of ranged index" );
+			return m_streamSource[index];
+		}
+
+		Data& GetData( size_t index )
 		{
 			assert( ( index >= 0 && index < Size() ) && "out of ranged index" );
 			return m_streamSource[index];

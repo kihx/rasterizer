@@ -269,6 +269,7 @@ namespace kih
 		}
 
 	private:
+		// WVP transform
 		void Transform( const Vector3& position, float outPosition[4] )
 		{
 			assert( m_pRenderingContext );
@@ -276,10 +277,12 @@ namespace kih
 			Matrix4 wvp = m_pRenderingContext->GetSharedConstantBuffer().GetMatrix4( ConstantBuffer::WVPMatrix );
 			Vector3 hpos = Vector3_Transform( position, wvp );
 
+			printf( "hpos: %.2f %.2f %.2f\n", hpos.X, hpos.Y, hpos.Z );
+
 			outPosition[0] = hpos.X;
 			outPosition[1] = hpos.Y;
 			outPosition[2] = hpos.Z;
-			outPosition[3] = 1.0f;
+			outPosition[3] = 1.0f;		// FIXME: Perspective division should be done after interpolation on the rasterizer.
 		}
 
 	private:
@@ -319,6 +322,25 @@ namespace kih
 			unsigned short height = static_cast<unsigned short>( rt->Height() );
 
 			assert( ( width > 0 && height > 0 ) && "invalid operation" );
+
+			float factorX = width * 0.5f;
+			float factorY = height * 0.5f;
+
+			// Viewport transform
+			size_t numVertices = inputStream->Size();
+			for ( size_t v = 0; v < numVertices; ++v )
+			{
+				auto& data = inputStream->GetData( v );
+				data.X *= factorX;
+				data.X += factorX;	// + x
+
+				data.Y *= factorY;
+				data.Y += factorY;	// + y
+
+				// data.Z   near/far
+
+				printf( "data: %.2f %.2f\n", data.X, data.Y );
+			}
 
 			// FIXME: is this ok??
 			outputStream->Reserve( width * height );
@@ -737,7 +759,7 @@ namespace kih
 		// input assembler
 		std::shared_ptr<VertexProcInputStream> vpInput = m_inputAssembler->Process( mesh );
 
-		printf( "VertexProcInputStream Size: %d\n", vpInput->Size() );
+		printf( "\nVertexProcInputStream Size: %d\n", vpInput->Size() );
 
 		// vertex processor
 		std::shared_ptr<RasterizerInputStream> raInput = m_vertexProcessor->Process( vpInput );
