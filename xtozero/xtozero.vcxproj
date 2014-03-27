@@ -85,6 +85,7 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Comman.h" />
     <ClInclude Include="FileHandler.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="Rasterizer.h" />
