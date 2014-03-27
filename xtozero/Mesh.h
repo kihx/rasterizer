@@ -10,7 +10,7 @@
 #include <iostream>
 #include "..//utility/math3d.h"
 
-const int VETEX_ELEMENT_COUNT = 3;
+const int VERTEX_ELEMENT_COUNT = 3;
 const int COLOR_ELEMENT_COUNT = 3;
 
 namespace xtozero
@@ -25,7 +25,7 @@ namespace xtozero
 	//template<typename T>
 	//struct Vertex
 	//{
-	//	T m_element[VETEX_ELEMENT_COUNT];
+	//	T m_element[VERTEX_ELEMENT_COUNT];
 	//};
 
 	enum COLOR_ELEMENT
@@ -53,6 +53,8 @@ namespace xtozero
 		~CMesh( void ){}
 
 		bool LoadFromFile( const char* pfilename );
+		bool LoadFromMsh( const char* pfilename );
+		bool LoadFromPly( const char* pfilename );
 		void PrintMeshInfo( void );
 	};
 
