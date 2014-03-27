@@ -32,7 +32,7 @@ byte g_pppScreenImage[SCREEN_HEIGHT][SCREEN_WIDTH][COLOR_DEPTH];
 //
 static GLdouble g_dZoomFactor = 1.0;
 static GLint g_iHeight;
-std::string g_meshFileName = "input.msh";
+std::string g_meshFileName = "cube.ply";
 
 // Customization 
 //
@@ -273,7 +273,7 @@ static void LoadModuleCoolD()
 //-----------------------------------------------------------------------------------------------------------------------
 void SetupTransform()
 {
-	const float PI = 3.141592653589f;
+	const float PI = 3.141592654f;
 
     // For our world matrix, we will just rotate the object about the y-axis.
     Matrix4 matWorld;
@@ -284,19 +284,22 @@ void SetupTransform()
     // period before conversion to a radian angle.
     unsigned int iTime = timeGetTime() % 1000;
     float fAngle = iTime * ( 2.0f * PI ) / 1000.0f;
-	matWorld.RotateY( fAngle );
+	//matWorld.RotateY( fAngle );
 
+	Matrix4 matScale;
+	matScale.Scaling( 5.0f, 5.0f, 5.0f );
+	matWorld = matScale * matWorld;
     g_ModuleContext.SetTransform( TransformType::World, matWorld.M );
 
     // Set up our view matrix. A view matrix can be defined given an eye point,
     // a point to lookat, and a direction for which way is up. Here, we set the
     // eye five units back along the z-axis and up three units, look at the
     // origin, and define "up" to be in the y-direction.
-    Vector3 vEyePt( 0.0f, 3.0f,-5.0f );
+    Vector3 vEyePt( 3.0f, 3.0f, -5.0f );
     Vector3 vLookatPt( 0.0f, 0.0f, 0.0f );
     Vector3 vUpVec( 0.0f, 1.0f, 0.0f );
     Matrix4 matView;
-    matView.LookAt( vEyePt, vLookatPt, vUpVec );
+    matView.LookAtLH( vEyePt, vLookatPt, vUpVec );
     g_ModuleContext.SetTransform( TransformType::View, matView.M );
 
     // For the projection matrix, we set up a perspective transform (which
@@ -306,7 +309,7 @@ void SetupTransform()
     // the aspect ratio, and the near and far clipping planes (which define at
     // what distances geometry should be no longer be rendered).
     Matrix4 matProj;
-    matProj.Perspective( PI / 4.0f, 1.0f, 1.0f, 100.0f );
+    matProj.PerspectiveLH( PI / 4.0f, 1.0f, 1.0f, 100.0f );
     g_ModuleContext.SetTransform( TransformType::Projection, matProj.M );
 }
 
@@ -361,7 +364,7 @@ void motion( int x, int y)
 
 	screeny = g_iHeight -( GLint) y;
 	glRasterPos2i( x, screeny );
-	glPixelZoom( g_dZoomFactor, g_dZoomFactor );
+	//glPixelZoom( g_dZoomFactor, g_dZoomFactor );
 	glCopyPixels( 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, GL_COLOR );
 	glPixelZoom( 1.0, 1.0 );
 	glFlush();
@@ -424,9 +427,9 @@ void keyboard( unsigned char key, int x, int y)
 
 	case 'z':
 		g_dZoomFactor += 0.5;
-		if ( g_dZoomFactor >= 3.0) 
+		if ( g_dZoomFactor >= 5.0) 
 		{
-			g_dZoomFactor = 3.0;
+			g_dZoomFactor = 5.0;
 		}
 		printf( "g_dZoomFactor is now %4.1f\n", g_dZoomFactor );
 		break;

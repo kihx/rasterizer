@@ -6,11 +6,16 @@
 
 using namespace xtozero;
 
+std::unique_ptr<xtozero::CMeshManager> gMeshManager( new xtozero::CMeshManager( ) );
+std::unique_ptr<xtozero::CVertexShader> gVertexShader( new xtozero::CVertexShader( ) );
+std::unique_ptr<xtozero::CRasterizer> gRasterizer( new xtozero::CRasterizer( ) );
+
 XTZ_API void XtzRenderToBuffer( void* buffer, int width, int height, int dpp )
 {
 	if ( buffer )
 	{
-		CRasterizer rasterizer( gMeshManager->LoadRecentMesh() );
+		gRasterizer->SetViewPort( 0, 0, width, height );
+		gRasterizer->Process( gMeshManager->LoadRecentMesh( ) );
 
 		size_t size = dpp / 8;
 
@@ -18,7 +23,7 @@ XTZ_API void XtzRenderToBuffer( void* buffer, int width, int height, int dpp )
 		unsigned int color = PIXEL_COLOR( 0, 0, 0 );
 
 		//Output Merger 구현후 수정
-		auto output = rasterizer.Getoutput();
+		auto output = gRasterizer->Getoutput( );
 
 		for ( int i = 0; i < height; ++i )
 		{
@@ -53,5 +58,16 @@ XTZ_API void XtzLoadMeshFromFile( const char* pfilename )
 
 XTZ_API void XtzSetTransform(int transformType, const float* matrix4x4)
 {
-
+	switch ( transformType )
+	{
+	case 0:
+		gVertexShader->SetWorldMatrix( matrix4x4 );
+		break;
+	case 1:
+		gVertexShader->SetViewMatrix( matrix4x4 );
+		break;
+	case 2:
+		gVertexShader->SetProjectionMatrix( matrix4x4 );
+		break;
+	}
 }

@@ -245,21 +245,21 @@ Matrix4& Matrix4::Rotate(const Vector3& axis, float angle)
 	return *this;
 }
 
-Matrix4& Matrix4::LookAt(const Vector3& eye, const Vector3& at, const Vector3& up)
+Matrix4& Matrix4::LookAtLH(const Vector3& eye, const Vector3& at, const Vector3& up)
 {
-	Vector3 ndist = at - eye;
-	ndist.Normalize();
+	Vector3 zaxis = at - eye;
+	zaxis.Normalize();
 
 	Vector3 nup = up;
 	nup.Normalize();
 
-	Vector3 s = ndist.CrossProduct(nup);
-	Vector3 u = s.CrossProduct(ndist);
+	Vector3 xaxis = zaxis.CrossProduct(nup);
+	Vector3 yaxis = xaxis.CrossProduct(zaxis);
 
-	A[0][0] = s.X; A[1][0] = s.Y; A[2][0] = s.Z; A[3][0] = -eye.X;
-	A[0][1] = u.X; A[1][1] = u.Y; A[2][1] = u.Z; A[3][1] = -eye.Y;
-	A[0][2] =-ndist.X; A[1][2] =-ndist.Y; A[2][2] =-ndist.Z; A[3][2] = -eye.Z;
-	A[0][3] = 0.0f; A[1][3] = 0.0f; A[2][3] = 0.0f; A[3][3] = 1.0f;
+	A[0][0] = xaxis.X;	A[1][0] = xaxis.Y;	A[2][0] = xaxis.Z;	A[3][0] = 0.0f;
+	A[0][1] = yaxis.X;	A[1][1] = yaxis.Y;	A[2][1] = yaxis.Z;	A[3][1] = 0.0f;
+	A[0][2] = zaxis.X;	A[1][2] = zaxis.Y;	A[2][2] = zaxis.Z;	A[3][2] = 0.0f;
+	A[0][3] = -xaxis.DotProduct( eye );		A[1][3] = -yaxis.DotProduct( eye );		A[2][3] = -zaxis.DotProduct( eye );		A[3][3] = 1.0f;
 
 	return *this;
 }
@@ -315,31 +315,17 @@ Matrix4& Matrix4::PerspectiveOffCenter(float l, float r, float b, float t, float
 	return *this;
 }
 
-Matrix4& Matrix4::Perspective(float fovY, float aspect, float zn, float zf)
+Matrix4& Matrix4::PerspectiveLH(float fovY, float aspect, float zn, float zf)
 {
-	float angle = DEG2RAD(fovY / 2.0f);
-	float cot = cos(angle) / sin(angle);
+	float h = 1.0f / tanf( fovY * 0.5f );
+	float w = h / aspect;
+	float fn = zf - zn;
 
-	A[0][0] = cot / aspect;
-	A[0][1] = 0.0f;
-	A[0][2] = 0.0f;
-	A[0][3] = 0.0f;
-
-	A[1][0] = 0.0f;
-	A[1][1] = cot;
-	A[1][2] = 0.0f;
-	A[1][3] = 0.0f;
-
-	A[2][0] = 0.0f;
-	A[2][1] = 0.0f;
-	A[2][2] = -(zf + zn) / (zf - zn);
-	A[2][3] = -1.0f;
-
-	A[3][0] = 0.0f;
-	A[3][1] = 0.0f;
-	A[3][2] = -(2 * zf * zn) / (zf - zn);
-	A[3][3] = 0.0f;
-
+	M[0] = w;		M[1] = 0.0f;     M[2] = 0.0f;			M[3] = 0.0f;
+	M[4] = 0.0f;    M[5] = h;		 M[6] = 0.0f;			M[7] = 0.0f;
+	M[8] = 0.0f;    M[9] = 0.0f;     M[10] = zf / fn;		M[11] = 1.0f;
+	M[12] = 0.0f;   M[13] = 0.0f;    M[14] = -zn * zf / fn; M[15] = 0.0f;
+	
 	return *this;
 }
 

@@ -8,6 +8,9 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
     </Filter>
+    <Filter Include="Math">
+      <UniqueIdentifier>{2d739c3e-7b48-4038-b660-be7ff3e0643b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -37,6 +40,12 @@
     <ClInclude Include="type.h">
       <Filter>Rendering</Filter>
     </ClInclude>
+    <ClInclude Include="matrix.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="vector.h">
+      <Filter>Math</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -59,6 +68,9 @@
     </ClCompile>
     <ClCompile Include="texture.cpp">
       <Filter>Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="matrix.cpp">
+      <Filter>Math</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

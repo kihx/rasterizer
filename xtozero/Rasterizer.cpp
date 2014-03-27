@@ -1,35 +1,9 @@
 #include "stdafx.h"
 #include "Rasterizer.h"
+#include "Comman.h"
 
 namespace xtozero
 {
-	CRasterizer::CRasterizer( const std::shared_ptr<CMesh> pMesh )
-	{
-		//여기에서 메시내부의 픽셀을 계산
-
-		for ( int i = 0; i < pMesh->m_faces.size(); ++i )
-		{
-			CreateEdgeTable( pMesh, i );
-
-			int scanline = m_edgeTable.begin()->first;
-			unsigned int facecolor = PIXEL_COLOR( pMesh->m_faces[i].m_color[r], pMesh->m_faces[i].m_color[g], pMesh->m_faces[i].m_color[b] );
-
-			while ( !(m_edgeTable.empty() && m_activeEdgeTable.empty()) )
-			{
-				UpdateActiveEdgeTable( scanline );
-
-				ProcessScanline( scanline, facecolor );
-
-				++scanline;
-			}
-		}
-	}
-
-	CRasterizer::~CRasterizer( void )
-	{
-
-	}
-
 	void CRasterizer::CreateEdgeTable( const std::shared_ptr<CMesh> pMesh, int faceNumber )
 	{
 		if ( faceNumber >= pMesh->m_faces.size() )
@@ -87,14 +61,16 @@ namespace xtozero
 				minX = min( start.X, end.X );
 
 				//edgeTable에 삽입
-				if ( m_edgeTable.find( minY ) == m_edgeTable.end() )
-				{
-					m_edgeTable[minY] = std::vector<Edge>();
-				}
 
-				m_edgeTable[minY].emplace_back( minY, maxY, minX, gradient );
+				m_edgeTable.emplace_back( minY, maxY, minX, gradient );
 			}
 		}
+		//m_edgeTable을 minY로 정렬
+		std::sort( m_edgeTable.begin(), m_edgeTable.end(),
+			[]( const Edge& lhs, const Edge& rhs ) -> bool
+			{
+				return lhs.m_minY < rhs.m_minY;
+			});
 	}
 
 	void CRasterizer::UpdateActiveEdgeTable( const int scanline )
@@ -112,24 +88,29 @@ namespace xtozero
 			}
 		}
 
-		if ( m_edgeTable.empty() )
+		while ( true )
 		{
-			//Do Nothing
-		}
-		else // AET 에 Edge 추가
-		{
-			std::vector<Edge>& edgelist = m_edgeTable.begin()->second;
-
-			if ( m_edgeTable.begin()->first < scanline )
+			if ( m_edgeTable.empty() )
 			{
-				for ( std::vector<Edge>::iterator& edge = edgelist.begin(); edge != edgelist.end(); ++edge )
-				{
-					m_activeEdgeTable.emplace_back( *edge );
-				}
-				m_edgeTable.erase( m_edgeTable.begin() );
+				break;
 			}
+			else
+			{
+				if ( m_edgeTable.begin( )->m_minY < scanline )
+				{
+					m_activeEdgeTable.emplace_back( *m_edgeTable.begin( ) );
+					m_edgeTable.erase( m_edgeTable.begin( ) );
+				}
+				else
+				{
+					break;
+				}
+			}
+		}
 
-			//minX로 정렬
+		//minX로 정렬
+		if ( m_activeEdgeTable.size() > 1 )
+		{
 			std::sort( m_activeEdgeTable.begin(), m_activeEdgeTable.end(),
 				[]( const Edge& lhs, const Edge& rhs )->bool
 			{
@@ -184,15 +165,22 @@ namespace xtozero
 				break;
 			}
 
+			startX = *iter;
+			endX = *(iter + 1);
 			if ( *iter > *(iter + 1) )
 			{
 				startX = *(iter + 1);
 				endX = *iter;
 			}
-			else
+
+			if ( startX < m_viewport.m_left )
 			{
-				startX = *iter;
-				endX = *(iter + 1);
+				startX = m_viewport.m_left;
+			}
+
+			if ( endX > m_viewport.m_right )
+			{
+				endX = m_viewport.m_right;
 			}
 
 			for ( int i = startX; i <= endX; ++i )
@@ -200,5 +188,55 @@ namespace xtozero
 				m_outputRS.emplace_back( i, scanline, facecolor );
 			}
 		}
+	}
+
+	void CRasterizer::Process( const std::shared_ptr<CMesh> pMesh )
+	{
+		//여기에서 메시내부의 픽셀을 계산
+
+		for ( int i = 0; i < pMesh->m_faces.size( ); ++i )
+		{
+			CreateEdgeTable( pMesh, i );
+
+			int scanline = m_edgeTable.begin( )->m_minY;
+			unsigned int facecolor = PIXEL_COLOR( pMesh->m_faces[i].m_color[r], pMesh->m_faces[i].m_color[g], pMesh->m_faces[i].m_color[b] );
+
+			while ( !(m_edgeTable.empty( ) && m_activeEdgeTable.empty( )) )
+			{
+				UpdateActiveEdgeTable( scanline );
+
+				ProcessScanline( scanline, facecolor );
+
+				++scanline;
+			}
+		}
+	}
+
+	void CRasterizer::SetViewPort( int left, int top, int right, int bottom )
+	{
+		if ( left > right )
+		{
+			Swap( left, right );
+		}
+		if ( top > bottom )
+		{
+			Swap( top, bottom );
+		}
+		
+		if ( left < 0 )
+		{
+			m_viewport.m_left = 0;
+		}
+		if ( top < 0 )
+		{
+			m_viewport.m_top = 0;
+		}
+
+		m_viewport.m_left = left;
+		m_viewport.m_top = top;
+		m_viewport.m_right = right;
+		m_viewport.m_bottom = bottom;
+
+		m_outputRS.reserve( (right - left) * (bottom - top) );
 	}
 }

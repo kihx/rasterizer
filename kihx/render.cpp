@@ -2,6 +2,8 @@
 #include "render.h"
 #include "mesh.h"
 #include "texture.h"
+#include "vector.h"
+#include "matrix.h"
 
 #include <list>
 
@@ -11,32 +13,15 @@ namespace kih
 	struct VertexProcData
 	{
 		// object-space position
-		union
-		{
-			struct
-			{
-				float X;
-				float Y;
-				float Z;
-			};
-
-			float Position[3];
-		};
+		Vector3 Position;
 
 		// vertex color
 		Color32 Color;
 
-		VertexProcData() :
-			X( 0.0f ),
-			Y( 0.0f ),
-			Z( 0.0f )			
-		{
-		}
+		VertexProcData() = default;
 
 		VertexProcData( const float position[3], const Color32& color) :
-			X( position[0] ),
-			Y( position[1] ),
-			Z( position[2] ),
+			Position( position ),
 			Color( color )
 		{
 		}
@@ -284,13 +269,20 @@ namespace kih
 		}
 
 	private:
-		void Transform( const float inPosition[3], float outPosition[4] )
+		// WVP transform
+		void Transform( const Vector3& position, float outPosition[4] )
 		{
-			// TODO: transform
-			outPosition[0] = inPosition[0];
-			outPosition[1] = inPosition[1];
-			outPosition[2] = inPosition[2];
-			outPosition[3] = 1.0f;
+			assert( m_pRenderingContext );
+
+			Matrix4 wvp = m_pRenderingContext->GetSharedConstantBuffer().GetMatrix4( ConstantBuffer::WVPMatrix );
+			Vector3 hpos = Vector3_Transform( position, wvp );
+
+			printf( "hpos: %.2f %.2f %.2f\n", hpos.X, hpos.Y, hpos.Z );
+
+			outPosition[0] = hpos.X;
+			outPosition[1] = hpos.Y;
+			outPosition[2] = hpos.Z;
+			outPosition[3] = 1.0f;		// FIXME: Perspective division should be done after interpolation on the rasterizer.
 		}
 
 	private:
@@ -330,6 +322,25 @@ namespace kih
 			unsigned short height = static_cast<unsigned short>( rt->Height() );
 
 			assert( ( width > 0 && height > 0 ) && "invalid operation" );
+
+			float factorX = width * 0.5f;
+			float factorY = height * 0.5f;
+
+			// Viewport transform
+			size_t numVertices = inputStream->Size();
+			for ( size_t v = 0; v < numVertices; ++v )
+			{
+				auto& data = inputStream->GetData( v );
+				data.X *= factorX;
+				data.X += factorX;	// + x
+
+				data.Y *= factorY;
+				data.Y += factorY;	// + y
+
+				// data.Z   near/far
+
+				printf( "data: %.2f %.2f\n", data.X, data.Y );
+			}
 
 			// FIXME: is this ok??
 			outputStream->Reserve( width * height );
@@ -729,6 +740,13 @@ namespace kih
 		assert( m_pixelProcessor );
 		assert( m_outputMerger );
 
+		RenderingDevice* pDevice = RenderingDevice::GetInstance();
+		assert( pDevice );
+
+		Matrix4 wv = pDevice->GetWorldMatrix() * pDevice->GetViewMatrix();
+		Matrix4 wvp = wv * pDevice->GetProjectionMatrix();
+		GetSharedConstantBuffer().SetMatrix4( ConstantBuffer::WVPMatrix, wvp );
+
 #ifdef FACE_SPECIFIC
 		for ( size_t face = 0; face < mesh->NumFaces(); ++face )
 		{		
@@ -741,7 +759,7 @@ namespace kih
 		// input assembler
 		std::shared_ptr<VertexProcInputStream> vpInput = m_inputAssembler->Process( mesh );
 
-		printf( "VertexProcInputStream Size: %d\n", vpInput->Size() );
+		printf( "\nVertexProcInputStream Size: %d\n", vpInput->Size() );
 
 		// vertex processor
 		std::shared_ptr<RasterizerInputStream> raInput = m_vertexProcessor->Process( vpInput );
@@ -774,6 +792,36 @@ namespace kih
 
 	/* RenderingDevice
 	*/
+	void RenderingDevice::SetWorldMatrix( const Matrix4& m )
+	{
+		m_worldMatrix = m;
+
+		for ( auto& context : m_renderingContexts )
+		{
+			context->GetSharedConstantBuffer().SetMatrix4( ConstantBuffer::WorldMatrix, m );
+		}
+	}
+
+	void RenderingDevice::SetViewMatrix( const Matrix4& m )
+	{
+		m_viewMatrix = m;
+
+		for ( auto& context : m_renderingContexts )
+		{
+			context->GetSharedConstantBuffer().SetMatrix4( ConstantBuffer::ViewMatrix, m );
+		}
+	}
+
+	void RenderingDevice::SetProjectionMatrix( const Matrix4& m )
+	{
+		m_projMatrix = m;
+
+		for ( auto& context : m_renderingContexts )
+		{
+			context->GetSharedConstantBuffer().SetMatrix4( ConstantBuffer::ProjectionMatrix, m );
+		}
+	}
+
 	std::shared_ptr<RenderingContext> RenderingDevice::CreateRenderingContext()
 	{
 		auto context = std::make_shared<RenderingContext>( 4 /* the number of render targets */ );

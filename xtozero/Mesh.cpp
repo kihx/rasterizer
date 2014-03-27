@@ -5,11 +5,28 @@ namespace xtozero
 {
 	bool CMesh::LoadFromFile( const char* pfilename )
 	{
+		const char* fileExtension;
+
+		fileExtension = strrchr( pfilename, '.' );
+
+		if ( strncmp( fileExtension, ".ply", strnlen_s( fileExtension, 4 ) ) == 0 )
+		{
+			return LoadFromPly( pfilename );
+		}
+		else if ( strncmp( fileExtension, ".msh", strnlen_s( fileExtension, 4 ) ) == 0 )
+		{
+			return LoadFromMsh( pfilename );
+		}
+		return false;
+	}
+
+	bool CMesh::LoadFromMsh( const char* pfilename )
+	{
 		CFileHandler meshfile( pfilename );
-		if ( meshfile.is_open() )
+		if ( meshfile.is_open( ) )
 		{
 			char token[256] = { 0 };
-			while ( meshfile.good() )
+			while ( meshfile.good( ) )
 			{
 				meshfile >> token;
 
@@ -18,27 +35,25 @@ namespace xtozero
 				{
 					if ( strncmp( token + symbollen, "Vertices", sizeof("Vertices") ) == 0 )
 					{
-						int vertices;
-						meshfile >> vertices;
+						meshfile >> m_nVerties;
 
-						if ( vertices <= 0 )
+						if ( m_nVerties <= 0 )
 						{
 							return false;
 						}
 
-						m_vertices.reserve( vertices );
+						m_vertices.reserve( m_nVerties );
 					}
 					else if ( strncmp( token + symbollen, "Faces", sizeof("Faces") ) == 0 )
 					{
-						int faces;
-						meshfile >> faces;
+						meshfile >> m_nfaces;
 
-						if ( faces <= 0 )
+						if ( m_nfaces <= 0 )
 						{
 							return false;
 						}
 
-						m_faces.reserve( faces );
+						m_faces.reserve( m_nfaces );
 					}
 				}
 				else
@@ -73,7 +88,87 @@ namespace xtozero
 							meshfile >> index;
 							face.m_indices.emplace_back( index - 1 );
 						}
-						face.m_indices.emplace_back( *face.m_indices.begin() );//마지막 정점은 시작 정점이다.
+						face.m_indices.emplace_back( *face.m_indices.begin( ) );//마지막 정점은 시작 정점이다.
+
+						m_faces.emplace_back( face );
+					}
+				}
+			}
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
+
+	bool CMesh::LoadFromPly( const char* pfilename )
+	{
+		CFileHandler meshfile( pfilename );
+		if ( meshfile.is_open( ) )
+		{
+			char token[256] = { 0 };
+			while ( meshfile.good( ) )
+			{
+				meshfile >> token;
+
+				int symbollen = sizeof("#$") - 1;
+				if ( strncmp( token, "#$", symbollen ) == 0 )
+				{
+					if ( strncmp( token + symbollen, "Vertices", sizeof("Vertices") ) == 0 )
+					{
+						meshfile >> m_nVerties;
+
+						if ( m_nVerties <= 0 )
+						{
+							return false;
+						}
+
+						m_vertices.reserve( m_nVerties );
+					}
+					else if ( strncmp( token + symbollen, "Faces", sizeof("Faces") ) == 0 )
+					{
+						meshfile >> m_nfaces;
+
+						if ( m_nfaces <= 0 )
+						{
+							return false;
+						}
+
+						m_faces.reserve( m_nfaces );
+					}
+				}
+				else
+				{
+					if ( strncmp( token, "Vertex", sizeof("Vertex") ) == 0 )
+					{
+						meshfile >> token;
+						Vector3 vertex;
+
+						meshfile >> vertex.X >> vertex.Y >> vertex.Z;
+
+						m_vertices.emplace_back( vertex );
+					}
+					else if ( strncmp( token, "Face", sizeof("Face") ) == 0 )
+					{
+						meshfile >> token;
+						Face face;
+
+						//Color 값이 없다.
+						//int color;
+						for ( int i = 0; i < COLOR_ELEMENT_COUNT; ++i )
+						{
+							//	meshfile >> color;
+							face.m_color[i] = 255;
+						}
+
+						int index;
+						face.m_indices.reserve( VERTEX_ELEMENT_COUNT );
+						for ( int i = 0; i < VERTEX_ELEMENT_COUNT; ++i )
+						{
+							meshfile >> index;
+							face.m_indices.emplace_back( index - 1 );
+						}
 
 						m_faces.emplace_back( face );
 					}
@@ -92,7 +187,7 @@ namespace xtozero
 		for (std::vector<Vector3>::iterator& iter = m_vertices.begin(); iter != m_vertices.end(); ++iter)
 		{
 			std::cout << "[VERTEX] ";
-			for ( int i = 0; i < VETEX_ELEMENT_COUNT; ++i )
+			for ( int i = 0; i < VERTEX_ELEMENT_COUNT; ++i )
 			{
 				std::cout << iter->X << " | " << iter->Y << " | " << iter->Z << " | ";
 			}

@@ -17,6 +17,8 @@ WModule::WModule(void* buffer, int width, int height, int bpp)
 	: m_buffer(buffer), m_screenWidth(width), m_screenHeight(height), m_colorDepth(bpp),
 	m_isSorted(false)
 {
+	m_fillInfo.reserve(height);
+	m_fillInfo.resize(height);
 }
 
 WModule::~WModule()
@@ -70,30 +72,26 @@ void WModule::PaintPixel(int x, int y, const unsigned char* rgb)
 void WModule::ResetFillInfo()
 {
 	// 라인정보 비우기
-	m_fillInfo.clear();
+	size_t num = m_fillInfo.size();
+	for (size_t i = 0; i < num; ++i)
+	{
+		m_fillInfo[i].m_edgeData.clear();
+	}
 }
 
 void WModule::InsertLineInfo(int lineIndex, int posX, const unsigned char* rgb)
 {
-	const auto& itr = m_fillInfo.find(lineIndex);
-	if ( m_fillInfo.find(lineIndex) == m_fillInfo.end() )
-	{
-		m_fillInfo.emplace(lineIndex, EdgeInfo(posX, rgb));
-	}
-	else
-	{
-		m_fillInfo[lineIndex].Insert(posX, rgb);
-	}
+	m_fillInfo[lineIndex].Insert(posX, rgb);
 
 	m_isSorted = false;
 }
 
 void WModule::SortFillInfo()
 {
-	auto& itr = m_fillInfo.begin();
-	for (; itr != m_fillInfo.end(); ++itr)
+	size_t num = m_fillInfo.size();
+	for (size_t i = 0; i < num; ++i)
 	{
-		itr->second.Sort();
+		m_fillInfo[i].Sort();
 	}
 
 	m_isSorted = true;
@@ -101,18 +99,16 @@ void WModule::SortFillInfo()
 
 void WModule::DrawFillInfo()
 {
-	auto& itr = m_fillInfo.begin();
-	for (; itr != m_fillInfo.end(); ++itr)
+	size_t num = m_fillInfo.size();
+	for (size_t i = 0; i < num; ++i)
 	{
-		DrawScanline(itr->first, itr->second);
+		DrawScanline(i, m_fillInfo[i]);
 	}
 }
 
 void WModule::DrawScanline(int lineIndex, const EdgeInfo& info)
 {
-	// 엣지 정보가 짝수 이어야 하는데 홀수로 들어오는 부분이 있음
-	// 버그 수정이 필요
-	size_t edgeInfoCount = info.m_edgeData.size() - 1;
+	size_t edgeInfoCount = info.m_edgeData.size();
 	for (size_t i = 0; i < edgeInfoCount; i += 2)
 	{
 		const PixelInfo& first = info.m_edgeData[i];
@@ -174,64 +170,86 @@ void WClear( void* pImage, int width, int height, unsigned long clearColor )
 	}
 }
 
-void WLoadMesh( const char* file )
+void WTransform(int transformType, const float* matrix4x4)
 {
-	std::fstream stream( file );
-	
+	// do nothing
+}
+
+void LoadMesh(const char* fileName)
+{
+	std::fstream stream(fileName);
+
 	const int MAX_LEN = 1024;
-	char buffer[MAX_LEN] = {0};
-	char line[MAX_LEN] = {0};
+	char buffer[MAX_LEN] = { 0 };
+	char line[MAX_LEN] = { 0 };
 
 	int vertexNum = 0;
 	int faceNum = 0;
 
 	WTriData* triangle = new WTriData();
 
-	while( stream.good() )
+	while (stream.good())
 	{
 		stream >> buffer;
 
-		if( strstr( buffer, "#$"))
+		if (strstr(buffer, "#$"))
 		{
-			if( strncmp( &buffer[2], "Vertices", 8) == 0)
+			if (strncmp(&buffer[2], "Vertices", 8) == 0)
 			{
 				stream >> vertexNum;
-				triangle->SetVertexNum( vertexNum );
+				triangle->SetVertexNum(vertexNum);
 			}
-			else if( strncmp( &buffer[2], "Faces", 5) == 0)
+			else if (strncmp(&buffer[2], "Faces", 5) == 0)
 			{
 				stream >> faceNum;
-				triangle->SetFaceNum( faceNum );
+				triangle->SetFaceNum(faceNum);
 			}
 		}
-		else if( strncmp( buffer, "Vertex", 6) == 0)
+		else if (strncmp(buffer, "Vertex", 6) == 0)
 		{
 			int vertexID = 0;
 			VERTEX* vertex = new VERTEX();
 			stream >> vertexID >> vertex->m_pos[0] >> vertex->m_pos[1] >> vertex->m_pos[2];
-			triangle->PushVertex( vertex );
+			triangle->PushVertex(vertex);
 		}
-		else if( strncmp( buffer, "Face", 4) == 0)
+		else if (strncmp(buffer, "Face", 4) == 0)
 		{
 			int faceID = 0;
 			int indexNum = 0;
-			int r,g,b;
+			int r, g, b;
 			WFace* face = new WFace();
 			stream >> faceID >> r >> g >> b;
 			face->m_rgb[0] = r;
 			face->m_rgb[1] = g;
 			face->m_rgb[2] = b;
-			
+
 			stream >> indexNum;
-			for(int i=0; i< indexNum; ++i)
+			for (int i = 0; i< indexNum; ++i)
 			{
 				int vertexID = 0;
 				stream >> vertexID;
-				face->m_index.push_back( vertexID -1 );
+				face->m_index.push_back(vertexID - 1);
 			}
-			triangle->PushFace( face );
+			triangle->PushFace(face);
 		}
 	}
-	
-	g_pMesh = std::shared_ptr<WMesh>( new WMesh( triangle ));
+
+	g_pMesh = std::shared_ptr<WMesh>(new WMesh(triangle));
+}
+
+void LoadPoly(const char* fileName)
+{
+
+}
+
+void WLoadMesh(const char* fileName)
+{
+	if (strstr(fileName, ".msh"))
+	{
+		LoadMesh(fileName);
+	}
+	else if (strstr(fileName, ".ply"))
+	{
+		LoadPoly(fileName);
+	}
 }

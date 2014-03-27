@@ -154,6 +154,7 @@ namespace kih
 
 	private:
 		bool LoadMshFile( const char* filename );
+		bool LoadPlyFile( const char* filename );
 
 	private:
 		std::vector<VertexF> m_vertices;

@@ -8,9 +8,9 @@
 #include <string>
 #include <memory>
 #include <iostream>
-#include "..//utility/math3d.h"
+#include "XtzMath.h"
 
-const int VETEX_ELEMENT_COUNT = 3;
+const int VERTEX_ELEMENT_COUNT = 3;
 const int COLOR_ELEMENT_COUNT = 3;
 
 namespace xtozero
@@ -25,7 +25,7 @@ namespace xtozero
 	//template<typename T>
 	//struct Vertex
 	//{
-	//	T m_element[VETEX_ELEMENT_COUNT];
+	//	T m_element[VERTEX_ELEMENT_COUNT];
 	//};
 
 	enum COLOR_ELEMENT
@@ -49,10 +49,15 @@ namespace xtozero
 		std::vector<Vector3> m_vertices;
 		std::vector<Face> m_faces;
 
-		CMesh( void ){}
+		int m_nfaces;
+		int m_nVerties;
+
+		CMesh( void ) : m_nfaces( 0 ), m_nVerties( 0 ) {}
 		~CMesh( void ){}
 
 		bool LoadFromFile( const char* pfilename );
+		bool LoadFromMsh( const char* pfilename );
+		bool LoadFromPly( const char* pfilename );
 		void PrintMeshInfo( void );
 	};
 
