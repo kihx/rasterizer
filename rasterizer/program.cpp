@@ -282,20 +282,20 @@ void SetupTransform()
     // every 1000 ms. To avoid the loss of precision inherent in very high 
     // floating point numbers, the system time is modulated by the rotation 
     // period before conversion to a radian angle.
-    unsigned int iTime = timeGetTime() % 1000;
-    float fAngle = iTime * ( 2.0f * PI ) / 1000.0f;
+ //   unsigned int iTime = timeGetTime() % 1000;
+ //   float fAngle = iTime * ( 2.0f * PI ) / 1000.0f;
 	//matWorld.RotateY( fAngle );
 
 	Matrix4 matScale;
-	matScale.Scaling( 5.0f, 5.0f, 5.0f );
-	matWorld = matScale * matWorld;
+	matScale.Scaling( 10.0f, 10.0f, 10.0f );
+	matWorld = matWorld * matScale;
     g_ModuleContext.SetTransform( TransformType::World, matWorld.M );
 
     // Set up our view matrix. A view matrix can be defined given an eye point,
     // a point to lookat, and a direction for which way is up. Here, we set the
     // eye five units back along the z-axis and up three units, look at the
     // origin, and define "up" to be in the y-direction.
-    Vector3 vEyePt( 3.0f, 3.0f, -5.0f );
+    Vector3 vEyePt( 1.5f, 3.0f, -5.0f );
     Vector3 vLookatPt( 0.0f, 0.0f, 0.0f );
     Vector3 vUpVec( 0.0f, 1.0f, 0.0f );
     Matrix4 matView;

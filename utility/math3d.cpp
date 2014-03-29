@@ -187,8 +187,8 @@ Matrix4& Matrix4::RotateY(float angle)
 	float cosA = cos(angle);
 
 	Identify();
-	A[0][0] = cosA; A[0][2] = -sinA;
-	A[2][0] = sinA; A[2][2] = cosA;
+	A[0][0] = cosA; A[2][0] = -sinA;
+	A[0][2] = sinA; A[2][2] = cosA;
 
 	return *this;
 }
@@ -253,13 +253,16 @@ Matrix4& Matrix4::LookAtLH(const Vector3& eye, const Vector3& at, const Vector3&
 	Vector3 nup = up;
 	nup.Normalize();
 
-	Vector3 xaxis = zaxis.CrossProduct(nup);
-	Vector3 yaxis = xaxis.CrossProduct(zaxis);
+	Vector3 xaxis = nup.CrossProduct( zaxis );
+	xaxis.Normalize();
 
-	A[0][0] = xaxis.X;	A[1][0] = xaxis.Y;	A[2][0] = xaxis.Z;	A[3][0] = 0.0f;
-	A[0][1] = yaxis.X;	A[1][1] = yaxis.Y;	A[2][1] = yaxis.Z;	A[3][1] = 0.0f;
-	A[0][2] = zaxis.X;	A[1][2] = zaxis.Y;	A[2][2] = zaxis.Z;	A[3][2] = 0.0f;
-	A[0][3] = -xaxis.DotProduct( eye );		A[1][3] = -yaxis.DotProduct( eye );		A[2][3] = -zaxis.DotProduct( eye );		A[3][3] = 1.0f;
+	Vector3 yaxis = zaxis.CrossProduct( xaxis );
+	yaxis.Normalize();
+
+	A[0][0] = xaxis.X;	A[1][0] = xaxis.Y;	A[2][0] = xaxis.Z;	A[3][0] = -xaxis.DotProduct( eye );
+	A[0][1] = yaxis.X;	A[1][1] = yaxis.Y;	A[2][1] = yaxis.Z;	A[3][1] = -yaxis.DotProduct( eye );
+	A[0][2] = zaxis.X;	A[1][2] = zaxis.Y;	A[2][2] = zaxis.Z;	A[3][2] = -zaxis.DotProduct( eye );
+	A[0][3] = 0.0f;		A[1][3] = 0.0f;		A[2][3] = 0.0f;		A[3][3] = 1.0f;
 
 	return *this;
 }
@@ -395,10 +398,10 @@ Matrix4 Matrix4::operator*(const Matrix4& rhs) const
 	{
 		for (int j = 0; j < 4; ++j) 
 		{
-			f = A[i][0] * rhs.A[0][j];
-			f += A[i][1] * rhs.A[1][j];
-			f += A[i][2] * rhs.A[2][j];
-			f += A[i][3] * rhs.A[3][j];
+			f = rhs.A[i][0] * A[0][j];
+			f += rhs.A[i][1] * A[1][j];
+			f += rhs.A[i][2] * A[2][j];
+			f += rhs.A[i][3] * A[3][j];
 
 			result.A[i][j] = f;
 		}
@@ -431,11 +434,10 @@ Matrix4& Matrix4::operator*=(const Matrix4&rhs)
 	{
 		for (int j = 0; j < 4; ++j) 
 		{
-			f = A[i][0] * rhs.A[0][j];
-			f += A[i][1] * rhs.A[1][j];
-			f += A[i][2] * rhs.A[2][j];
-			f += A[i][3] * rhs.A[3][j];
-
+			f = rhs.A[i][0] * A[0][j];
+			f += rhs.A[i][1] * A[1][j];
+			f += rhs.A[i][2] * A[2][j];
+			f += rhs.A[i][3] * A[3][j];
 			result.A[i][j] = f;
 		}
 	}
