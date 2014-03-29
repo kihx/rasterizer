@@ -93,10 +93,10 @@ namespace kih
 			{
 				for ( int j = 0; j < 4; ++j )
 				{
-					f = A[i][0] * rhs.A[0][j];
-					f += A[i][1] * rhs.A[1][j];
-					f += A[i][2] * rhs.A[2][j];
-					f += A[i][3] * rhs.A[3][j];
+					f = rhs.A[i][0] * A[0][j];
+					f += rhs.A[i][1] * A[1][j];
+					f += rhs.A[i][2] * A[2][j];
+					f += rhs.A[i][3] * A[3][j];
 					ret.A[i][j] = f;
 				}
 			}

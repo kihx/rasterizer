@@ -4,6 +4,7 @@
 #include "texture.h"
 #include "vector.h"
 #include "matrix.h"
+#include "random.h"
 
 #include <list>
 
@@ -124,7 +125,7 @@ namespace kih
 		// z of a pixel
 		float Depth;
 		
-		//Color32 Color;		// interpolated color
+		Color32 Color;		// interpolated color
 
 		PixelProcData() :
 			PX( 0 ),
@@ -133,11 +134,11 @@ namespace kih
 		{
 		}
 
-		PixelProcData( unsigned short px, unsigned short py, float Depth/*, const Color32& color*/ ) :
+		PixelProcData( unsigned short px, unsigned short py, float Depth, const Color32& color ) :
 			PX( px ),
 			PY( py ),
-			Depth( Depth )/*,
-			Color( color )*/
+			Depth( Depth ),
+			Color( color )
 		{
 		}
 
@@ -289,12 +290,14 @@ namespace kih
 				}
 				else
 				{
+					const Matrix4& wvp = GetSharedConstantBuffer().GetMatrix4( ConstantBuffer::WVPMatrix );
+
 					for ( size_t i = 0; i < inputSize; ++i )
 					{
 						const auto& vertex = inputStream->GetData( i );
 
 						Vector4 hPos;
-						TransformWVP( vertex.Position, hPos );
+						TransformWVP( vertex.Position, wvp, hPos );
 
 						m_outputStream->Push( hPos );
 					}
@@ -308,9 +311,8 @@ namespace kih
 		
 	private:
 		// WVP transform
-		void TransformWVP( const Vector3& position, Vector4& outPosition )
+		void TransformWVP( const Vector3& position, const Matrix4& wvp, Vector4& outPosition )
 		{
-			Matrix4 wvp = GetSharedConstantBuffer().GetMatrix4( ConstantBuffer::WVPMatrix );
 			outPosition = Vector3_Transform( position, wvp );
 
 			//printf( "hpos: %.2f %.2f %.2f\n", hpos.X, hpos.Y, hpos.Z );
@@ -481,9 +483,9 @@ namespace kih
 					// Push this element at the selected scanline.
 					m_edgeTable[startY].emplace_back( yMax, xMin, xMax, slope );
 
-					// Update next indices
+					// Update next indices.
+					v0Index = v1Index;
 					++v1Index;
-					v0Index = v1Index - 1;
 				}
 
 				// rasterization
@@ -496,6 +498,12 @@ namespace kih
 			assert( outputStream );
 			assert( height == m_edgeTable.size() && "target height and scanline are mismatched" );
 			
+			// random color for debugging
+			byte seedR = Random::Next( 0, 255 );
+			byte seedG = Random::Next( 0, 255 );
+			byte seedB = Random::Next( 0, 255 );
+			Color32 color( seedR, seedG, seedB, 255 );
+
 			std::list<ActiveEdgeTableElement> aet;
 
 			// for each scanline
@@ -517,8 +525,7 @@ namespace kih
 				}
 
 				// Push inside ET elements on this scanline into the AET.
-				const std::list<EdgeTableElement>& edgeList = m_edgeTable[y];
-				for ( const auto& elem : edgeList )
+				for ( const auto& elem : m_edgeTable[y] )
 				{
 					if ( y < elem.YMax )
 					{
@@ -526,7 +533,7 @@ namespace kih
 					}
 				}
 
-				if ( aet.size() <= 0 )
+				if ( aet.empty() )
 				{
 					continue;
 				}
@@ -563,7 +570,8 @@ namespace kih
 						for ( unsigned short x = xLeft; x < xRight; ++x )
 						{
 							__TODO( write the pixel Z value );
-							outputStream->Push( x, y, 0.0f/*, elemLeft.ETElement.ColorL*/ );	
+							outputStream->Push( x, y, 0.0f, color );	
+							//outputStream->Push( x, y, 0.0f/*, elemLeft.ETElement.ColorL*/ );	
 						}
 					}
 
@@ -605,9 +613,16 @@ namespace kih
 				data.Position.Y *= factorY;
 				data.Position.Y += factorY;	// + y
 
-				// data.Z   near/far					
+				// [-1, 1] to [0, 1]
+				data.Position.Z *= 0.5f;
+				data.Position.Z += 0.5f;
 
-				//printf( "data: %.2f %.2f\n", data.X, data.Y );
+				printf( "data: %.2f %.2f %.2f\n", data.Position.X, data.Position.Y, data.Position.Z );
+
+				if ( (v + 1) % 3 == 0 )
+				{
+					printf( "\n" );
+				}
 			}
 		}
 
@@ -660,12 +675,14 @@ namespace kih
 					{
 						const auto& fragment = inputStream->GetData( i );
 
+						color32 = fragment.Color;
+
 						// TODO: Z-buffering
 
 						// TODO: pixel shading
 #if 1
 						byte* base = buffer + ( ( ( width * fragment.PY ) + fragment.PX ) * stride );
-						*( base /*+ 0*/ ) = color32.R;
+						*( base ) = color32.R;
 						*( base + 1 ) = color32.G;
 						*( base + 2 ) = color32.B;
 
@@ -790,7 +807,6 @@ namespace kih
 		Matrix4 wv = pDevice->GetWorldMatrix() * pDevice->GetViewMatrix();
 		Matrix4 wvp = wv * pDevice->GetProjectionMatrix();
 		GetSharedConstantBuffer().SetMatrix4( ConstantBuffer::WVPMatrix, wvp );
-
 
 		// Draw primitives here.
 		PrimitiveType primitiveType = mesh->GetPrimitiveType();

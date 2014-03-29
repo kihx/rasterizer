@@ -46,6 +46,9 @@
     <ClInclude Include="vector.h">
       <Filter>Math</Filter>
     </ClInclude>
+    <ClInclude Include="random.h">
+      <Filter>Math</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -70,6 +73,9 @@
       <Filter>Rendering</Filter>
     </ClCompile>
     <ClCompile Include="matrix.cpp">
+      <Filter>Math</Filter>
+    </ClCompile>
+    <ClCompile Include="random.cpp">
       <Filter>Math</Filter>
     </ClCompile>
   </ItemGroup>

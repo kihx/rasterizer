@@ -231,13 +231,16 @@ namespace kih
 		Vector3 nup = up;
 		nup.Normalize();
 
-		Vector3 xaxis = zaxis.CrossProduct( nup );
-		Vector3 yaxis = xaxis.CrossProduct( zaxis );
+		Vector3 xaxis = nup.CrossProduct( zaxis );
+		xaxis.Normalize();
 
-		A[0][0] = xaxis.X;	A[1][0] = xaxis.Y;	A[2][0] = xaxis.Z;	A[3][0] = 0.0f;
-		A[0][1] = yaxis.X;	A[1][1] = yaxis.Y;	A[2][1] = yaxis.Z;	A[3][1] = 0.0f;
-		A[0][2] = zaxis.X;	A[1][2] = zaxis.Y;	A[2][2] = zaxis.Z;	A[3][2] = 0.0f;
-		A[0][3] = -xaxis.DotProduct( eye );		A[1][3] = -yaxis.DotProduct( eye );		A[2][3] = -zaxis.DotProduct( eye );		A[3][3] = 1.0f;
+		Vector3 yaxis = zaxis.CrossProduct( xaxis );
+		yaxis.Normalize();
+
+		A[0][0] = xaxis.X;	A[1][0] = xaxis.Y;	A[2][0] = xaxis.Z;	A[3][0] = -xaxis.DotProduct( eye );
+		A[0][1] = yaxis.X;	A[1][1] = yaxis.Y;	A[2][1] = yaxis.Z;	A[3][1] = -yaxis.DotProduct( eye );
+		A[0][2] = zaxis.X;	A[1][2] = zaxis.Y;	A[2][2] = zaxis.Z;	A[3][2] = -zaxis.DotProduct( eye );
+		A[0][3] = 0.0f;		A[1][3] = 0.0f;		A[2][3] = 0.0f;		A[3][3] = 1.0f;
 
 		return *this;
 	}

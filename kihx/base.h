@@ -75,7 +75,7 @@ inline T2 FloatToInteger( T1 f )
 	static_assert( std::is_floating_point<T1>::value, "input type must be floating point" );
 	static_assert( std::is_integral<T2>::value, "return type must be integer" );
 	__UNDONE( change to a faster function );
-	return static_cast< T2 >( floor( f ) );
+	return static_cast< T2 >( f );
 }
 
 
