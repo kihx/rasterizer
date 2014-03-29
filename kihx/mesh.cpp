@@ -6,17 +6,17 @@
 
 namespace kih
 {
-	// RAII: Resource Acquisition Is Initialization
-	// stream reader class
-	class RAIIStreamReader
+	/* class FileReader
+	*/
+	class FileReader
 	{
 	public:
-		explicit RAIIStreamReader( const char* filename )
+		explicit FileReader( const char* filename )
 		{
 			m_reader.open( filename );
 		}
 
-		~RAIIStreamReader()
+		~FileReader()
 		{
 			m_reader.close();
 		}
@@ -52,7 +52,7 @@ namespace kih
 
 		std::ifstream& operator>>( unsigned char& value )
 		{
-			// read stream as numeric value and then convert to unsigned char
+			// Read stream as numeric value and then convert to unsigned char.
 			int tmp;
 			m_reader >> tmp;
 			value = (unsigned char) tmp;
@@ -64,19 +64,8 @@ namespace kih
 	};
 
 
-	/* class Mesh
-	*/	
-	Mesh::Mesh()
-	{
-
-	}
-
-	Mesh::~Mesh()
-	{
-
-	}
-
-	std::shared_ptr<Mesh> Mesh::CreateFromFile( const char* filename )
+	// Mesh factory function
+	std::shared_ptr<IMesh> CreateMeshFromFile( const char* filename )
 	{
 		if ( filename == nullptr )
 		{
@@ -88,42 +77,53 @@ namespace kih
 		size_t length = strlen( filename );
 		const char* ext = filename + length - 3;
 
-		// cannot use std::make_shared<>() by the protected access modifier
-		auto mesh = std::shared_ptr<Mesh>( new Mesh() );
-
-		bool succeeded = false;
+		std::shared_ptr<IMesh> mesh = nullptr;
 		if ( strcmp( ext, "msh" ) == 0 )
 		{
-			succeeded = mesh->LoadMshFile( filename );
+			// cannot use std::make_shared<>() by the protected access modifier
+			mesh = std::shared_ptr<IrregularMesh>( new IrregularMesh() );
+			if ( !mesh->LoadFile( filename ) )
+			{
+				mesh.reset();
+			}			
 		}
 		else if ( strcmp( ext, "ply" ) == 0 )
 		{
-			succeeded = mesh->LoadPlyFile( filename );
-		}
-
-		if ( !succeeded )
-		{
-			//mesh.reset();
-			return nullptr;
+			mesh = std::shared_ptr<OptimizedMesh>( new OptimizedMesh() );
+			if ( !mesh->LoadFile( filename ) )
+			{
+				mesh.reset();
+			}
 		}
 
 		return mesh;
 	}
 
 
-	/*	sample: input.msh
-	#$Vertices       6    # 점의 개수
-	#$Faces        2    # 면의 개수
-	Vertex         1   0 0 0  # 점번호 x y z
-	Vertex         2   639 479 0
-	Vertex         3   0 479 0
-	Vertex         4   300.5 70.4 0 
-	Vertex         5   500.8 50.5 0
-	Vertex         6   400.8 450.1 0
-	Face 1 0 0 255 3 1 2 3 # 면번호 r g b “점의 개수” “면을 이루는 점들”(점의 개수는 유동적)..
-	Face 2 255 0 0 4 4 5 6 1 
-	*/
-	bool Mesh::LoadMshFile( const char* filename )
+
+	/* class Mesh
+	*/	
+	IrregularMesh::IrregularMesh()
+	{
+
+	}
+
+	IrregularMesh::~IrregularMesh()
+	{
+
+	}	
+
+	PrimitiveType IrregularMesh::GetPrimitiveType() const
+	{
+		return PrimitiveType::Undefined;
+	}
+
+	CoordinatesType IrregularMesh::GetCoordinatesType() const
+	{
+		return CoordinatesType::ReciprocalHomogeneous;
+	}
+
+	bool IrregularMesh::LoadFile( const char* filename )
 	{
 		if ( filename == nullptr )
 		{
@@ -131,7 +131,7 @@ namespace kih
 			return false;
 		}
 
-		RAIIStreamReader reader( filename );
+		FileReader reader( filename );
 		if ( !reader.IsOpened())
 		{
 			LOG_WARNING( "File open failure" );
@@ -197,7 +197,30 @@ namespace kih
 		return true;
 	}
 
-	bool Mesh::LoadPlyFile( const char* filename )
+
+	/* class OptimizedMesh
+	*/
+	OptimizedMesh::OptimizedMesh()
+	{
+
+	}
+
+	OptimizedMesh::~OptimizedMesh()
+	{
+
+	}
+
+	PrimitiveType OptimizedMesh::GetPrimitiveType() const
+	{
+		return PrimitiveType::Triangles;
+	}
+
+	CoordinatesType OptimizedMesh::GetCoordinatesType() const
+	{
+		return CoordinatesType::Projective;
+	}
+
+	bool OptimizedMesh::LoadFile( const char* filename )
 	{
 		if ( filename == nullptr )
 		{
@@ -205,7 +228,7 @@ namespace kih
 			return false;
 		}
 
-		RAIIStreamReader reader( filename );
+		FileReader reader( filename );
 		if ( !reader.IsOpened() )
 		{
 			LOG_WARNING( "File open failure" );
@@ -236,38 +259,35 @@ namespace kih
 
 		// vertices
 		int vertexNumber;
-		m_vertices.resize( vertexCount );
+		m_vertexBuffer.Resize( vertexCount );
 		for ( int i = 0; i < vertexCount; ++i )
 		{
 			reader >> trash;			// Vertex
 			reader >> vertexNumber;	// = index + 1
-			reader >> m_vertices[i].x;
-			reader >> m_vertices[i].y;
-			reader >> m_vertices[i].z;
+
+			Vertex<float>& vertex = m_vertexBuffer.GetVertex( i );
+			reader >> vertex.x;
+			reader >> vertex.y;
+			reader >> vertex.z;
 		}
 
-		// faces
+		// indices
 		int faceNumber;
-		m_faces.resize( faceCount );
+		
+		// .ply has always three vertices per face.
+		const int NumVertices = 3;
+		m_indexBuffer.Resize( faceCount * 3 );
 		for ( int i = 0; i < faceCount; ++i )
 		{
 			reader >> trash;		// Face
 			reader >> faceNumber;	// = index + 1
 			
-			m_faces[i].r = 255;
-			m_faces[i].g = 255;
-			m_faces[i].b = 255;
-			m_faces[i].a = 255;
-
-			// .ply has always three vertices per face.
-			const int NumVertices = 3;
-			m_faces[i].m_indices.resize( NumVertices );
 			for ( int j = 0; j < NumVertices; ++j )
 			{
-				reader >> m_faces[i].m_indices[j];
+				reader >> m_indexBuffer.GetIndex( i * NumVertices + j );
 			}
 		}
 
 		return true;
-	}
+	}	
 };

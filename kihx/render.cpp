@@ -34,9 +34,23 @@ namespace kih
 	class VertexProcInputStream : public BaseInputOutputStream<VertexProcData>
 	{
 	public:
-		VertexProcInputStream()
+		VertexProcInputStream() :
+			m_coordinatesType( CoordinatesType::Projective )
 		{
 		}
+
+		CoordinatesType GetCoordinatesType() const
+		{
+			return m_coordinatesType;
+		}
+
+		void SetCoordinatesType( CoordinatesType coord )
+		{
+			m_coordinatesType = coord;
+		}
+
+	private:
+		CoordinatesType m_coordinatesType;
 	};
 
 
@@ -67,6 +81,15 @@ namespace kih
 		{
 		}
 
+		RasterizerData( const Vector3& position, const Color32& color ) :
+			X( position.X ),
+			Y( position.Y ),
+			Z( position.Z ),
+			W( 1.0f ),
+			Color( color )
+		{
+		}
+
 		RasterizerData( const float position[4], const Color32& color ) :
 			X( position[0] ),
 			Y( position[1] ),
@@ -84,22 +107,35 @@ namespace kih
 	class RasterizerInputStream : public BaseInputOutputStream<RasterizerData>
 	{
 	public:
-		RasterizerInputStream()
+		RasterizerInputStream() :
+			m_coordinatesType( CoordinatesType::Projective ),
+			m_primitiveType( PrimitiveType::Triangles )
 		{
+		}
+
+		CoordinatesType GetCoordinatesType() const
+		{
+			return m_coordinatesType;
+		}
+
+		void SetCoordinatesType( CoordinatesType coord )
+		{
+			m_coordinatesType = coord;
 		}
 
 		PrimitiveType GetPrimitiveType() const
 		{
-			return m_primType;
+			return m_primitiveType;
 		}
 
 		void SetPrimitiveType( PrimitiveType primType )
 		{
-			m_primType = primType;
+			m_primitiveType = primType;
 		}
 
 	private:
-		PrimitiveType m_primType;
+		CoordinatesType m_coordinatesType;
+		PrimitiveType m_primitiveType;
 	};
 
 
@@ -158,17 +194,17 @@ namespace kih
 
 	};
 
-#define FACE_SPECIFIC		1
 
 	/* class InputAssembler
 	*/
-	class InputAssembler : public IRenderingProcessor<Mesh, InputAssemblerOutputStream>
+	class InputAssembler : public IRenderingProcessor<IMesh, InputAssemblerOutputStream>
 	{
 		NONCOPYABLE_CLASS( InputAssembler )
 
 	public:
 		explicit InputAssembler( RenderingContext* pRenderingContext ) :
-			m_pRenderingContext( pRenderingContext )
+			m_pRenderingContext( pRenderingContext ),
+			m_faceIndex( 0 )
 		{
 		}
 
@@ -176,55 +212,72 @@ namespace kih
 		{
 		}
 
-		virtual std::shared_ptr<InputAssemblerOutputStream> Process( std::shared_ptr<Mesh> inputStream )
+		virtual std::shared_ptr<InputAssemblerOutputStream> Process( std::shared_ptr<IMesh> inputStream )
 		{
 			auto outputStream = std::make_shared<InputAssemblerOutputStream>();
+	
+			outputStream->SetCoordinatesType( inputStream->GetCoordinatesType() );
 
-#ifdef SUPPORT_MSH
-			// Count the number of vertices in the mesh, 
-			// and reserve space for the output stream.
-			size_t capacity = 0;
-#ifdef FACE_SPECIFIC
-			capacity += inputStream->NumVerticesInFace( m_faceIndex );
-#else
-			size_t numFaces = inputStream->NumFaces();
-			for ( size_t face = 0; face < numFaces; ++face )
+			if ( inputStream->GetPrimitiveType() == PrimitiveType::Undefined )
 			{
-				capacity += inputStream->NumVerticesInFace( face );
-			}
-#endif
-			outputStream->Reserve( capacity );
+				IrregularMesh* mesh = dynamic_cast< IrregularMesh* >( inputStream.get() );
+				if ( mesh == nullptr )
+				{
+					return outputStream;
+				}
 
-			// Convert the mesh to an input stream of the vertex processor.
-#ifdef FACE_SPECIFIC
-			size_t face = m_faceIndex;
-#else
-			for ( size_t face = 0; face < numFaces; ++face )
-#endif
-			{
-				const byte* color = inputStream->GetFaceColor( face );
+				// per face rendering
+				size_t capacity = mesh->NumVerticesInFace( m_faceIndex );
+				outputStream->Reserve( capacity );
 
-				size_t numVertices = inputStream->NumVerticesInFace( face );
+				// Convert the face geometry to an input stream of the vertex processor.
+				size_t face = m_faceIndex;
+				const byte* color = mesh->GetFaceColor( face );
+
+				size_t numVertices = mesh->NumVerticesInFace( face );
 				for ( size_t vert = 0; vert < numVertices; ++vert )
 				{
 					__TODO( change vertex color to material color using a pixel processor constant buffer );
-					outputStream->Push( inputStream->GetVertexInFaceAt( face, vert ), color );
+					outputStream->Push( mesh->GetVertexInFaceAt( face, vert ), color );
 				}
 			}
-#else
-			static_assert( 0, "not implemented yet" );
-#endif
+			else
+			{
+				OptimizedMesh* mesh = dynamic_cast< OptimizedMesh* >( inputStream.get() );
+				if ( mesh == nullptr )
+				{
+					return outputStream;
+				}
+				
+				const auto& vertexBuffer = mesh->GetVertexBuffer();
+				const auto& indexBuffer = mesh->GetIndexBuffer();
+
+				// per mesh rendering
+				size_t numIndices = indexBuffer.Size();
+				outputStream->Reserve( numIndices );
+
+				// Convert the mesh geometry to an input stream of the vertex processor.
+				for ( size_t i = 0; i < numIndices; ++i )
+				{
+					const byte color[4] = { 255, 255, 255, 255 };
+
+					__TODO( change vertex color to material color using a pixel processor constant buffer );
+					unsigned short index = indexBuffer.GetIndexConst( i ) - 1;
+					outputStream->Push( &vertexBuffer.GetVertexConst( index ).x, color );
+				}
+			}
 
 			return outputStream;
 		}
 
+		void SetFaceIndex( size_t index )
+		{
+			m_faceIndex = index;
+		}
+
 	private:
 		RenderingContext* m_pRenderingContext;
-
-#ifdef FACE_SPECIFIC
-	public:
 		size_t m_faceIndex;
-#endif
 	};
 	
 
@@ -248,26 +301,40 @@ namespace kih
 		{
 			auto outputStream = std::make_shared<VertexProcOutputStream>();
 
+			outputStream->SetCoordinatesType( inputStream->GetCoordinatesType() );
+
 			size_t inputSize = inputStream->Size();
 			if ( inputSize > 0 )
 			{
 				// Currently, input and output size is always same.
 				outputStream->Reserve( inputSize );
 
-				for ( size_t i = 0; i < inputSize; ++i )
+				if ( inputStream->GetCoordinatesType() == CoordinatesType::ReciprocalHomogeneous )
 				{
-					const auto& vertex = inputStream->GetData( i );
+					for ( size_t i = 0; i < inputSize; ++i )
+					{
+						const auto& vertex = inputStream->GetData( i );
 
-					float transformedPosition[4];
-					Transform( vertex.Position, transformedPosition );
+						outputStream->Push( vertex.Position, vertex.Color );
+					}
+				}
+				else
+				{
+					for ( size_t i = 0; i < inputSize; ++i )
+					{
+						const auto& vertex = inputStream->GetData( i );
 
-					outputStream->Push( transformedPosition, vertex.Color );
+						float transformedPosition[4];
+						Transform( vertex.Position, transformedPosition );
+
+						outputStream->Push( transformedPosition, vertex.Color );
+					}
 				}
 			}
 
 			return outputStream;
 		}
-
+		
 	private:
 		// WVP transform
 		void Transform( const Vector3& position, float outPosition[4] )
@@ -277,7 +344,7 @@ namespace kih
 			Matrix4 wvp = m_pRenderingContext->GetSharedConstantBuffer().GetMatrix4( ConstantBuffer::WVPMatrix );
 			Vector3 hpos = Vector3_Transform( position, wvp );
 
-			printf( "hpos: %.2f %.2f %.2f\n", hpos.X, hpos.Y, hpos.Z );
+			//printf( "hpos: %.2f %.2f %.2f\n", hpos.X, hpos.Y, hpos.Z );
 
 			outPosition[0] = hpos.X;
 			outPosition[1] = hpos.Y;
@@ -323,23 +390,26 @@ namespace kih
 
 			assert( ( width > 0 && height > 0 ) && "invalid operation" );
 
-			float factorX = width * 0.5f;
-			float factorY = height * 0.5f;
-
-			// Viewport transform
-			size_t numVertices = inputStream->Size();
-			for ( size_t v = 0; v < numVertices; ++v )
+			// viewport transform for projective coordinates
+			if ( inputStream->GetCoordinatesType() == CoordinatesType::Projective )
 			{
-				auto& data = inputStream->GetData( v );
-				data.X *= factorX;
-				data.X += factorX;	// + x
+				float factorX = width * 0.5f;
+				float factorY = height * 0.5f;
 
-				data.Y *= factorY;
-				data.Y += factorY;	// + y
+				size_t numVertices = inputStream->Size();
+				for ( size_t v = 0; v < numVertices; ++v )
+				{
+					auto& data = inputStream->GetData( v );
+					data.X *= factorX;
+					data.X += factorX;	// + x
 
-				// data.Z   near/far
+					data.Y *= factorY;
+					data.Y += factorY;	// + y
 
-				printf( "data: %.2f %.2f\n", data.X, data.Y );
+					// data.Z   near/far
+
+					//printf( "data: %.2f %.2f\n", data.X, data.Y );
+				}
 			}
 
 			// FIXME: is this ok??
@@ -404,7 +474,7 @@ namespace kih
 			assert( inputStream );
 			
 			PrimitiveType primitiveType = inputStream->GetPrimitiveType();
-			size_t numVerticesPerPrimitive = ComputeNumberOfVerticesPerPrimitive( primitiveType );
+			size_t numVerticesPerPrimitive = GetNumberOfVerticesPerPrimitive( primitiveType );
 
 			// Validate the number of vertices considering primitive type.
 			size_t numVertices = inputStream->Size();
@@ -521,8 +591,11 @@ namespace kih
 					continue;
 				}
 
-				// Sort AET elements from left to right.				
-				aet.sort();
+				// Sort AET elements from left to right.	
+				if ( aet.size() > 1 )
+				{
+					aet.sort();
+				}
 
 				// Gather pixels being drawn using the AET.
 				for ( auto iter = aet.begin(); iter != aet.end(); ++iter )
@@ -531,6 +604,7 @@ namespace kih
 					ActiveEdgeTableElement& elemLeft = *iter;
 					if ( ++iter == aet.end() )
 					{
+						elemLeft.CurrentX += elemLeft.ETElement.Slope;
 						break;
 					}
 					ActiveEdgeTableElement& elemRight = *iter;
@@ -727,66 +801,66 @@ namespace kih
 		}
 	}
 
-	void RenderingContext::Draw( std::shared_ptr<Mesh> mesh )
+	void RenderingContext::Draw( std::shared_ptr<IMesh> mesh )
 	{
 		if ( mesh == nullptr )
 		{
 			return;
 		}
 
+		RenderingDevice* pDevice = RenderingDevice::GetInstance();
+		assert( pDevice );
 		assert( m_inputAssembler );
 		assert( m_vertexProcessor );
 		assert( m_rasterizer );
 		assert( m_pixelProcessor );
 		assert( m_outputMerger );
 
-		RenderingDevice* pDevice = RenderingDevice::GetInstance();
-		assert( pDevice );
-
+		// Set a constant buffer for WVP transform.
 		Matrix4 wv = pDevice->GetWorldMatrix() * pDevice->GetViewMatrix();
 		Matrix4 wvp = wv * pDevice->GetProjectionMatrix();
 		GetSharedConstantBuffer().SetMatrix4( ConstantBuffer::WVPMatrix, wvp );
 
-#ifdef FACE_SPECIFIC
-		for ( size_t face = 0; face < mesh->NumFaces(); ++face )
-		{		
-			m_inputAssembler->m_faceIndex = face;
-#else
-		// If a source is the Mesh class
-		// we assume that the primitive type is 'triangles'.
-		PrimitiveType primType = PrimitiveType::TRIANGLES;
-#endif
+		PrimitiveType primitiveType = mesh->GetPrimitiveType();
+		
+		if ( primitiveType == PrimitiveType::Undefined )
+		{
+			if ( IrregularMesh* pMesh = dynamic_cast< IrregularMesh* >( mesh.get() ) )
+			{
+				for ( size_t face = 0; face < pMesh->NumFaces(); ++face )
+				{
+					m_inputAssembler->SetFaceIndex( face );
+					DrawInternal( mesh, pMesh->NumVerticesInFace( face ) );
+				}
+			}
+		}
+		else
+		{
+			DrawInternal( mesh, GetNumberOfVerticesPerPrimitive( primitiveType ) );
+		}
+	}
+
+	void RenderingContext::DrawInternal( std::shared_ptr<IMesh> mesh, int numVerticesPerPrimitive )
+	{
 		// input assembler
 		std::shared_ptr<VertexProcInputStream> vpInput = m_inputAssembler->Process( mesh );
-
 		printf( "\nVertexProcInputStream Size: %d\n", vpInput->Size() );
 
 		// vertex processor
 		std::shared_ptr<RasterizerInputStream> raInput = m_vertexProcessor->Process( vpInput );
-
 		printf( "RasterizerInputStream Size: %d\n", raInput->Size() );
 
 		// rasterizer
-#ifdef FACE_SPECIFIC
-		size_t numVerticesInFace = mesh->NumVerticesInFace( face );
-		raInput->SetPrimitiveType( GetPrimitiveTypeFromNumberOfVertices( numVerticesInFace ) );
-#else
-		raInput->SetPrimitiveType( primType );
-#endif
+		raInput->SetPrimitiveType( GetPrimitiveTypeFromNumberOfVertices( numVerticesPerPrimitive ) );
 		std::shared_ptr<PixelProcInputStream> ppInput = m_rasterizer->Process( raInput );
-
 		printf( "PixelProcInputStream Size: %d\n", ppInput->Size() );
 
 		// pixel processor
 		std::shared_ptr<OutputMergerInputStream> omInput = m_pixelProcessor->Process( ppInput );
-
 		printf( "OutputMergerInputStream Size: %d\n", 0 );
 
 		// output merger
 		omInput = m_outputMerger->Process( omInput );
-#ifdef FACE_SPECIFIC
-		}
-#endif
 	}
 
 

@@ -8,8 +8,10 @@
 
 
 namespace kih
-{
-	class Mesh;
+{	
+	class IMesh;
+	class IrregularMesh;
+	class OptimizedMesh;
 
 	class ConstantBuffer;
 	class Texture;
@@ -59,7 +61,7 @@ namespace kih
 		template <typename... Args>
 		void Push( Args&&... args )
 		{
-			m_streamSource.emplace_back( std::forward<Args>( args )... );
+			m_streamSource.emplace_back( args... );
 		}
 
 		const Data* GetStreamSource() const
@@ -170,7 +172,7 @@ namespace kih
 
 		void Clear( byte r, byte g, byte b, byte a );
 
-		void Draw( std::shared_ptr<Mesh> mesh );
+		void Draw( std::shared_ptr<IMesh> mesh );
 
 		std::shared_ptr<Texture> GetRenderTaget( size_t index )
 		{
@@ -189,6 +191,9 @@ namespace kih
 		{
 			return m_sharedConstantBuffer;
 		}
+
+	private:
+		void DrawInternal( std::shared_ptr<IMesh> mesh, int numVerticesPerPrimitive );
 
 	private:
 		std::shared_ptr<InputAssembler> m_inputAssembler;

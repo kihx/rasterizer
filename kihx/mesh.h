@@ -9,13 +9,17 @@
 
 namespace kih
 {
+	/* enum class PrimitiveType
+	*/
 	enum class PrimitiveType : unsigned int
 	{
-		POINTS = 1,
-		LINES = 2,
-		TRIANGLES = 3,
-		QUADS = 4,
-		PENTAGONS = 5,
+		Undefined = 0,
+		Points = 1,
+		Lines = 2,
+		Triangles = 3,
+		Quads = 4,
+		Pentagons = 5,
+		Octas = 6
 	};
 
 	inline PrimitiveType GetPrimitiveTypeFromNumberOfVertices( size_t num )
@@ -23,26 +27,23 @@ namespace kih
 		return static_cast< PrimitiveType >( num );
 	}
 
-	inline size_t ComputeNumberOfVerticesPerPrimitive( PrimitiveType type )
+	inline size_t GetNumberOfVerticesPerPrimitive( PrimitiveType type )
 	{	
 		return static_cast< size_t >( type );
-		//switch ( type )
-		//{
-		//case PrimitiveType::POINTS:
-		//	throw std::runtime_error( "unsupported primitive type" );
-		//	return 1;
-
-		////case PrimitiveType::LINES:
-		////	numVerticesPerPrimitive = 2;
-		////	break;
-
-		//case PrimitiveType::TRIANGLES:
-		//default:
-		//	return 3;
-		//}
 	}
+
+
+	/* enum class CoordinateType
+	*/
+	enum class CoordinatesType
+	{
+		Projective = 0,
+		ReciprocalHomogeneous,
+	};
 	
 
+	/* Vertex
+	*/
 	template<typename VertexType>
 	struct Vertex
 	{
@@ -50,53 +51,6 @@ namespace kih
 		VertexType y;
 		VertexType z;
 	};
-
-	
-	/* class VertexBuffer
-	*/
-	//template<typename VertexType>
-	//class VertexBuffer
-	//{
-	//public:
-	//	VertexBuffer() {}
-
-	//	const VertexType* GetStreamSource() const
-	//	{
-	//		return &m_vertices; 
-	//	}
-	//	
-	//	void Reserve( int capacity )
-	//	{
-	//		m_vertices.reserve( capacity ); 
-	//	}
-
-	//private:
-	//	std::vector< Vertex<VertexType> > m_vertices;
-	//};
-
-		
-	/* class IndexBuffer
-	*/
-	//template<typename IndexType>
-	//class IndexBuffer
-	//{
-	//public:
-	//	IndexBuffer() {}
-
-	//	const IndexType* GetStreamSource() const
-	//	{
-	//		return &m_indicies; 
-	//	}
-	//	
-	//	void Reserve( int capacity ) 
-	//	{ 
-	//		m_indicies.reserve( capacity ); 
-	//	}
-
-	//private:
-	//	std::vector<IndexType> m_indicies;
-	//};
-
 
 	template<typename IndexType>
 	struct Face
@@ -108,22 +62,147 @@ namespace kih
 		std::vector<IndexType> m_indices;
 	};
 
-
-	/* class Mesh
+	
+	/* class VertexBuffer
 	*/
-	class Mesh
+	template<typename VertexType>
+	class VertexBuffer
 	{
-		NONCOPYABLE_CLASS( Mesh )
+	public:
+		VertexBuffer() = default;
+		virtual ~VertexBuffer() = default;
 
-		typedef Vertex<float> VertexF;
-		typedef Face<unsigned short> FaceS;
+		template <typename... Args>
+		void Push( Args&&... args )
+		{
+			m_vertices.emplace_back( args... );
+		}
+
+		const Vertex<VertexType>* GetStreamSource() const
+		{
+			return &m_vertices[0];
+		}
+
+		const Vertex<VertexType>& GetVertexConst( size_t index ) const
+		{
+			assert( ( index >= 0 && index < Size() ) && "out of ranged index" );
+			return m_vertices[index];
+		}
+
+		Vertex<VertexType>& GetVertex( size_t index )
+		{
+			assert( ( index >= 0 && index < Size() ) && "out of ranged index" );
+			return m_vertices[index];
+		}
+
+		size_t Size() const
+		{
+			return m_vertices.size();
+		}
+
+		void Resize( int size )
+		{
+			m_vertices.resize( size );
+		}
+		
+		void Reserve( int capacity )
+		{
+			m_vertices.reserve( capacity ); 
+		}
 
 	private:
-		Mesh();
-	public:
-		virtual ~Mesh();
+		std::vector<Vertex<VertexType>> m_vertices;
+	};
 
-		static std::shared_ptr<Mesh> CreateFromFile( const char* filename );
+		
+	/* class IndexBuffer
+	*/
+	template<typename IndexType>
+	class IndexBuffer
+	{
+	public:
+		IndexBuffer() = default;
+		virtual ~IndexBuffer() = default;
+
+		template <typename... Args>
+		void Push( Args&&... args )
+		{
+			m_vertices.emplace_back( args... );
+		}
+
+		const IndexType* GetStreamSource() const
+		{
+			return &m_indicies; 
+		}
+
+		const IndexType& GetIndexConst( size_t index ) const
+		{
+			assert( ( index >= 0 && index < Size() ) && "out of ranged index" );
+			return m_indicies[index];
+		}
+
+		IndexType& GetIndex( size_t index )
+		{
+			assert( ( index >= 0 && index < Size() ) && "out of ranged index" );
+			return m_indicies[index];
+		}
+
+		size_t Size() const
+		{
+			return m_indicies.size();
+		}
+
+		void Resize( int size )
+		{
+			m_indicies.resize( size );
+		}
+		
+		void Reserve( int capacity ) 
+		{ 
+			m_indicies.reserve( capacity ); 
+		}
+
+	private:
+		std::vector<IndexType> m_indicies;
+	};
+
+
+	typedef Vertex<float> VertexF;
+	typedef Face<unsigned short> FaceS;
+
+
+
+	/* class IMesh
+	*/
+	class IMesh
+	{
+	public:	
+		virtual PrimitiveType GetPrimitiveType() const = 0;
+		virtual CoordinatesType GetCoordinatesType() const = 0;
+
+		virtual bool LoadFile( const char* filename ) = 0;
+	};
+
+	// IMesh factory
+	std::shared_ptr<IMesh> CreateMeshFromFile( const char* filename );
+
+
+	/* class IrregularMesh
+			It has various number of vertices for each face.
+	*/
+	class IrregularMesh : public IMesh
+	{
+		friend std::shared_ptr<IMesh> CreateMeshFromFile( const char* filename );
+
+	private:
+		IrregularMesh();
+	public:
+		virtual ~IrregularMesh();
+
+		virtual PrimitiveType GetPrimitiveType() const;
+		virtual CoordinatesType GetCoordinatesType() const;
+
+		virtual bool LoadFile( const char* filename );
 
 		size_t NumFaces() const
 		{
@@ -153,14 +232,53 @@ namespace kih
 		}
 
 	private:
-		bool LoadMshFile( const char* filename );
-		bool LoadPlyFile( const char* filename );
-
-	private:
 		std::vector<VertexF> m_vertices;
 		std::vector<FaceS> m_faces;
 	};
+
+	
+	/* class OptimizedMesh
+			It always has triangulated primitives.
+	*/
+	class OptimizedMesh : public IMesh
+	{
+		friend std::shared_ptr<IMesh> CreateMeshFromFile( const char* filename );
+
+	private:
+		OptimizedMesh();
+	public:
+		virtual ~OptimizedMesh();
+
+		virtual PrimitiveType GetPrimitiveType() const;
+		virtual CoordinatesType GetCoordinatesType() const;
+
+		virtual bool LoadFile( const char* filename );
+
+		size_t ComputeNumFaces()
+		{
+			return m_indexBuffer.Size() / 3;
+		}
+
+		VertexBuffer<float>& GetVertexBuffer()
+		{
+			return m_vertexBuffer;
+		}
+
+		IndexBuffer<unsigned short>& GetIndexBuffer()
+		{
+			return m_indexBuffer;
+		}
+
+	private:
+		VertexBuffer<float> m_vertexBuffer;
+		IndexBuffer<unsigned short> m_indexBuffer;
+	};
 };
 
-using kih::Mesh;
+using kih::PrimitiveType;
+using kih::CoordinatesType;
+
+using kih::IMesh;
+using kih::IrregularMesh;
+using kih::OptimizedMesh;
 
