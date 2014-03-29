@@ -35,15 +35,105 @@ namespace kih
 	class PixelProcessor;
 	class OutputMerger;
 	class RenderingContext;
+	
 
-
-	/* class IRenderingProcessor
+	/* class ConstantBuffer
 	*/
-	template<class InputStream, class OutputStream>
-	class IRenderingProcessor
+	class ConstantBuffer final
 	{
 	public:
-		virtual std::shared_ptr<OutputStream> Process( std::shared_ptr<InputStream> inputStream ) = 0;
+		static const int Capacity = 128;
+
+		enum NamedIndex
+		{
+			#define	ENUM_MATRIX(e)	( e + 4 )
+			#define	ENUM_VECTOR(e)	( e + 1 )
+
+			WorldMatrix = 0,
+			ViewMatrix = ENUM_MATRIX( WorldMatrix ),
+			ProjectionMatrix = ENUM_MATRIX( ViewMatrix ),
+			WVPMatrix = ENUM_MATRIX( ProjectionMatrix ),
+			DiffuseColor = ENUM_MATRIX( WVPMatrix ),
+		};
+
+		ConstantBuffer() = default;
+
+		const Vector4& GetVector4( int index )
+		{
+			assert( index >= 0 && index < Capacity );
+			return m_constantBuffer[index];
+		}
+
+		const Matrix4& GetMatrix4( int index )
+		{
+			assert( index >= 0 && index < Capacity );
+			// FIXME: is safe such type casting?
+			return *( reinterpret_cast< Matrix4* >( &m_constantBuffer[index] ) );
+		}
+
+		void SetFloat4( int index, const float* value )
+		{
+			assert( index >= 0 && index < Capacity );
+			m_constantBuffer[index].X = value[0];
+			m_constantBuffer[index].Y = value[1];
+			m_constantBuffer[index].Z = value[2];
+			m_constantBuffer[index].W = value[3];
+		}
+
+		void SetVector4( int index, const Vector4& value )
+		{
+			assert( index >= 0 && index < Capacity );
+			m_constantBuffer[index] = value;
+		}
+
+		void SetMatrix4( int index, const Matrix4& value )
+		{
+			SetFloat4( index, value.A[0] );
+			SetFloat4( index + 1, value.A[1] );
+			SetFloat4( index + 2, value.A[2] );
+			SetFloat4( index + 3, value.A[3] );
+		}
+
+	private:
+		Vector4 m_constantBuffer[Capacity];
+	};
+
+
+	/* class BaseRenderingProcessor
+	*/
+	template<class InputStream, class OutputStream>
+	class BaseRenderingProcessor
+	{
+	public:
+		explicit BaseRenderingProcessor( RenderingContext* pContext ) :
+			m_pRenderingContext( pContext )
+		{
+			assert( m_pRenderingContext );
+
+			m_outputStream = std::make_shared<OutputStream>();
+		}
+
+		virtual ~BaseRenderingProcessor() = default;
+
+		virtual std::shared_ptr<OutputStream> Process( std::shared_ptr<InputStream> inputStream ) = 0;				
+
+		ConstantBuffer& GetSharedConstantBuffer()
+		{
+			assert( m_pRenderingContext );
+			return m_pRenderingContext->GetSharedConstantBuffer();
+		}
+
+	protected:
+		RenderingContext* GetContext()
+		{
+			return m_pRenderingContext;
+		}
+
+	protected:
+		std::shared_ptr<OutputStream> m_outputStream;
+
+	private:
+		RenderingContext* m_pRenderingContext;
 	};
 
 
@@ -98,68 +188,15 @@ namespace kih
 			m_streamSource.reserve( capacity );
 		}
 
+		void Clear()
+		{
+			m_streamSource.clear();
+		}
+
 	private:
 		std::vector<Data> m_streamSource;
 	};
-
-
-	/* class ConstantBuffer
-	*/
-	class ConstantBuffer final
-	{
-	public:
-		static const int Capacity = 128;
-
-		enum NamedIndex
-		{
-			WorldMatrix = 0,
-			ViewMatrix = WorldMatrix + 4,
-			ProjectionMatrix = ViewMatrix + 4,
-			WVPMatrix = ProjectionMatrix + 4
-		};
-
-		ConstantBuffer() = default;
-
-		const Vector4& GetVector4( int index )
-		{
-			assert( index >= 0 && index < Capacity );
-			return m_constantBuffer[index];
-		}
-
-		const Matrix4& GetMatrix4( int index )
-		{
-			assert( index >= 0 && index < Capacity );
-			// FIXME: is safe such type casting?
-			return *( reinterpret_cast< Matrix4* >( &m_constantBuffer[index] ) );
-		}
-
-		void SetFloat4( int index, const float* value )
-		{
-			assert( index >= 0 && index < Capacity );
-			m_constantBuffer[index].X = value[0];
-			m_constantBuffer[index].Y = value[1];
-			m_constantBuffer[index].Z = value[2];
-			m_constantBuffer[index].W = value[3];
-		}
-
-		void SetVector4( int index, const Vector4& value )
-		{
-			assert( index >= 0 && index < Capacity );
-			m_constantBuffer[index] = value;
-		}
-
-		void SetMatrix4( int index, const Matrix4& value )
-		{
-			SetFloat4( index, value.A[0] );
-			SetFloat4( index + 1, value.A[1] );
-			SetFloat4( index + 2, value.A[2] );
-			SetFloat4( index + 3, value.A[3] );
-		}
-
-	private:
-		Vector4 m_constantBuffer[Capacity];
-	};
-
+	
 
 	/* class RenderingContext
 	*/

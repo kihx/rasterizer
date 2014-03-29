@@ -223,21 +223,21 @@ namespace kih
 		return *this;
 	}
 
-	const Matrix4& Matrix4::LookAt( const Vector3& eye, const Vector3& at, const Vector3& up )
+	const Matrix4& Matrix4::LookAtLH( const Vector3& eye, const Vector3& at, const Vector3& up )
 	{
-		Vector3 ndist = at - eye;
-		ndist.Normalize();
+		Vector3 zaxis = at - eye;
+		zaxis.Normalize();
 
 		Vector3 nup = up;
 		nup.Normalize();
 
-		Vector3 s = ndist.CrossProduct( nup );
-		Vector3 u = s.CrossProduct( ndist );
+		Vector3 xaxis = zaxis.CrossProduct( nup );
+		Vector3 yaxis = xaxis.CrossProduct( zaxis );
 
-		A[0][0] = s.X; A[1][0] = s.Y; A[2][0] = s.Z; A[3][0] = -eye.X;
-		A[0][1] = u.X; A[1][1] = u.Y; A[2][1] = u.Z; A[3][1] = -eye.Y;
-		A[0][2] = -ndist.X; A[1][2] = -ndist.Y; A[2][2] = -ndist.Z; A[3][2] = -eye.Z;
-		A[0][3] = 0.0f; A[1][3] = 0.0f; A[2][3] = 0.0f; A[3][3] = 1.0f;
+		A[0][0] = xaxis.X;	A[1][0] = xaxis.Y;	A[2][0] = xaxis.Z;	A[3][0] = 0.0f;
+		A[0][1] = yaxis.X;	A[1][1] = yaxis.Y;	A[2][1] = yaxis.Z;	A[3][1] = 0.0f;
+		A[0][2] = zaxis.X;	A[1][2] = zaxis.Y;	A[2][2] = zaxis.Z;	A[3][2] = 0.0f;
+		A[0][3] = -xaxis.DotProduct( eye );		A[1][3] = -yaxis.DotProduct( eye );		A[2][3] = -zaxis.DotProduct( eye );		A[3][3] = 1.0f;
 
 		return *this;
 	}
@@ -293,30 +293,16 @@ namespace kih
 		return *this;
 	}
 
-	const Matrix4& Matrix4::Perspective( float fovY, float aspect, float zn, float zf )
+	const Matrix4& Matrix4::PerspectiveLH( float fovY, float aspect, float zn, float zf )
 	{
-		float angle = DEG2RAD( fovY / 2.0f );
-		float cot = cos( angle ) / sin( angle );
+		float h = 1.0f / tanf( fovY * 0.5f );
+		float w = h / aspect;
+		float fn = zf - zn;
 
-		A[0][0] = cot / aspect;
-		A[0][1] = 0.0f;
-		A[0][2] = 0.0f;
-		A[0][3] = 0.0f;
-
-		A[1][0] = 0.0f;
-		A[1][1] = cot;
-		A[1][2] = 0.0f;
-		A[1][3] = 0.0f;
-
-		A[2][0] = 0.0f;
-		A[2][1] = 0.0f;
-		A[2][2] = -( zf + zn ) / ( zf - zn );
-		A[2][3] = -1.0f;
-
-		A[3][0] = 0.0f;
-		A[3][1] = 0.0f;
-		A[3][2] = -( 2 * zf * zn ) / ( zf - zn );
-		A[3][3] = 0.0f;
+		Value[0] = w;		Value[1] = 0.0f;     Value[2] = 0.0f;			Value[3] = 0.0f;
+		Value[4] = 0.0f;    Value[5] = h;		 Value[6] = 0.0f;			Value[7] = 0.0f;
+		Value[8] = 0.0f;    Value[9] = 0.0f;     Value[10] = zf / fn;		Value[11] = 1.0f;
+		Value[12] = 0.0f;   Value[13] = 0.0f;    Value[14] = -zn * zf / fn; Value[15] = 0.0f;
 
 		return *this;
 	}
@@ -380,14 +366,13 @@ namespace kih
 
 	/*
 	*/
-	Vector3 Vector3_Transform( const Vector3& vec, const Matrix4& mat )
+	Vector4 Vector3_Transform( const Vector3& vec, const Matrix4& mat )
 	{
-		Vector3 tmp;
-		tmp.X = mat.A[0][0] * vec.X + mat.A[1][0] * vec.Y + mat.A[2][0] * vec.Z + mat.A[3][0];
-		tmp.Y = mat.A[0][1] * vec.X + mat.A[1][1] * vec.Y + mat.A[2][1] * vec.Z + mat.A[3][1];
-		tmp.Z = mat.A[0][2] * vec.X + mat.A[1][2] * vec.Y + mat.A[2][2] * vec.Z + mat.A[3][2];
-		float w = mat.A[0][3] * vec.X + mat.A[1][3] * vec.Y + mat.A[2][3] * vec.Z + mat.A[3][3];
-		tmp /= w;
-		return tmp;
+		Vector4 output;
+		output.X = mat.A[0][0] * vec.X + mat.A[1][0] * vec.Y + mat.A[2][0] * vec.Z + mat.A[3][0];
+		output.Y = mat.A[0][1] * vec.X + mat.A[1][1] * vec.Y + mat.A[2][1] * vec.Z + mat.A[3][1];
+		output.Z = mat.A[0][2] * vec.X + mat.A[1][2] * vec.Y + mat.A[2][2] * vec.Z + mat.A[3][2];
+		output.W = mat.A[0][3] * vec.X + mat.A[1][3] * vec.Y + mat.A[2][3] * vec.Z + mat.A[3][3];
+		return output;
 	}
 }

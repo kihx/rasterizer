@@ -11,18 +11,21 @@
 namespace kih
 {	
 	struct VertexProcData
-	{
-		// object-space position
-		Vector3 Position;
-
-		// vertex color
-		Color32 Color;
+	{		
+		Vector3 Position;		// object-space position
+		//Color32 Color;		// vertex color
 
 		VertexProcData() = default;
 
-		VertexProcData( const float position[3], const Color32& color) :
-			Position( position ),
-			Color( color )
+		VertexProcData( const float position[3]/*, const Color32& color*/ ) :
+			Position( position )/*,
+			Color( color )*/
+		{
+		}
+
+		VertexProcData( const Vector3& position/*, const Color32& color*/ ) :
+			Position( position )/*,
+			Color( color )*/
 		{
 		}
 
@@ -55,47 +58,20 @@ namespace kih
 
 
 	struct RasterizerData
-	{
-		// in NDC coordinates
-		union
-		{
-			struct
-			{
-				float X;
-				float Y;
-				float Z;
-				float W;
-			};
+	{		
+		Vector4 Position;	// wvp transformed position		
+		//Color32 Color;		// vertex color
 
-			float Position[4];
-		};
+		RasterizerData() = default;
 
-		// vertex color
-		Color32 Color;
-
-		RasterizerData() :
-			X( 0.0f ),
-			Y( 0.0f ),
-			Z( 0.0f ),
-			W( 1.0f )			
+		RasterizerData( const Vector3& position/*, const Color32& color*/ ) :
+			Position( position )/*,
+			Color( color )*/
 		{
 		}
 
-		RasterizerData( const Vector3& position, const Color32& color ) :
-			X( position.X ),
-			Y( position.Y ),
-			Z( position.Z ),
-			W( 1.0f ),
-			Color( color )
-		{
-		}
-
-		RasterizerData( const float position[4], const Color32& color ) :
-			X( position[0] ),
-			Y( position[1] ),
-			Z( position[2] ),
-			W( position[3] ),
-			Color( color )
+		RasterizerData( const Vector4& position ) :
+			Position( position )
 		{
 		}
 
@@ -147,9 +123,8 @@ namespace kih
 		
 		// z of a pixel
 		float Depth;
-
-		// interpolated color
-		Color32 Color;
+		
+		//Color32 Color;		// interpolated color
 
 		PixelProcData() :
 			PX( 0 ),
@@ -158,11 +133,11 @@ namespace kih
 		{
 		}
 
-		PixelProcData( unsigned short px, unsigned short py, float Depth, const Color32& color ) :
+		PixelProcData( unsigned short px, unsigned short py, float Depth/*, const Color32& color*/ ) :
 			PX( px ),
 			PY( py ),
-			Depth( Depth ),
-			Color( color )
+			Depth( Depth )/*,
+			Color( color )*/
 		{
 		}
 
@@ -182,8 +157,7 @@ namespace kih
 
 	/* class OutputMergerInputStream
 	*/
-	__UNDONE( Need output merger stream );
-	class OutputMergerInputStream
+	class OutputMergerInputStream : public BaseInputOutputStream<PixelProcData>
 	{
 	public:
 		OutputMergerInputStream()
@@ -197,13 +171,13 @@ namespace kih
 
 	/* class InputAssembler
 	*/
-	class InputAssembler : public IRenderingProcessor<IMesh, InputAssemblerOutputStream>
+	class InputAssembler : public BaseRenderingProcessor<IMesh, InputAssemblerOutputStream>
 	{
 		NONCOPYABLE_CLASS( InputAssembler )
 
 	public:
 		explicit InputAssembler( RenderingContext* pRenderingContext ) :
-			m_pRenderingContext( pRenderingContext ),
+			BaseRenderingProcessor( pRenderingContext ),
 			m_faceIndex( 0 )
 		{
 		}
@@ -214,60 +188,56 @@ namespace kih
 
 		virtual std::shared_ptr<InputAssemblerOutputStream> Process( std::shared_ptr<IMesh> inputStream )
 		{
-			auto outputStream = std::make_shared<InputAssemblerOutputStream>();
-	
-			outputStream->SetCoordinatesType( inputStream->GetCoordinatesType() );
+			assert( inputStream );
 
+			m_outputStream->Clear();
+			
 			if ( inputStream->GetPrimitiveType() == PrimitiveType::Undefined )
 			{
-				IrregularMesh* mesh = dynamic_cast< IrregularMesh* >( inputStream.get() );
+				const IrregularMesh* mesh = dynamic_cast< IrregularMesh* >( inputStream.get() );
 				if ( mesh == nullptr )
 				{
-					return outputStream;
+					return m_outputStream;
 				}
 
 				// per face rendering
 				size_t capacity = mesh->NumVerticesInFace( m_faceIndex );
-				outputStream->Reserve( capacity );
+				m_outputStream->Reserve( capacity );
 
 				// Convert the face geometry to an input stream of the vertex processor.
 				size_t face = m_faceIndex;
-				const byte* color = mesh->GetFaceColor( face );
-
 				size_t numVertices = mesh->NumVerticesInFace( face );
 				for ( size_t vert = 0; vert < numVertices; ++vert )
 				{
-					__TODO( change vertex color to material color using a pixel processor constant buffer );
-					outputStream->Push( mesh->GetVertexInFaceAt( face, vert ), color );
+					m_outputStream->Push( mesh->GetVertexInFaceAt( face, vert ) );
 				}
 			}
 			else
 			{
-				OptimizedMesh* mesh = dynamic_cast< OptimizedMesh* >( inputStream.get() );
+				const OptimizedMesh* mesh = dynamic_cast< OptimizedMesh* >( inputStream.get() );
 				if ( mesh == nullptr )
 				{
-					return outputStream;
+					return m_outputStream;
 				}
 				
-				const auto& vertexBuffer = mesh->GetVertexBuffer();
-				const auto& indexBuffer = mesh->GetIndexBuffer();
+				const auto& vertexBuffer = mesh->GetVertexBufferConst();
+				const auto& indexBuffer = mesh->GetIndexBufferConst();
 
 				// per mesh rendering
 				size_t numIndices = indexBuffer.Size();
-				outputStream->Reserve( numIndices );
+				m_outputStream->Reserve( numIndices );
 
 				// Convert the mesh geometry to an input stream of the vertex processor.
 				for ( size_t i = 0; i < numIndices; ++i )
 				{
-					const byte color[4] = { 255, 255, 255, 255 };
-
-					__TODO( change vertex color to material color using a pixel processor constant buffer );
 					unsigned short index = indexBuffer.GetIndexConst( i ) - 1;
-					outputStream->Push( &vertexBuffer.GetVertexConst( index ).x, color );
+					m_outputStream->Push( &vertexBuffer.GetVertexConst( index ).x );
 				}
 			}
 
-			return outputStream;
+			m_outputStream->SetCoordinatesType( inputStream->GetCoordinatesType() );
+
+			return m_outputStream;
 		}
 
 		void SetFaceIndex( size_t index )
@@ -276,20 +246,19 @@ namespace kih
 		}
 
 	private:
-		RenderingContext* m_pRenderingContext;
 		size_t m_faceIndex;
 	};
 	
 
 	/* class VertexProcessor
 	*/
-	class VertexProcessor : public IRenderingProcessor<VertexProcInputStream, VertexProcOutputStream>
+	class VertexProcessor : public BaseRenderingProcessor<VertexProcInputStream, VertexProcOutputStream>
 	{
 		NONCOPYABLE_CLASS( VertexProcessor )
 
 	public:
 		explicit VertexProcessor( RenderingContext* pRenderingContext ) :
-			m_pRenderingContext( pRenderingContext )
+			BaseRenderingProcessor( pRenderingContext )
 		{
 		}
 
@@ -299,15 +268,15 @@ namespace kih
 
 		virtual std::shared_ptr<VertexProcOutputStream> Process( std::shared_ptr<VertexProcInputStream> inputStream )
 		{
-			auto outputStream = std::make_shared<VertexProcOutputStream>();
+			assert( inputStream );
 
-			outputStream->SetCoordinatesType( inputStream->GetCoordinatesType() );
+			m_outputStream->Clear();
 
 			size_t inputSize = inputStream->Size();
 			if ( inputSize > 0 )
 			{
 				// Currently, input and output size is always same.
-				outputStream->Reserve( inputSize );
+				m_outputStream->Reserve( inputSize );
 
 				if ( inputStream->GetCoordinatesType() == CoordinatesType::ReciprocalHomogeneous )
 				{
@@ -315,7 +284,7 @@ namespace kih
 					{
 						const auto& vertex = inputStream->GetData( i );
 
-						outputStream->Push( vertex.Position, vertex.Color );
+						m_outputStream->Push( vertex.Position );
 					}
 				}
 				else
@@ -324,48 +293,40 @@ namespace kih
 					{
 						const auto& vertex = inputStream->GetData( i );
 
-						float transformedPosition[4];
-						Transform( vertex.Position, transformedPosition );
+						Vector4 hPos;
+						TransformWVP( vertex.Position, hPos );
 
-						outputStream->Push( transformedPosition, vertex.Color );
+						m_outputStream->Push( hPos );
 					}
 				}
 			}
 
-			return outputStream;
+			m_outputStream->SetCoordinatesType( inputStream->GetCoordinatesType() );
+
+			return m_outputStream;
 		}
 		
 	private:
 		// WVP transform
-		void Transform( const Vector3& position, float outPosition[4] )
+		void TransformWVP( const Vector3& position, Vector4& outPosition )
 		{
-			assert( m_pRenderingContext );
-
-			Matrix4 wvp = m_pRenderingContext->GetSharedConstantBuffer().GetMatrix4( ConstantBuffer::WVPMatrix );
-			Vector3 hpos = Vector3_Transform( position, wvp );
+			Matrix4 wvp = GetSharedConstantBuffer().GetMatrix4( ConstantBuffer::WVPMatrix );
+			outPosition = Vector3_Transform( position, wvp );
 
 			//printf( "hpos: %.2f %.2f %.2f\n", hpos.X, hpos.Y, hpos.Z );
-
-			outPosition[0] = hpos.X;
-			outPosition[1] = hpos.Y;
-			outPosition[2] = hpos.Z;
-			outPosition[3] = 1.0f;		// FIXME: Perspective division should be done after interpolation on the rasterizer.
 		}
-
-	private:
-		RenderingContext* m_pRenderingContext;
 	};
 
 	
 	/* class Rasterizer
 	*/
-	class Rasterizer : public IRenderingProcessor<RasterizerInputStream, RasterizerOutputStream>
+	class Rasterizer : public BaseRenderingProcessor<RasterizerInputStream, RasterizerOutputStream>
 	{
 		NONCOPYABLE_CLASS( Rasterizer )
 
 	public:
 		explicit Rasterizer( RenderingContext* pRenderingContext ) :
-			m_pRenderingContext( pRenderingContext )
+			BaseRenderingProcessor( pRenderingContext )
 		{
 		}
 
@@ -375,14 +336,14 @@ namespace kih
 
 		virtual std::shared_ptr<RasterizerOutputStream> Process( std::shared_ptr<RasterizerInputStream> inputStream )
 		{
-			assert( m_pRenderingContext );
-			
-			auto outputStream = std::make_shared<RasterizerOutputStream>();
+			assert( inputStream );
 
-			std::shared_ptr<Texture> rt = m_pRenderingContext->GetRenderTaget( 0 );
+			m_outputStream->Clear();
+
+			std::shared_ptr<Texture> rt = GetContext()->GetRenderTaget( 0 );
 			if ( rt == nullptr )
 			{
-				return outputStream;
+				return m_outputStream;
 			}
 
 			unsigned short width = static_cast<unsigned short>( rt->Width() );
@@ -390,36 +351,15 @@ namespace kih
 
 			assert( ( width > 0 && height > 0 ) && "invalid operation" );
 
-			// viewport transform for projective coordinates
-			if ( inputStream->GetCoordinatesType() == CoordinatesType::Projective )
-			{
-				float factorX = width * 0.5f;
-				float factorY = height * 0.5f;
-
-				size_t numVertices = inputStream->Size();
-				for ( size_t v = 0; v < numVertices; ++v )
-				{
-					auto& data = inputStream->GetData( v );
-					data.X *= factorX;
-					data.X += factorX;	// + x
-
-					data.Y *= factorY;
-					data.Y += factorY;	// + y
-
-					// data.Z   near/far
-
-					//printf( "data: %.2f %.2f\n", data.X, data.Y );
-				}
-			}
+			TransformViewport( inputStream, width, height );
 
 			// FIXME: is this ok??
-			outputStream->Reserve( width * height );
+			m_outputStream->Reserve( width * height );
+			DoScanlineConversion( inputStream, m_outputStream, width, height );
 
-			DoScanlineConversion( inputStream, outputStream, width, height );
-
-			return outputStream;
+			return m_outputStream;
 		}
-
+	
 	private:
 		struct EdgeTableElement
 		{
@@ -429,18 +369,18 @@ namespace kih
 			float Slope;
 			// float Depth;	// depth
 
-			const Color32& ColorL;
-			const Color32& ColorR;
+			//const Color32& ColorL;
+			//const Color32& ColorR;
 
 			EdgeTableElement() = delete;
 
-			explicit EdgeTableElement( float yMax, float xMin, float xMax, float slope, const Color32& colorL, const Color32& colorR ) :
+			explicit EdgeTableElement( float yMax, float xMin, float xMax, float slope/*, const Color32& colorL, const Color32& colorR*/ ) :
 				YMax( yMax ),
 				XMin( xMin ),
 				XMax( xMax ),
-				Slope( slope ),
+				Slope( slope )/*,
 				ColorL( colorL ),
-				ColorR( colorR )
+				ColorR( colorR )*/
 			{
 			}
 
@@ -516,22 +456,22 @@ namespace kih
 					const auto& v1 = inputStream->GetData( v1Index );
 
 					// Make an ET element.
-					float xMax = v0.X;
-					float xMin = v1.X;
-					if ( v0.X < v1.X )
+					float xMax = v0.Position.X;
+					float xMin = v1.Position.X;
+					if ( v0.Position.X < v1.Position.X )
 					{
 						Swap<float>( xMax, xMin );
 					}
 
-					float yMax = v0.Y;
-					float yMin = v1.Y;
-					if ( v0.Y < v1.Y )
+					float yMax = v0.Position.Y;
+					float yMin = v1.Position.Y;
+					if ( v0.Position.Y < v1.Position.Y )
 					{
 						Swap<float>( yMax, yMin );
 					}
 
-					float dx = v0.X - v1.X;
-					float dy = v0.Y - v1.Y;
+					float dx = v0.Position.X - v1.Position.X;
+					float dy = v0.Position.Y - v1.Position.Y;
 					float slope = ( dy == 0.0f ) ? 0.0f : ( dx / dy );
 
 					// Select a start scanline with Y-axis clipping.
@@ -539,7 +479,7 @@ namespace kih
 					startY = Clamp<unsigned short>( startY, 0, height - 1 );
 
 					// Push this element at the selected scanline.
-					m_edgeTable[startY].emplace_back( yMax, xMin, xMax, slope, v0.Color, v1.Color );	// is this color order ok?				
+					m_edgeTable[startY].emplace_back( yMax, xMin, xMax, slope );
 
 					// Update next indices
 					++v1Index;
@@ -623,8 +563,7 @@ namespace kih
 						for ( unsigned short x = xLeft; x < xRight; ++x )
 						{
 							__TODO( write the pixel Z value );
-							__TODO( interpolate colors );
-							outputStream->Push( x, y, 0.0f, elemLeft.ETElement.ColorL );	
+							outputStream->Push( x, y, 0.0f/*, elemLeft.ETElement.ColorL*/ );	
 						}
 					}
 
@@ -640,21 +579,52 @@ namespace kih
 			}
 		}
 
+		void TransformViewport( std::shared_ptr<RasterizerInputStream> inputStream, unsigned short width, unsigned short height )
+		{
+			// viewport transform for projective coordinates
+			if ( inputStream->GetCoordinatesType() != CoordinatesType::Projective )
+			{
+				return;
+			}
+
+			float factorX = width * 0.5f;
+			float factorY = height * 0.5f;
+
+			size_t numVertices = inputStream->Size();
+			for ( size_t v = 0; v < numVertices; ++v )
+			{
+				auto& data = inputStream->GetData( v );
+
+				// perspective division
+				data.Position /= data.Position.W;
+
+				// NDC -> viewport
+				data.Position.X *= factorX;
+				data.Position.X += factorX;	// + x
+
+				data.Position.Y *= factorY;
+				data.Position.Y += factorY;	// + y
+
+				// data.Z   near/far					
+
+				//printf( "data: %.2f %.2f\n", data.X, data.Y );
+			}
+		}
+
 	private:
-		RenderingContext* m_pRenderingContext;
 		std::vector<std::list<EdgeTableElement>> m_edgeTable;
 	};
 
 
 	/* class PixelProcessor
 	*/
-	class PixelProcessor : public IRenderingProcessor<PixelProcInputStream, PixelProcOutputStream>
+	class PixelProcessor : public BaseRenderingProcessor<PixelProcInputStream, PixelProcOutputStream>
 	{
 		NONCOPYABLE_CLASS( PixelProcessor )
 
 	public:
 		explicit PixelProcessor( RenderingContext* pRenderingContext ) :
-			m_pRenderingContext( pRenderingContext )
+			BaseRenderingProcessor( pRenderingContext )
 		{
 		}
 
@@ -664,26 +634,28 @@ namespace kih
 		
 		virtual std::shared_ptr<PixelProcOutputStream> Process( std::shared_ptr<PixelProcInputStream> inputStream )
 		{
-			assert( m_pRenderingContext );
 			assert( inputStream );
 
-			auto outputStream = std::make_shared<PixelProcOutputStream>();
+			m_outputStream->Clear();
 			
-			std::shared_ptr<Texture> rt = m_pRenderingContext->GetRenderTaget( 0 );
+			std::shared_ptr<Texture> rt = GetContext()->GetRenderTaget( 0 );
 			if ( rt == nullptr )
 			{
-				return outputStream;
+				return m_outputStream;
 			}
 
 			size_t inputStreamSize = inputStream->Size();
 			if ( inputStreamSize > 0 )
 			{
-				int width = rt->Width();
-				int stride = GetBytesPerPixel( rt->Format() );
-
 				LockGuardPtr<Texture> guard( rt );
 				if ( byte* buffer = static_cast< byte* >( guard.Ptr() ) )
 				{
+					const Vector4& color = GetSharedConstantBuffer().GetVector4( ConstantBuffer::DiffuseColor );
+					Color32 color32 = Vector4_ToColor32( color );
+
+					int width = rt->Width();
+					int stride = GetBytesPerPixel( rt->Format() );
+
 					for ( size_t i = 0; i < inputStreamSize; ++i )
 					{
 						const auto& fragment = inputStream->GetData( i );
@@ -693,9 +665,13 @@ namespace kih
 						// TODO: pixel shading
 #if 1
 						byte* base = buffer + ( ( ( width * fragment.PY ) + fragment.PX ) * stride );
-						*( base /*+ 0*/ ) = fragment.Color.R;
-						*( base + 1 ) = fragment.Color.G;
-						*( base + 2 ) = fragment.Color.B;
+						*( base /*+ 0*/ ) = color32.R;
+						*( base + 1 ) = color32.G;
+						*( base + 2 ) = color32.B;
+
+						//*( base /*+ 0*/ ) = fragment.Color.R;
+						//*( base + 1 ) = fragment.Color.G;
+						//*( base + 2 ) = fragment.Color.B;
 #else
 						//rt->WriteTexel( fragment.PX, fragment.PY, fragment.Color.Value );
 #endif
@@ -703,23 +679,20 @@ namespace kih
 				}
 			}
 
-			return outputStream;
+			return m_outputStream;
 		}
-
-	private:
-		RenderingContext* m_pRenderingContext;
 	};
 
 
 	/* class OutputMerger
 	*/
-	class OutputMerger : public IRenderingProcessor<OutputMergerInputStream, OutputMergerOutputStream>
+	class OutputMerger : public BaseRenderingProcessor<OutputMergerInputStream, OutputMergerOutputStream>
 	{
 		NONCOPYABLE_CLASS( OutputMerger )
 
 	public:
 		explicit OutputMerger( RenderingContext* pRenderingContext ) :
-			m_pRenderingContext( pRenderingContext )
+			BaseRenderingProcessor( pRenderingContext )
 		{
 		}
 
@@ -735,9 +708,6 @@ namespace kih
 			//return std::shared_ptr<OutputMergerInputStream>( pOut );
 			return inputStream;
 		}
-
-	private:
-		RenderingContext* m_pRenderingContext;
 	};
 
 
@@ -821,6 +791,8 @@ namespace kih
 		Matrix4 wvp = wv * pDevice->GetProjectionMatrix();
 		GetSharedConstantBuffer().SetMatrix4( ConstantBuffer::WVPMatrix, wvp );
 
+
+		// Draw primitives here.
 		PrimitiveType primitiveType = mesh->GetPrimitiveType();
 		
 		if ( primitiveType == PrimitiveType::Undefined )
@@ -829,13 +801,22 @@ namespace kih
 			{
 				for ( size_t face = 0; face < pMesh->NumFaces(); ++face )
 				{
-					m_inputAssembler->SetFaceIndex( face );
+					const unsigned char* color = pMesh->GetFaceColor( face );
+					GetSharedConstantBuffer().SetVector4( ConstantBuffer::DiffuseColor, 
+															Vector4( static_cast<byte>( color[0] / 255.0f ), 
+																	static_cast<byte>( color[1] / 255.0f ), 
+																	static_cast<byte>( color[2] / 255.0f ), 
+																	static_cast<byte>( color[3] / 255.0f ) ) );
+
+					m_inputAssembler->SetFaceIndex( face );					
 					DrawInternal( mesh, pMesh->NumVerticesInFace( face ) );
 				}
 			}
 		}
 		else
 		{
+			GetSharedConstantBuffer().SetVector4( ConstantBuffer::DiffuseColor, Vector4( 1.0f, 1.0f, 1.0f, 1.0f ) );
+
 			DrawInternal( mesh, GetNumberOfVerticesPerPrimitive( primitiveType ) );
 		}
 	}

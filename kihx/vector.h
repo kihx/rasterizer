@@ -133,19 +133,19 @@ namespace kih
 			return *this;
 		}
 
-		Vector3& operator/=( float offset )
+		Vector3& operator/=( float value )
 		{
-			X /= offset;
-			Y /= offset;
-			Z /= offset;
+			X /= value;
+			Y /= value;
+			Z /= value;
 			return *this;
 		}
 
-		Vector3& operator*=( float offset )
+		Vector3& operator*=( float value )
 		{
-			X *= offset;
-			Y *= offset;
-			Z *= offset;
+			X *= value;
+			Y *= value;
+			Z *= value;
 			return *this;
 		}
 
@@ -199,7 +199,7 @@ namespace kih
 		{
 		}
 
-		Vector4( float x, float y, float z, float w ) :
+		Vector4( float x, float y, float z, float w = 1.0f ) :
 			X( x ),
 			Y( y ),
 			Z( z ),
@@ -215,11 +215,129 @@ namespace kih
 		{
 		}
 
+		Vector4( const Vector3& rhs ) :
+			X( rhs.X ),
+			Y( rhs.Y ),
+			Z( rhs.Z ),
+			W( 1.0f )
+		{
+		}
+
 		Vector4( const Vector4& rhs ) = default;
 
 		Vector4& operator=( const Vector4& rhs ) = default;
+
+		Vector4& operator+=( const Vector4 &rhs )
+		{
+			X += rhs.X;
+			Y += rhs.Y;
+			Z += rhs.Z;
+			W += rhs.W;
+			return *this;
+		}
+
+		Vector4& operator-=( const Vector4 &rhs )
+		{
+			X -= rhs.X;
+			Y -= rhs.Y;
+			Z -= rhs.Z;
+			W -= rhs.W;
+			return *this;
+		}
+
+		Vector4& operator/=( float value )
+		{
+			X /= value;
+			Y /= value;
+			Z /= value;
+			W /= value;
+			return *this;
+		}
+
+		Vector4& operator*=( float value )
+		{
+			X *= value;
+			Y *= value;
+			Z *= value;
+			W *= value;
+			return *this;
+		}
+
+		bool operator==( const Vector4& rhs ) const
+		{
+			return X == rhs.X && Y == rhs.Y && Z == rhs.Z && W == rhs.W;
+		}
+
+		bool operator!=( const Vector4& rhs ) const
+		{
+			return X != rhs.X || Y != rhs.Y || Z != rhs.Z || W != rhs.W;
+		}
 	};
+
+
+	/* struct Color4
+	*/
+	template<typename T>
+	struct Color4
+	{
+		static_assert( std::is_integral<T>::value || std::is_floating_point<T>::value, "base type must be integral or floating point" );
+
+		union
+		{
+			struct
+			{
+				T R;
+				T G;
+				T B;
+				T A;
+			};
+
+			T Value[4];
+		};
+
+		Color4() :
+			R( T() ),
+			G( T() ),
+			B( T() ),
+			A( T() )
+		{
+		}
+
+		Color4( T r, T g, T b, T a ) :
+			R( r ),
+			G( g ),
+			B( b ),
+			A( a )
+		{
+		}
+
+		Color4( const T color[4] ) :
+			R( color[0] ),
+			G( color[1] ),
+			B( color[2] ),
+			A( color[3] )
+		{
+		}
+
+		Color4( const Color4& c ) = default;
+	};
+	
+
+	typedef Color4<byte> Color32;
+	typedef Color4<float> Color128;
+
+
+	inline Color32 Vector4_ToColor32( const Vector4& src )
+	{
+		return Color32( Clamp<byte>( static_cast<byte>( src.X * 255.0f ), 0, 255 ),
+						Clamp<byte>( static_cast<byte>( src.Y * 255.0f ), 0, 255 ),
+						Clamp<byte>( static_cast<byte>( src.Z * 255.0f ), 0, 255 ),
+						Clamp<byte>( static_cast<byte>( src.W * 255.0f ), 0, 255 ) );
+	}
 }
 
 using kih::Vector3;
 using kih::Vector4;
+
+using kih::Color32;
+using kih::Color128;

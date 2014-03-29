@@ -259,9 +259,19 @@ namespace kih
 			return m_indexBuffer.Size() / 3;
 		}
 
+		const VertexBuffer<float>& GetVertexBufferConst() const
+		{
+			return m_vertexBuffer;
+		}
+
 		VertexBuffer<float>& GetVertexBuffer()
 		{
 			return m_vertexBuffer;
+		}
+
+		const IndexBuffer<unsigned short>& GetIndexBufferConst() const 
+		{
+			return m_indexBuffer;
 		}
 
 		IndexBuffer<unsigned short>& GetIndexBuffer()

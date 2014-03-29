@@ -74,11 +74,11 @@ namespace kih
 
 		const Matrix4& Rotate( const Vector3& axis, float angle );
 
-		const Matrix4& LookAt( const Vector3& eye, const Vector3& at, const Vector3& up );
+		const Matrix4& LookAtLH( const Vector3& eye, const Vector3& at, const Vector3& up );
 
 		const Matrix4& PerspectiveOffCenter( float l, float r, float b, float t, float zn, float zf );
 
-		const Matrix4& Perspective( float fovY, float aspect, float zn, float zf );
+		const Matrix4& PerspectiveLH( float fovY, float aspect, float zn, float zf );
 
 		const Matrix4& Ortho( float l, float r, float b, float t, float zn, float zf );
 
@@ -128,7 +128,7 @@ namespace kih
 
 	/*
 	*/
-	Vector3 Vector3_Transform( const Vector3& vec, const Matrix4& mat );
+	Vector4 Vector3_Transform( const Vector3& vec, const Matrix4& mat );
 }
 
 using kih::Matrix4;
