@@ -31,6 +31,18 @@
 
 // utility functions
 //
+const float PI = 3.141592654f;
+
+inline float ToRadian( float degree )
+{
+	return degree * ( PI / 180.0f );
+}
+
+inline float ToDegree( float radian )
+{
+	return radian * ( 180.0f / PI );
+}
+
 template<typename T>
 inline const T& Min( const T& lhs, const T& rhs )
 {

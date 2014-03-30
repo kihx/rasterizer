@@ -283,9 +283,9 @@ void SetupTransform()
     // every 1000 ms. To avoid the loss of precision inherent in very high 
     // floating point numbers, the system time is modulated by the rotation 
     // period before conversion to a radian angle.
- //   unsigned int iTime = timeGetTime() % 1000;
- //   float fAngle = iTime * ( 2.0f * PI ) / 1000.0f;
-	//matWorld.RotateY( fAngle );
+	unsigned int iTime = timeGetTime() % 1000;
+	float fAngle = iTime * ( 2.0f * PI ) / 1000.0f;
+	matWorld.RotateY( fAngle );
 
 	Matrix4 matScale;
 	matScale.Scaling( 10.0f, 10.0f, 10.0f );

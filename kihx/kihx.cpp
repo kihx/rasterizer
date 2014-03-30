@@ -52,11 +52,11 @@ KIHX_API void kiSetTransform( int transformType, const float* matrix4x4 )
 		RenderingDevice::GetInstance()->SetWorldMatrix( Matrix4( matrix4x4 ) );
 		break;
 
-	case 2:
+	case 1:
 		RenderingDevice::GetInstance()->SetViewMatrix( Matrix4( matrix4x4 ) );
 		break;
 
-	case 1:
+	case 2:
 		RenderingDevice::GetInstance()->SetProjectionMatrix( Matrix4( matrix4x4 ) );
 		break;
 	

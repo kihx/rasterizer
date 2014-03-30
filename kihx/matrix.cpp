@@ -298,7 +298,7 @@ namespace kih
 
 	const Matrix4& Matrix4::PerspectiveLH( float fovY, float aspect, float zn, float zf )
 	{
-		float h = 1.0f / tanf( fovY * 0.5f );
+		float h = 1.0f / tanf( ToRadian( fovY * 0.5f ) );
 		float w = h / aspect;
 		float fn = zf - zn;
 
@@ -369,13 +369,11 @@ namespace kih
 
 	/*
 	*/
-	Vector4 Vector3_Transform( const Vector3& vec, const Matrix4& mat )
+	void Vector3_Transform( const Vector3& vec, const Matrix4& mat, Vector4& result )
 	{
-		Vector4 output;
-		output.X = mat.A[0][0] * vec.X + mat.A[1][0] * vec.Y + mat.A[2][0] * vec.Z + mat.A[3][0];
-		output.Y = mat.A[0][1] * vec.X + mat.A[1][1] * vec.Y + mat.A[2][1] * vec.Z + mat.A[3][1];
-		output.Z = mat.A[0][2] * vec.X + mat.A[1][2] * vec.Y + mat.A[2][2] * vec.Z + mat.A[3][2];
-		output.W = mat.A[0][3] * vec.X + mat.A[1][3] * vec.Y + mat.A[2][3] * vec.Z + mat.A[3][3];
-		return output;
+		result.X = mat.A[0][0] * vec.X + mat.A[1][0] * vec.Y + mat.A[2][0] * vec.Z + mat.A[3][0];
+		result.Y = mat.A[0][1] * vec.X + mat.A[1][1] * vec.Y + mat.A[2][1] * vec.Z + mat.A[3][1];
+		result.Z = mat.A[0][2] * vec.X + mat.A[1][2] * vec.Y + mat.A[2][2] * vec.Z + mat.A[3][2];
+		result.W = mat.A[0][3] * vec.X + mat.A[1][3] * vec.Y + mat.A[2][3] * vec.Z + mat.A[3][3];
 	}
 }

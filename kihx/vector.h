@@ -171,6 +171,18 @@ namespace kih
 		{
 			return X != rhs.X || Y != rhs.Y || Z != rhs.Z;
 		}
+
+		float operator[]( int index ) const
+		{
+			assert( index >= 0 && index < 3 );
+			return Value[index];
+		}
+
+		float& operator[]( int index )
+		{
+			assert( index >= 0 && index < 3 );
+			return Value[index];
+		}
 	};
 
 
@@ -271,6 +283,18 @@ namespace kih
 		bool operator!=( const Vector4& rhs ) const
 		{
 			return X != rhs.X || Y != rhs.Y || Z != rhs.Z || W != rhs.W;
+		}
+
+		float operator[]( int index ) const
+		{
+			assert( index >= 0 && index < 4 );
+			return Value[index];
+		}
+
+		float& operator[]( int index )
+		{
+			assert( index >= 0 && index < 4 );
+			return Value[index];
 		}
 	};
 

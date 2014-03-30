@@ -313,7 +313,7 @@ namespace kih
 		// WVP transform
 		void TransformWVP( const Vector3& position, const Matrix4& wvp, Vector4& outPosition )
 		{
-			outPosition = Vector3_Transform( position, wvp );
+			Vector3_Transform( position, wvp, outPosition );
 
 			//printf( "hpos: %.2f %.2f %.2f\n", hpos.X, hpos.Y, hpos.Z );
 		}
@@ -477,7 +477,7 @@ namespace kih
 					float slope = ( dy == 0.0f ) ? 0.0f : ( dx / dy );
 
 					// Select a start scanline with Y-axis clipping.
-					unsigned short startY = FloatToInteger<float, unsigned short>( std::round( yMin ) );
+					unsigned short startY = FloatToInteger<float, unsigned short>( std::ceil( yMin ) );
 					startY = Clamp<unsigned short>( startY, 0, height - 1 );
 
 					// Push this element at the selected scanline.
@@ -581,10 +581,10 @@ namespace kih
 				}
 			}
 
-			for ( unsigned short y = 0; y < height; ++y )
-			{
-				m_edgeTable[y].clear();
-			}
+			//for ( unsigned short y = 0; y < height; ++y )
+			//{
+			//	m_edgeTable[y].clear();
+			//}
 		}
 
 		void TransformViewport( std::shared_ptr<RasterizerInputStream> inputStream, unsigned short width, unsigned short height )
