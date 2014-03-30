@@ -1,19 +1,22 @@
 #ifndef _PIPELINEELEMENTS_H_
 #define _PIPELINEELEMENTS_H_
 
-#include "..//utility/math3d.h"
+#include "XtzMath.h"
+
+#include <map>
+#include <vector>
 
 namespace xtozero
 {
 	class CRsElementDesc
 	{
 	public:
-		CRsElementDesc( Vector3 vertex, float r, float g, float b )
-			: m_Vertex( vertex ), m_Color( r, g, b ) {}
+		CRsElementDesc( ) {}
 		~CRsElementDesc( ) {}
 
-		Vector3 m_Vertex;
-		Vector3 m_Color;
+		std::vector<Vector3> m_vertices;
+		std::vector<Vector3> m_Color;
+		std::map<int, std::vector<int>> m_faces;
 	};
 
 	class CPsElementDesc

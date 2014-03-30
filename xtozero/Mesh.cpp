@@ -163,12 +163,13 @@ namespace xtozero
 						}
 
 						int index;
-						face.m_indices.reserve( VERTEX_ELEMENT_COUNT );
+						face.m_indices.reserve( VERTEX_ELEMENT_COUNT + 1 );
 						for ( int i = 0; i < VERTEX_ELEMENT_COUNT; ++i )
 						{
 							meshfile >> index;
 							face.m_indices.emplace_back( index - 1 );
 						}
+						face.m_indices.emplace_back( *face.m_indices.begin( ) );//마지막 정점은 시작 정점이다.
 
 						m_faces.emplace_back( face );
 					}

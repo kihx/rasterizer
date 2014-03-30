@@ -4,9 +4,9 @@
 
 namespace xtozero
 {
-	void CRasterizer::CreateEdgeTable( const std::shared_ptr<CMesh> pMesh, int faceNumber )
+	void CRasterizer::CreateEdgeTable( CRsElementDesc& rsInput, int faceNumber )
 	{
-		if ( faceNumber >= pMesh->m_faces.size() )
+		if ( faceNumber >= rsInput.m_faces.size( ) )
 		{
 			return;
 		}
@@ -18,11 +18,11 @@ namespace xtozero
 		float gradient = 0.0f;
 		float dx = 0.0f;
 		float dy = 0.0f;
-		Face& face = pMesh->m_faces[faceNumber];
+		std::vector<int>& faces = rsInput.m_faces[faceNumber];
 
-		for ( std::vector<int>::iterator& index = face.m_indices.begin(); index != face.m_indices.end(); ++index )
+		for ( std::vector<int>::iterator& index = faces.begin( ); index != faces.end( ); ++index )
 		{
-			if ( (index + 1) == face.m_indices.end() )
+			if ( (index + 1) == faces.end( ) )
 			{
 				//선분이 성립 안 됨.
 				//Do Nothing
@@ -30,8 +30,8 @@ namespace xtozero
 			}
 			else
 			{
-				const Vector3& start = pMesh->m_vertices[*index];
-				const Vector3& end = pMesh->m_vertices[*(index + 1)];
+				const Vector3& start = rsInput.m_vertices[*index];
+				const Vector3& end = rsInput.m_vertices[*(index + 1)];
 
 				//기울기를 구함
 				dy = end.Y - start.Y;
@@ -190,16 +190,22 @@ namespace xtozero
 		}
 	}
 
-	void CRasterizer::Process( const std::shared_ptr<CMesh> pMesh )
+	void CRasterizer::Process( CRsElementDesc& rsInput )
 	{
 		//여기에서 메시내부의 픽셀을 계산
 
-		for ( int i = 0; i < pMesh->m_faces.size( ); ++i )
+		for ( std::vector<Vector3>::iterator& iter = rsInput.m_vertices.begin(); iter != rsInput.m_vertices.end(); ++iter )
 		{
-			CreateEdgeTable( pMesh, i );
+			(*iter).X = ((*iter).X * m_viewport.m_right * 0.5f) + m_viewport.m_right * 0.5f;
+			(*iter).Y = -((*iter).Y * m_viewport.m_bottom * 0.5f) + m_viewport.m_bottom * 0.5f;
+		}
+
+		for ( int i = 0; i < rsInput.m_faces.size( ); ++i )
+		{
+			CreateEdgeTable( rsInput, i );
 
 			int scanline = m_edgeTable.begin( )->m_minY;
-			unsigned int facecolor = PIXEL_COLOR( pMesh->m_faces[i].m_color[r], pMesh->m_faces[i].m_color[g], pMesh->m_faces[i].m_color[b] );
+			unsigned int facecolor = RAND_COLOR();
 
 			while ( !(m_edgeTable.empty( ) && m_activeEdgeTable.empty( )) )
 			{

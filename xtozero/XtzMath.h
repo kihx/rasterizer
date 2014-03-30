@@ -1,5 +1,5 @@
-#ifndef _MATH_H_
-#define _MATH_H
+#ifndef _XTZMATH_H_
+#define _XTZMATH_H_
 
 #include <vector>
 #include <math.h>

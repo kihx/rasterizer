@@ -15,7 +15,7 @@ XTZ_API void XtzRenderToBuffer( void* buffer, int width, int height, int dpp )
 	if ( buffer )
 	{
 		gRasterizer->SetViewPort( 0, 0, width, height );
-		gRasterizer->Process( gMeshManager->LoadRecentMesh( ) );
+		gRasterizer->Process( gVertexShader->Process( gMeshManager->LoadRecentMesh( ) ) );
 
 		size_t size = dpp / 8;
 

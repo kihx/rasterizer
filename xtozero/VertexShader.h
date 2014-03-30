@@ -3,6 +3,7 @@
 
 #include "Mesh.h"
 #include "pipelineElements.h"
+#include <utility>
 
 #include <vector>
 
@@ -18,7 +19,7 @@ namespace xtozero
 		CVertexShader() {}
 		~CVertexShader() {}
 
-		std::vector<CRsElementDesc> Process( const std::shared_ptr<CMesh> pMesh );
+		CRsElementDesc Process( const std::shared_ptr<CMesh>& pMesh );
 
 		void SetWorldMatrix( const float* mmatrix4x4 )
 		{
