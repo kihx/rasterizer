@@ -94,6 +94,7 @@ namespace xtozero
 					}
 				}
 			}
+			m_coordinate = COORDINATE::WINDOW_COORDINATE;
 			return true;
 		}
 		else
@@ -176,6 +177,7 @@ namespace xtozero
 				}
 			}
 			return true;
+			m_coordinate = COORDINATE::OBJECT_COORDINATE;
 		}
 		else
 		{

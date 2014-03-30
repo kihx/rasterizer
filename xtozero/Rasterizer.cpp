@@ -178,9 +178,9 @@ namespace xtozero
 				startX = m_viewport.m_left;
 			}
 
-			if ( endX > m_viewport.m_right )
+			if ( endX >= m_viewport.m_right )
 			{
-				endX = m_viewport.m_right;
+				endX = m_viewport.m_right - 1;
 			}
 
 			for ( int i = startX; i <= endX; ++i )
@@ -194,10 +194,13 @@ namespace xtozero
 	{
 		//여기에서 메시내부의 픽셀을 계산
 
-		for ( std::vector<Vector3>::iterator& iter = rsInput.m_vertices.begin(); iter != rsInput.m_vertices.end(); ++iter )
+		if ( rsInput.m_coodinate == COORDINATE::OBJECT_COORDINATE )
 		{
-			(*iter).X = ((*iter).X * m_viewport.m_right * 0.5f) + m_viewport.m_right * 0.5f;
-			(*iter).Y = -((*iter).Y * m_viewport.m_bottom * 0.5f) + m_viewport.m_bottom * 0.5f;
+			for ( std::vector<Vector3>::iterator& iter = rsInput.m_vertices.begin( ); iter != rsInput.m_vertices.end( ); ++iter )
+			{
+				(*iter).X = ((*iter).X * m_viewport.m_right * 0.5f) + m_viewport.m_right * 0.5f;
+				(*iter).Y = -((*iter).Y * m_viewport.m_bottom * 0.5f) + m_viewport.m_bottom * 0.5f;
+			}
 		}
 
 		for ( int i = 0; i < rsInput.m_faces.size( ); ++i )
@@ -205,6 +208,12 @@ namespace xtozero
 			CreateEdgeTable( rsInput, i );
 
 			int scanline = m_edgeTable.begin( )->m_minY;
+
+			if ( scanline < m_viewport.m_top )
+			{
+				scanline = m_viewport.m_top;
+			}
+
 			unsigned int facecolor = RAND_COLOR();
 
 			while ( !(m_edgeTable.empty( ) && m_activeEdgeTable.empty( )) )
@@ -214,6 +223,11 @@ namespace xtozero
 				ProcessScanline( scanline, facecolor );
 
 				++scanline;
+
+				if ( scanline > m_viewport.m_bottom )
+				{
+					break;
+				}
 			}
 		}
 	}

@@ -14,7 +14,10 @@ namespace xtozero
 		for ( int i = 0; i < pMesh->m_nVerties; ++i )
 		{
 			Vector3 position = pMesh->m_vertices[i];
-			position.Transform( wvpMatrix );
+			if ( pMesh->m_coordinate == COORDINATE::OBJECT_COORDINATE )
+			{
+				position.Transform( wvpMatrix );
+			}
 
 			vsOutput.m_vertices.emplace_back( position );
 		}
@@ -31,6 +34,8 @@ namespace xtozero
 				vsOutput.m_faces[key].emplace_back( *indexiter );
 			}
 		}
+
+		vsOutput.m_coodinate = pMesh->m_coordinate;
 
 		return vsOutput;
 	}

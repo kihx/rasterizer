@@ -28,6 +28,12 @@ namespace xtozero
 	//	T m_element[VERTEX_ELEMENT_COUNT];
 	//};
 
+	enum class COORDINATE
+	{
+		OBJECT_COORDINATE = 0,
+		WINDOW_COORDINATE
+	};
+
 	enum COLOR_ELEMENT
 	{
 		r = 0,
@@ -51,6 +57,8 @@ namespace xtozero
 
 		int m_nfaces;
 		int m_nVerties;
+
+		COORDINATE m_coordinate;
 
 		CMesh( void ) : m_nfaces( 0 ), m_nVerties( 0 ) {}
 		~CMesh( void ){}

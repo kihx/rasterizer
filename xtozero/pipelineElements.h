@@ -2,6 +2,7 @@
 #define _PIPELINEELEMENTS_H_
 
 #include "XtzMath.h"
+#include "Mesh.h"
 
 #include <map>
 #include <vector>
@@ -17,6 +18,7 @@ namespace xtozero
 		std::vector<Vector3> m_vertices;
 		std::vector<Vector3> m_Color;
 		std::map<int, std::vector<int>> m_faces;
+		COORDINATE m_coodinate;
 	};
 
 	class CPsElementDesc
