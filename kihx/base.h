@@ -31,39 +31,6 @@
 
 // utility functions
 //
-const float PI = 3.141592654f;
-
-inline float ToRadian( float degree )
-{
-	return degree * ( PI / 180.0f );
-}
-
-inline float ToDegree( float radian )
-{
-	return radian * ( 180.0f / PI );
-}
-
-template<typename T>
-inline const T& Min( const T& lhs, const T& rhs )
-{
-	static_assert( std::is_integral<T>::value || std::is_floating_point<T>::value, "base type must be integral or floating point" );
-	return (lhs <= rhs) ? lhs : rhs;
-}
-
-template<typename T>
-inline const T& Max( const T& lhs, const T& rhs )
-{
-	static_assert( std::is_integral<T>::value || std::is_floating_point<T>::value, "base type must be integral or floating point" );
-	return ( lhs >= rhs ) ? lhs : rhs;
-}
-
-template<typename T>
-inline const T& Clamp( const T& value, const T& min, const T& max )
-{
-	static_assert( std::is_integral<T>::value || std::is_floating_point<T>::value, "base type must be integral or floating point" );
-	return Max<T>( Min<T>( value, max ), min );
-}
-
 template<typename T>
 inline void Swap( T& lhs, T& rhs, typename std::enable_if< std::is_scalar<T>::value >::type* = nullptr )
 {
@@ -79,15 +46,6 @@ inline void Swap( T& lhs, T& rhs, typename std::enable_if< !std::is_scalar<T>::v
 	T tmp = std::move( lhs );
 	lhs = std::move( rhs );
 	rhs = std::move( tmp );
-}
-
-template<typename T1, typename T2>
-inline T2 FloatToInteger( T1 f )
-{
-	static_assert( std::is_floating_point<T1>::value, "input type must be floating point" );
-	static_assert( std::is_integral<T2>::value, "return type must be integer" );
-	__UNDONE( change to a faster function );
-	return static_cast< T2 >( f );
 }
 
 
@@ -153,23 +111,30 @@ class LockGuardPtr
 {
 public:
 	LockGuardPtr( std::shared_ptr<T> obj ) :
-		m_obj( obj )
+		m_obj( obj ),
+		m_ptr( nullptr )
 	{
-		m_obj->Lock( &m_p );
+		if ( m_obj )
+		{
+			m_obj->Lock( &m_ptr );
+		}
 	}
 
 	~LockGuardPtr()
 	{
-		m_obj->Unlock();
+		if ( m_obj )
+		{
+			m_obj->Unlock();
+		}
 	}
 
 	void* Ptr()
 	{
-		return m_p;
+		return m_ptr;
 	}
 
 private:
 	std::shared_ptr<T> m_obj;
-	void* m_p;
+	void* m_ptr;
 };
 

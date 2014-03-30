@@ -12,17 +12,25 @@ namespace kih
 	{
 		Unknown = 0,
 
-		RGB888 = 10,
+		// color
+		R8G8B8 = 10,
+
+		// depth-stencil
+		D8S24 = 1000	// depth 8 and stencil 24 bits
 	};
 
 	inline int GetBytesPerPixel( ColorFormat format )
 	{
 		switch ( format )
 		{
-		case ColorFormat::RGB888:
+		case ColorFormat::R8G8B8:
 			return 3;
 
+		case ColorFormat::D8S24:
+			return 4;
+
 		default:
+			assert( 0 && "invalid operation" );
 			return 0;
 		}
 	}
@@ -32,11 +40,37 @@ namespace kih
 		switch ( bpp )
 		{
 		case 24:
-			return ColorFormat::RGB888;
+			return ColorFormat::R8G8B8;
 
 		default:
+			assert( 0 && "invalid operation" );
 			return ColorFormat::Unknown;
 		}
+	}
+
+	inline ColorFormat GetSuitableDepthStencilFormatFromBpp( int bpp )
+	{
+		switch ( bpp )
+		{
+		case 32:
+			return ColorFormat::D8S24;
+
+		default:
+			assert( 0 && "invalid operation" );
+			return ColorFormat::Unknown;
+		}
+	}
+
+	inline bool ColorFormat_IsColor( ColorFormat format )
+	{
+		unsigned int e = static_cast<unsigned int>( format );
+		return ( e >= static_cast< unsigned int >( ColorFormat::R8G8B8 ) &&
+			e < static_cast< unsigned int >( ColorFormat::D8S24 ) );
+	}
+
+	inline bool ColorFormat_IsDepthStencil( ColorFormat format )
+	{
+		return !ColorFormat_IsColor( format );
 	}
 
 

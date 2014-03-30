@@ -207,7 +207,7 @@ namespace kih
 	public:
 		explicit RenderingContext( size_t numRenderTargets );
 
-		void Clear( byte r, byte g, byte b, byte a );
+		void Clear( byte r, byte g, byte b, byte a, float z = 1.0f, int stencil = 0 );
 
 		void Draw( std::shared_ptr<IMesh> mesh );
 
@@ -217,12 +217,13 @@ namespace kih
 			return m_renderTargets[index];
 		}
 
-		bool SetRenderTarget( std::shared_ptr<Texture> texture, size_t index )
+		std::shared_ptr<Texture> GetDepthStencil()
 		{
-			assert( ( index >= 0 && index < m_renderTargets.size() ) && "out of ranged index" );
-			m_renderTargets[index] = texture;
-			return true;
+			return m_depthStencil;
 		}
+
+		bool SetRenderTarget( std::shared_ptr<Texture> texture, size_t index );
+		bool SetDepthStencil( std::shared_ptr<Texture> texture );
 
 		ConstantBuffer& GetSharedConstantBuffer()
 		{
@@ -233,13 +234,14 @@ namespace kih
 		void DrawInternal( std::shared_ptr<IMesh> mesh, int numVerticesPerPrimitive );
 
 	private:
-		std::shared_ptr<InputAssembler> m_inputAssembler;
-		std::shared_ptr<VertexProcessor> m_vertexProcessor;
-		std::shared_ptr<Rasterizer> m_rasterizer;
-		std::shared_ptr<PixelProcessor> m_pixelProcessor;
-		std::shared_ptr<OutputMerger> m_outputMerger;
+		std::unique_ptr<InputAssembler> m_inputAssembler;
+		std::unique_ptr<VertexProcessor> m_vertexProcessor;
+		std::unique_ptr<Rasterizer> m_rasterizer;
+		std::unique_ptr<PixelProcessor> m_pixelProcessor;
+		std::unique_ptr<OutputMerger> m_outputMerger;
 		
 		std::vector< std::shared_ptr<Texture> > m_renderTargets;
+		std::shared_ptr<Texture> m_depthStencil;
 
 		ConstantBuffer m_sharedConstantBuffer;
 	};

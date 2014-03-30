@@ -350,13 +350,10 @@ namespace kih
 	typedef Color4<byte> Color32;
 	typedef Color4<float> Color128;
 
-
+	
 	inline Color32 Vector4_ToColor32( const Vector4& src )
 	{
-		return Color32( Clamp<byte>( static_cast<byte>( src.X * 255.0f ), 0, 255 ),
-						Clamp<byte>( static_cast<byte>( src.Y * 255.0f ), 0, 255 ),
-						Clamp<byte>( static_cast<byte>( src.Z * 255.0f ), 0, 255 ),
-						Clamp<byte>( static_cast<byte>( src.W * 255.0f ), 0, 255 ) );
+		return Color32( Float_ToByte( src.X ), Float_ToByte( src.Y ), Float_ToByte( src.Z ), Float_ToByte( src.W ) );
 	}
 }
 

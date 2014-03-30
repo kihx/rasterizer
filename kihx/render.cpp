@@ -174,7 +174,7 @@ namespace kih
 	*/
 	class InputAssembler : public BaseRenderingProcessor<IMesh, InputAssemblerOutputStream>
 	{
-		NONCOPYABLE_CLASS( InputAssembler )
+		NONCOPYABLE_CLASS( InputAssembler );
 
 	public:
 		explicit InputAssembler( RenderingContext* pRenderingContext ) :
@@ -255,7 +255,7 @@ namespace kih
 	*/
 	class VertexProcessor : public BaseRenderingProcessor<VertexProcInputStream, VertexProcOutputStream>
 	{
-		NONCOPYABLE_CLASS( VertexProcessor )
+		NONCOPYABLE_CLASS( VertexProcessor );
 
 	public:
 		explicit VertexProcessor( RenderingContext* pRenderingContext ) :
@@ -324,7 +324,7 @@ namespace kih
 	*/
 	class Rasterizer : public BaseRenderingProcessor<RasterizerInputStream, RasterizerOutputStream>
 	{
-		NONCOPYABLE_CLASS( Rasterizer )
+		NONCOPYABLE_CLASS( Rasterizer );
 
 	public:
 		explicit Rasterizer( RenderingContext* pRenderingContext ) :
@@ -369,18 +369,19 @@ namespace kih
 			float XMin;
 			float XMax;
 			float Slope;
-			// float Depth;	// depth
+			float Depth;
 
 			//const Color32& ColorL;
 			//const Color32& ColorR;
 
 			EdgeTableElement() = delete;
 
-			explicit EdgeTableElement( float yMax, float xMin, float xMax, float slope/*, const Color32& colorL, const Color32& colorR*/ ) :
+			explicit EdgeTableElement( float yMax, float xMin, float xMax, float slope, float depth /*, const Color32& colorL, const Color32& colorR*/ ) :
 				YMax( yMax ),
 				XMin( xMin ),
 				XMax( xMax ),
-				Slope( slope )/*,
+				Slope( slope ),
+				Depth( depth)/*,
 				ColorL( colorL ),
 				ColorR( colorR )*/
 			{
@@ -393,12 +394,14 @@ namespace kih
 		{
 			const EdgeTableElement& ETElement;
 			float CurrentX;
+			float CurrentDepth;
 
 			ActiveEdgeTableElement() = delete;
 
 			explicit ActiveEdgeTableElement( const EdgeTableElement& etElem ) :
 				ETElement( etElem ),
-				CurrentX( etElem.Slope > 0.0f ? etElem.XMin : etElem.XMax )
+				CurrentX( etElem.Slope > 0.0f ? etElem.XMin : etElem.XMax ),
+				CurrentDepth( etElem.Depth )
 			{
 			}
 
@@ -460,9 +463,12 @@ namespace kih
 					// Make an ET element.
 					float xMax = v0.Position.X;
 					float xMin = v1.Position.X;
+					float zStart = v1.Position.Z;	// Select left's Z.
+					float zEnd = v0.Position.Z;
 					if ( v0.Position.X < v1.Position.X )
 					{
 						Swap<float>( xMax, xMin );
+						Swap<float>( zStart, zEnd );
 					}
 
 					float yMax = v0.Position.Y;
@@ -477,11 +483,11 @@ namespace kih
 					float slope = ( dy == 0.0f ) ? 0.0f : ( dx / dy );
 
 					// Select a start scanline with Y-axis clipping.
-					unsigned short startY = FloatToInteger<float, unsigned short>( std::ceil( yMin ) );
+					unsigned short startY = Float_ToInteger<float, unsigned short>( std::ceil( yMin ) );
 					startY = Clamp<unsigned short>( startY, 0, height - 1 );
 
 					// Push this element at the selected scanline.
-					m_edgeTable[startY].emplace_back( yMax, xMin, xMax, slope );
+					m_edgeTable[startY].emplace_back( yMax, xMin, xMax, slope, zStart );
 
 					// Update next indices.
 					v0Index = v1Index;
@@ -499,9 +505,9 @@ namespace kih
 			assert( height == m_edgeTable.size() && "target height and scanline are mismatched" );
 			
 			// random color for debugging
-			byte seedR = Random::Next( 0, 255 );
-			byte seedG = Random::Next( 0, 255 );
-			byte seedB = Random::Next( 0, 255 );
+			byte seedR = static_cast<byte>( Random::Next( 0, 255 ) );
+			byte seedG = static_cast<byte>( Random::Next( 0, 255 ) );
+			byte seedB = static_cast<byte>( Random::Next( 0, 255 ) );
 			Color32 color( seedR, seedG, seedB, 255 );
 
 			std::list<ActiveEdgeTableElement> aet;
@@ -559,8 +565,8 @@ namespace kih
 					// Approximate intersection pixels betweeen edges on the scanline.
 					if ( elemLeft.CurrentX != elemRight.CurrentX )
 					{
-						unsigned short xLeft = FloatToInteger<float, unsigned short>( std::round( elemLeft.CurrentX ) );
-						unsigned short xRight = FloatToInteger<float, unsigned short>( std::round( elemRight.CurrentX ) );
+						unsigned short xLeft = Float_ToInteger<float, unsigned short>( std::round( elemLeft.CurrentX ) );
+						unsigned short xRight = Float_ToInteger<float, unsigned short>( std::round( elemRight.CurrentX ) );
 
 						// clipping on RT
 						xLeft = Max<unsigned short>( xLeft, 0 );
@@ -569,15 +575,18 @@ namespace kih
 						// Push inside pixels between intersections into the output stream.
 						for ( unsigned short x = xLeft; x < xRight; ++x )
 						{
-							__TODO( write the pixel Z value );
-							outputStream->Push( x, y, 0.0f, color );	
+							// FIXME: depth update
+							outputStream->Push( x, y, elemLeft.CurrentDepth, color );	
 							//outputStream->Push( x, y, 0.0f/*, elemLeft.ETElement.ColorL*/ );	
 						}
 					}
 
-					// Update the next position incrementally
+					// Update the next position incrementally.
 					elemLeft.CurrentX += elemLeft.ETElement.Slope;
 					elemRight.CurrentX += elemRight.ETElement.Slope;
+
+					elemLeft.CurrentDepth += elemLeft.ETElement.Slope;
+					elemRight.CurrentDepth += elemRight.ETElement.Slope;
 				}
 			}
 
@@ -615,14 +624,13 @@ namespace kih
 
 				// [-1, 1] to [0, 1]
 				data.Position.Z *= 0.5f;
-				data.Position.Z += 0.5f;
+				data.Position.Z += 0.5f;				
 
-				printf( "data: %.2f %.2f %.2f\n", data.Position.X, data.Position.Y, data.Position.Z );
-
-				if ( (v + 1) % 3 == 0 )
-				{
-					printf( "\n" );
-				}
+				//printf( "data: %.2f %.2f %.2f\n", data.Position.X, data.Position.Y, data.Position.Z );
+				//if ( (v + 1) % 3 == 0 )
+				//{
+				//	printf( "\n" );
+				//}
 			}
 		}
 
@@ -635,7 +643,60 @@ namespace kih
 	*/
 	class PixelProcessor : public BaseRenderingProcessor<PixelProcInputStream, PixelProcOutputStream>
 	{
-		NONCOPYABLE_CLASS( PixelProcessor )
+		NONCOPYABLE_CLASS( PixelProcessor );
+	
+		/* class PixelProcessor::DepthTestParamPack
+				: A parameter pack for depth test to reduce iterative work.
+		*/
+		class DepthTestParamPack
+		{
+		public:
+			explicit DepthTestParamPack( std::shared_ptr<Texture> ds ) :
+				m_ds( ds ),
+				m_ptr( nullptr )
+			{
+				if ( ds == nullptr )
+				{
+					// This is NOT an error. We accept this case.
+					return;
+				}
+
+				m_ds = ds;
+
+				// Get raw memory from the depth stencil.
+				if ( !m_ds->Lock( reinterpret_cast< void** >( &m_ptr ) ) )
+				{
+					return;
+				}
+
+				m_width = m_ds->Width();
+				m_stride = GetBytesPerPixel( m_ds->Format() );
+			}
+
+			~DepthTestParamPack()
+			{
+				if ( m_ds )
+				{
+					m_ds->Unlock();
+				}
+			}
+
+			bool IsValid() const
+			{
+				return ( m_ptr != nullptr );
+			}
+
+			byte* GetAddress( const PixelProcData& fragment )
+			{
+				return ( m_ptr + ( ( ( m_width * fragment.PY ) + fragment.PX ) * m_stride ) );
+			}
+
+		private:
+			std::shared_ptr<Texture> m_ds;
+			byte* m_ptr;
+			int m_width;
+			int m_stride;
+		};
 
 	public:
 		explicit PixelProcessor( RenderingContext* pRenderingContext ) :
@@ -651,52 +712,104 @@ namespace kih
 		{
 			assert( inputStream );
 
-			m_outputStream->Clear();
-			
+			m_outputStream->Clear();			
+
+			size_t inputStreamSize = inputStream->Size();
+			if ( inputStreamSize <= 0 )
+			{
+				return m_outputStream;
+			}
+
+			//assert( ( GetContext()->GetRenderTaget( 1 ) == nullptr ) && "MRT is not implemented yet" );
+				
+			// UNDONE: Currently, we assume RTs is only one.
 			std::shared_ptr<Texture> rt = GetContext()->GetRenderTaget( 0 );
 			if ( rt == nullptr )
 			{
 				return m_outputStream;
 			}
 
-			size_t inputStreamSize = inputStream->Size();
-			if ( inputStreamSize > 0 )
+			// Get raw memory from the render target.
+			LockGuardPtr<Texture> guardRT( rt );
+			byte* bufferRT = static_cast< byte* >( guardRT.Ptr() );
+			if ( bufferRT == nullptr )
 			{
-				LockGuardPtr<Texture> guard( rt );
-				if ( byte* buffer = static_cast< byte* >( guard.Ptr() ) )
+				return m_outputStream;
+			}
+				
+			int widthRT = rt->Width();
+			int strideRT = GetBytesPerPixel( rt->Format() );
+
+				
+			// Make a parameter pack for depth test.
+			std::shared_ptr<Texture> ds = GetContext()->GetDepthStencil();
+			DepthTestParamPack depthTestParam( ds );
+			// TODO: implementation for a floating point depth buffer
+			// Currently, we assume that the size of a depth buffer is one byte.
+			assert( ( ds == nullptr || ds->Format() == ColorFormat::D8S24 ) && "floating point depth buffer is not implemented yet" );
+
+
+			// Load pixel shader constants.
+			//const Vector4& diffuseColor = GetSharedConstantBuffer().GetVector4( ConstantBuffer::DiffuseColor );
+			//Color32 color = Vector4_ToColor32( color );
+
+
+			// Now, do per-pixel operations here.
+			for ( size_t i = 0; i < inputStreamSize; ++i )
+			{
+				const auto& fragment = inputStream->GetData( i );
+					
+				if ( depthTestParam.IsValid() )
 				{
-					const Vector4& color = GetSharedConstantBuffer().GetVector4( ConstantBuffer::DiffuseColor );
-					Color32 color32 = Vector4_ToColor32( color );
-
-					int width = rt->Width();
-					int stride = GetBytesPerPixel( rt->Format() );
-
-					for ( size_t i = 0; i < inputStreamSize; ++i )
+					if ( !DoDepthTest( depthTestParam, fragment ) )
 					{
-						const auto& fragment = inputStream->GetData( i );
-
-						color32 = fragment.Color;
-
-						// TODO: Z-buffering
-
-						// TODO: pixel shading
-#if 1
-						byte* base = buffer + ( ( ( width * fragment.PY ) + fragment.PX ) * stride );
-						*( base ) = color32.R;
-						*( base + 1 ) = color32.G;
-						*( base + 2 ) = color32.B;
-
-						//*( base /*+ 0*/ ) = fragment.Color.R;
-						//*( base + 1 ) = fragment.Color.G;
-						//*( base + 2 ) = fragment.Color.B;
-#else
-						//rt->WriteTexel( fragment.PX, fragment.PY, fragment.Color.Value );
-#endif
+						continue;
 					}
 				}
+
+				Color32 color = fragment.Color;
+
+				// TODO: pixel shading
+
+#if 1	// faster code
+				byte* base = bufferRT + ( ( ( widthRT * fragment.PY ) + fragment.PX ) * strideRT );
+				*( base ) = color.R;
+				*( base + 1 ) = color.G;
+				*( base + 2 ) = color.B;
+#else
+				//rt->WriteTexel( fragment.PX, fragment.PY, fragment.Color.Value );
+#endif
 			}
 
 			return m_outputStream;
+		}
+
+	private:
+		bool DoDepthTest( DepthTestParamPack& param, const PixelProcData& fragment )
+		{	
+			assert( param.IsValid() );
+
+			byte* base = param.GetAddress( fragment );
+			if ( base == nullptr )
+			{
+				LOG_WARNING( "invalid operation" );
+				return true;	// This is the correct result of depth test.
+			}
+
+			byte& target = *base;
+			byte depth = Float_ToByte( fragment.Depth );
+
+			__UNDONE( depth func and depth writable );
+			// depth test (less-equal)
+			if ( target <= depth )
+			{
+				return false;
+			}
+
+			// depth write
+			target = depth;
+
+			return true;
 		}
 	};
 
@@ -705,7 +818,7 @@ namespace kih
 	*/
 	class OutputMerger : public BaseRenderingProcessor<OutputMergerInputStream, OutputMergerOutputStream>
 	{
-		NONCOPYABLE_CLASS( OutputMerger )
+		NONCOPYABLE_CLASS( OutputMerger );
 
 	public:
 		explicit OutputMerger( RenderingContext* pRenderingContext ) :
@@ -732,11 +845,11 @@ namespace kih
 	/* class RenderingContext
 	*/
 	RenderingContext::RenderingContext( size_t numRenderTargets ) :
-		m_inputAssembler( std::make_shared<InputAssembler>( this ) ),
-		m_vertexProcessor( std::make_shared<VertexProcessor>( this ) ),
-		m_rasterizer( std::make_shared<Rasterizer>( this ) ),
-		m_pixelProcessor( std::make_shared<PixelProcessor>( this ) ),
-		m_outputMerger( std::make_shared<OutputMerger>( this ) )
+		m_inputAssembler( std::make_unique<InputAssembler>( this ) ),
+		m_vertexProcessor( std::make_unique<VertexProcessor>( this ) ),
+		m_rasterizer( std::make_unique<Rasterizer>( this ) ),
+		m_pixelProcessor( std::make_unique<PixelProcessor>( this ) ),
+		m_outputMerger( std::make_unique<OutputMerger>( this ) )
 	{
 		m_renderTargets.resize( numRenderTargets );
 		/* nullptr initialization is not necessary.
@@ -746,44 +859,76 @@ namespace kih
 		}*/
 	}
 
-	void RenderingContext::Clear( byte r, byte g, byte b, byte a )
+	void RenderingContext::Clear( byte r, byte g, byte b, byte a, float z, int stencil )
 	{
 		//unsigned int color = ( r | ( ((unsigned short) g) << 8 ) | ( ((unsigned int) b) << 16 )) | ( ((unsigned int) a) << 24 );
 
 		a = 255;	// FIXME
 
+		// render targets
 		size_t num = m_renderTargets.size();
 		for ( size_t i = 0; i < num; ++i )
 		{
-			if ( m_renderTargets[i] == nullptr )
+			std::shared_ptr<Texture> rt = m_renderTargets[i];
+			if ( rt == nullptr )
 			{
 				continue;
 			}
 
-			LockGuardPtr<Texture> guard( m_renderTargets[i] );
-			if ( void* ptr = guard.Ptr() )
+			LockGuardPtr<Texture> guard( rt );
+			void* ptr = guard.Ptr();
+			if ( ptr == nullptr )
 			{
-				assert( ptr );
+				continue;
+			}
 
-				std::shared_ptr<Texture> rt = m_renderTargets[i];
+			assert( ptr );
 
-				int width = rt->Width();
-				int height = rt->Height();
+			int width = rt->Width();
+			int height = rt->Height();
 
-				if ( r == g && g == b )
-				{
-					int size = width * height * GetBytesPerPixel( rt->Format() );
-					memset( ptr, r, size );
-					return;
-				}
+			if ( r == g && g == b )
+			{
+				int size = width * height * GetBytesPerPixel( rt->Format() );
+				memset( ptr, r, size );
+				continue;
+			}
 					
-				for ( int h = 0; h < height; ++h )
+			for ( int h = 0; h < height; ++h )
+			{
+				for ( int w = 0; w < width; ++w )
 				{
-					for ( int w = 0; w < width; ++w )
-					{
-						rt->WriteTexel( w, h, r, g, b );
-					}
+					rt->WriteTexel( w, h, r, g, b );
 				}
+			}
+		}
+
+		// depth-stencil
+		std::shared_ptr<Texture> ds = m_depthStencil;
+		if ( ds == nullptr )
+		{
+			return;
+		}
+
+		LockGuardPtr<Texture> guard( ds );
+		void* ptr = guard.Ptr();
+		if ( ptr == nullptr )
+		{
+			return;
+		}
+
+		assert( ptr );
+		
+		int width = ds->Width();
+		int height = ds->Height();
+		byte depth = Float_ToByte( z );
+
+		for ( int h = 0; h < height; ++h )
+		{
+			for ( int w = 0; w < width; ++w )
+			{
+				// FIXME: stencil
+				ds->WriteTexel( w, h, depth, 0, 0 );
 			}
 		}
 	}
@@ -835,6 +980,40 @@ namespace kih
 
 			DrawInternal( mesh, GetNumberOfVerticesPerPrimitive( primitiveType ) );
 		}
+	}
+
+	bool RenderingContext::SetRenderTarget( std::shared_ptr<Texture> texture, size_t index )
+	{
+		if ( index >= 0 && index < m_renderTargets.size() )
+		{
+			if ( texture )
+			{
+				if ( ColorFormat_IsDepthStencil( texture->Format() ) )
+				{
+					assert( 0 && "invalid parameter" );
+					return false;
+				}
+
+				m_renderTargets[index] = texture;
+				return true;
+			}
+		}
+		return false;
+	}
+
+	bool RenderingContext::SetDepthStencil( std::shared_ptr<Texture> texture )
+	{
+		if ( texture )
+		{
+			if ( ColorFormat_IsColor( texture->Format() ) )
+			{
+				assert( 0 && "invalid parameter" );
+				return false;
+			}
+		}
+
+		m_depthStencil = texture;
+		return false;
 	}
 
 	void RenderingContext::DrawInternal( std::shared_ptr<IMesh> mesh, int numVerticesPerPrimitive )
@@ -895,7 +1074,7 @@ namespace kih
 
 	std::shared_ptr<RenderingContext> RenderingDevice::CreateRenderingContext()
 	{
-		auto context = std::make_shared<RenderingContext>( 4 /* the number of render targets */ );
+		auto context = std::make_shared<RenderingContext>( 1 /* the number of render targets */ );
 		m_renderingContexts.emplace_back( context );
 		return context;
 	}
