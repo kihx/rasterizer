@@ -35,10 +35,11 @@ namespace xtozero
 		int m_minY;
 		int m_maxY;
 		float m_minX;
+		float m_maxX;
 		float m_gradient;
 
-		Edge( int minY, int maxY, float minX, float gradient )
-			: m_minY( minY ), m_maxY( maxY ), m_minX( minX ), m_gradient( gradient ) {}
+		Edge( int minY, int maxY, float minX, float maxX, float gradient )
+			: m_minY( minY ), m_maxY( maxY ), m_minX( minX ), m_maxX( maxX ), m_gradient( gradient ) {}
 		~Edge() {}
 	};
 

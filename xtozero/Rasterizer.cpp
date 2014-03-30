@@ -15,6 +15,7 @@ namespace xtozero
 		int minY = 0;
 		int maxY = 0;
 		float minX = 0.0f;
+		float maxX = 0.0f;
 		float gradient = 0.0f;
 		float dx = 0.0f;
 		float dy = 0.0f;
@@ -37,7 +38,7 @@ namespace xtozero
 				dy = end.Y - start.Y;
 				dx = end.X - start.X;
 
-				if ( dy == 0 ) // 무조건 닫힌 도형이라면 x축에 평행한다면 빼도 될텐데...
+				if ( -1.0 < dy && dy < 1.0 ) //dy가 0.2와 같은 형태로 나온다면 기울기가 큰폭으로 늘어난다.
 				{
 					gradient = 0.0f;
 				}
@@ -47,22 +48,25 @@ namespace xtozero
 				}
 
 				//minY, minX를 구함
+				maxY = static_cast<int>(end.Y);
+				minY = static_cast<int>(start.Y);
 				if ( start.Y > end.Y )
 				{
 					maxY = static_cast<int>(start.Y);
 					minY = static_cast<int>(end.Y);
 				}
-				else
-				{
-					maxY = static_cast<int>(end.Y);
-					minY = static_cast<int>(start.Y);
-				}
 
-				minX = min( start.X, end.X );
+				minX = start.X;
+				maxX = end.X;
+				if ( minX > maxX )
+				{
+					minX = end.X;
+					maxX = start.X;
+				}
 
 				//edgeTable에 삽입
 
-				m_edgeTable.emplace_back( minY, maxY, minX, gradient );
+				m_edgeTable.emplace_back( minY, maxY, minX, maxX, gradient );
 			}
 		}
 		//m_edgeTable을 minY로 정렬
@@ -134,7 +138,7 @@ namespace xtozero
 	void CRasterizer::ProcessScanline( int scanline, unsigned int facecolor )//정점 보간하면 컬러 넘겨주지 않을 예정...
 	{
 		std::vector<int> horizontalLine;
-
+ 
 		//수평선을 그릴 구간을 지정
 
 		int intersectX = 0;
@@ -147,9 +151,16 @@ namespace xtozero
 			}
 			else
 			{
-				intersectX = GetIntersectXpos(
+				intersectX = static_cast<int>(GetIntersectXpos(
 					iter->m_minY, iter->m_maxY, scanline, iter->m_minX, iter->m_gradient
-					);
+					));
+
+				// y축에 대한 기울기는 x축에 대한 정밀도가 떨어진다.
+				// 따라서 구한 교차점이 maxX 보다 크면 maxX로 강제한다.
+				if ( intersectX > iter->m_maxX ) 
+				{
+					intersectX = static_cast<int>(ceilf(iter->m_maxX));
+				}
 
 				horizontalLine.emplace_back( intersectX );
 			}
@@ -193,6 +204,7 @@ namespace xtozero
 	void CRasterizer::Process( CRsElementDesc& rsInput )
 	{
 		//여기에서 메시내부의 픽셀을 계산
+		m_outputRS.clear();
 
 		if ( rsInput.m_coodinate == COORDINATE::OBJECT_COORDINATE )
 		{
@@ -203,7 +215,7 @@ namespace xtozero
 			}
 		}
 
-		for ( int i = 0; i < rsInput.m_faces.size( ); ++i )
+		for ( int i = 0; i < rsInput.m_faces.size(); ++i )
 		{
 			CreateEdgeTable( rsInput, i );
 
@@ -214,7 +226,8 @@ namespace xtozero
 				scanline = m_viewport.m_top;
 			}
 
-			unsigned int facecolor = RAND_COLOR();
+			unsigned int facecolor = PIXEL_COLOR( 0, 255, 255 );
+			//unsigned int facecolor = RAND_COLOR();
 
 			while ( !(m_edgeTable.empty( ) && m_activeEdgeTable.empty( )) )
 			{

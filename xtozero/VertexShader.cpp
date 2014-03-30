@@ -22,12 +22,14 @@ namespace xtozero
 			vsOutput.m_vertices.emplace_back( position );
 		}
 		
+		int key = 0;
 		for ( std::vector<Face>::iterator faceiter = pMesh->m_faces.begin( ); faceiter != pMesh->m_faces.end( ); ++faceiter )
 		{
-			int key = faceiter - pMesh->m_faces.begin();
+			key = faceiter - pMesh->m_faces.begin( );
 			if ( vsOutput.m_faces.find( key ) == vsOutput.m_faces.end( ) )
 			{
 				vsOutput.m_faces[key] = std::vector<int>();
+				vsOutput.m_faces[key].reserve( pMesh->m_nfaces );
 			}
 			for ( std::vector<int>::iterator indexiter = faceiter->m_indices.begin( ); indexiter != faceiter->m_indices.end( ); ++indexiter )
 			{
