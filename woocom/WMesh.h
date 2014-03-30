@@ -1,24 +1,24 @@
 #pragma once
 
 #include "WTrDatai.h"
+#include "WIDrawable.h"
 
 #include <memory>
 
-class WModule;
-class WMesh
+class WMesh : public WIDrawable
 {
 public:
 	WMesh(WTriData* data) 
 		: m_data(data)
 	{
 	}
-	~WMesh()
+	virtual ~WMesh()
 	{
 		delete m_data;
 	}
 
-	void DrawOutline( WModule* pPainter);
-	void DrawSolid( WModule* pPainter);
+	virtual void DrawOutline( WModule* pPainter);
+	virtual void DrawSolid( WModule* pPainter);
 private:
 	void DrawLine(WModule* pPainter, const VERTEX* v1, const VERTEX* v2, const unsigned char* rgb);
 	void InsertLineInfo(WModule* pPainter, const VERTEX* v1, const VERTEX* v2, const unsigned char* rgb);

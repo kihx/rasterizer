@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../utility/math3d.h"
+
 #include <vector>
 #include <map>
 #include <algorithm>
@@ -44,6 +46,13 @@ struct EdgeInfo
 
 class WModule
 {
+	enum class TransformType : int
+	{
+		World = 0,
+		View,
+		Projection,
+	};
+
 public:
 	WModule(void* buffer, int width, int height, int bpp);
 	~WModule();
@@ -56,6 +65,11 @@ public:
 	void InsertLineInfo(int lineIndex, int posX, const unsigned char* rgb);
 	void SortFillInfo();
 	void DrawFillInfo();
+
+	void SetTransform(int type, const Matrix4& transform);
+	const Matrix4& GetWorld() const;
+	const Matrix4& GetView() const;
+	const Matrix4& GetProj() const;
 private:
 	void DrawScanline(int lineIndex, const EdgeInfo& info );
 
@@ -67,4 +81,7 @@ private:
 
 	bool m_isSorted;
 	std::vector< EdgeInfo >	m_fillInfo;
+	Matrix4	m_world;
+	Matrix4 m_view;
+	Matrix4 m_proj;
 };

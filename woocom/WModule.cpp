@@ -2,16 +2,17 @@
 
 #include "woocom.h"
 #include "WModule.h"
-#include "WTrDatai.h"
+#include "WFileLoader.h"
 #include "WMesh.h"
+#include "WPolygon.h"
+#include "Utility.h"
 
 #include <memory>
-#include <fstream>
 
 #include <Windows.h>
 
 std::shared_ptr<WModule> g_pPainter;
-std::shared_ptr<WMesh> g_pMesh;
+std::shared_ptr<WIDrawable> g_pDrawObj;
 
 WModule::WModule(void* buffer, int width, int height, int bpp) 
 	: m_buffer(buffer), m_screenWidth(width), m_screenHeight(height), m_colorDepth(bpp),
@@ -127,6 +128,39 @@ void WModule::DrawScanline(int lineIndex, const EdgeInfo& info)
 	}	
 }
 
+void WModule::SetTransform(int type, const Matrix4& transform)
+{
+	switch (type)
+	{
+	case 0:
+		m_world = transform;
+		break;
+	case 1:
+		m_view = transform;
+		break;
+	case 2:
+		m_proj = transform;
+		break;
+	default:
+		break;
+	}
+}
+
+const Matrix4& WModule::GetWorld() const
+{
+	return m_world;
+}
+
+const Matrix4& WModule::GetView() const
+{
+	return m_view;
+}
+
+const Matrix4& WModule::GetProj() const
+{
+	return m_proj;
+}
+
 BOOL WINAPI DllMain(HINSTANCE hInst, DWORD fdwReason, PVOID fImpLoad)
 {
 	switch(fdwReason)
@@ -154,10 +188,10 @@ void WRender(void* buffer, int width, int height, int colorDepth)
 
 	g_pPainter->Render();
 	
-	if( g_pMesh )
+	if (g_pDrawObj)
 	{
-		//g_pMesh->DrawOutline( g_pPainter.get() );
-		g_pMesh->DrawSolid(g_pPainter.get());
+		//g_pDrawObj->DrawOutline( g_pPainter.get() );
+		g_pDrawObj->DrawSolid(g_pPainter.get());
 	}
 	
 }
@@ -172,84 +206,22 @@ void WClear( void* pImage, int width, int height, unsigned long clearColor )
 
 void WTransform(int transformType, const float* matrix4x4)
 {
-	// do nothing
-}
-
-void LoadMesh(const char* fileName)
-{
-	std::fstream stream(fileName);
-
-	const int MAX_LEN = 1024;
-	char buffer[MAX_LEN] = { 0 };
-	char line[MAX_LEN] = { 0 };
-
-	int vertexNum = 0;
-	int faceNum = 0;
-
-	WTriData* triangle = new WTriData();
-
-	while (stream.good())
+	if (g_pPainter)
 	{
-		stream >> buffer;
-
-		if (strstr(buffer, "#$"))
-		{
-			if (strncmp(&buffer[2], "Vertices", 8) == 0)
-			{
-				stream >> vertexNum;
-				triangle->SetVertexNum(vertexNum);
-			}
-			else if (strncmp(&buffer[2], "Faces", 5) == 0)
-			{
-				stream >> faceNum;
-				triangle->SetFaceNum(faceNum);
-			}
-		}
-		else if (strncmp(buffer, "Vertex", 6) == 0)
-		{
-			int vertexID = 0;
-			VERTEX* vertex = new VERTEX();
-			stream >> vertexID >> vertex->m_pos[0] >> vertex->m_pos[1] >> vertex->m_pos[2];
-			triangle->PushVertex(vertex);
-		}
-		else if (strncmp(buffer, "Face", 4) == 0)
-		{
-			int faceID = 0;
-			int indexNum = 0;
-			int r, g, b;
-			WFace* face = new WFace();
-			stream >> faceID >> r >> g >> b;
-			face->m_rgb[0] = r;
-			face->m_rgb[1] = g;
-			face->m_rgb[2] = b;
-
-			stream >> indexNum;
-			for (int i = 0; i< indexNum; ++i)
-			{
-				int vertexID = 0;
-				stream >> vertexID;
-				face->m_index.push_back(vertexID - 1);
-			}
-			triangle->PushFace(face);
-		}
+		g_pPainter->SetTransform(transformType, Utility::Float2Matrix4(matrix4x4));
 	}
-
-	g_pMesh = std::shared_ptr<WMesh>(new WMesh(triangle));
-}
-
-void LoadPoly(const char* fileName)
-{
-
 }
 
 void WLoadMesh(const char* fileName)
 {
 	if (strstr(fileName, ".msh"))
 	{
-		LoadMesh(fileName);
+		WTriData* triangle = FileLoader::LoadMesh(fileName);
+		g_pDrawObj = std::shared_ptr<WIDrawable>(new WMesh(triangle));
 	}
 	else if (strstr(fileName, ".ply"))
 	{
-		LoadPoly(fileName);
+		WPolyData* polygon = FileLoader::LoadPoly(fileName);
+		g_pDrawObj = std::shared_ptr<WIDrawable>(new WPolygon(polygon));
 	}
 }
