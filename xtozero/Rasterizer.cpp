@@ -201,7 +201,7 @@ namespace xtozero
 		}
 	}
 
-	void CRasterizer::Process( CRsElementDesc& rsInput )
+	std::vector<CPsElementDesc>& CRasterizer::Process( CRsElementDesc& rsInput )
 	{
 		//여기에서 메시내부의 픽셀을 계산
 		m_outputRS.clear();
@@ -231,8 +231,8 @@ namespace xtozero
 				scanline = m_viewport.m_top;
 			}
 
-			unsigned int facecolor = PIXEL_COLOR( 0, 255, 255 );
-			//unsigned int facecolor = RAND_COLOR();
+			//unsigned int facecolor = PIXEL_COLOR( 0, 255, 255 );
+			unsigned int facecolor = RAND_COLOR();
 
 			while ( !(m_edgeTable.empty( ) && m_activeEdgeTable.empty( )) )
 			{
@@ -248,6 +248,8 @@ namespace xtozero
 				}
 			}
 		}
+
+		return m_outputRS;
 	}
 
 	void CRasterizer::SetViewPort( int left, int top, int right, int bottom )

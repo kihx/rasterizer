@@ -58,7 +58,7 @@ namespace xtozero
 	public:
 		CRasterizer( void ) {}
 		~CRasterizer( void ) {}
-		void Process( CRsElementDesc& rsInput );
+		std::vector<CPsElementDesc>& Process( CRsElementDesc& rsInput );
 		void SetViewPort( int left, int top, int right, int bottom );
 
 		//Å×½ºÆ®

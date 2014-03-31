@@ -30,7 +30,20 @@ namespace xtozero
 
 		int m_x;
 		int m_y;
-		//float m_z; //일단은 그려지는 순서대로
+		float m_z;
+		unsigned int m_color;
+	};
+
+	class COmElementDesc
+	{
+	public:
+		COmElementDesc( int x, int y, unsigned int color )
+			: m_x( x ), m_y( y ), m_color( color ) {}
+		~COmElementDesc( ) {}
+
+		int m_x;
+		int m_y;
+		float m_z; 
 		unsigned int m_color;
 	};
 }

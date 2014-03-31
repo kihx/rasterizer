@@ -73,14 +73,10 @@ namespace xtozero
 	{
 	private:
 		std::string m_recentMesh;
-		static CMeshManager* m_instance;
 		std::map<std::string, std::shared_ptr<CMesh>> m_meshes;
 	public:
 		CMeshManager( void ){}
 		~CMeshManager( void ){}
-
-		static CMeshManager* GetInstance( void );
-		static void ReleaseInstance( void );
 
 		std::shared_ptr<CMesh> LoadMeshFromFile( const char* pfilename );
 		std::shared_ptr<CMesh> LoadRecentMesh();
