@@ -3,7 +3,7 @@
 
 namespace xtozero
 {
-	COutputMerger::COutputMerger() : m_ppDepthBuffer( nullptr ), m_height( 0 ), m_width( 0 ),
+	COutputMerger::COutputMerger() : m_pDepthBuffer( nullptr ), m_height( 0 ), m_width( 0 ),
 		m_pFrameBuffer( nullptr )
 	{
 	}
@@ -18,20 +18,12 @@ namespace xtozero
 		m_width = width;
 		m_height = height;
 
-		m_ppDepthBuffer = new unsigned char*[height];
-		for ( int i = 0; i < height; ++i )
-		{
-			m_ppDepthBuffer[i] = new unsigned char[width];
-		}
+		m_pDepthBuffer = new unsigned char[height * width];
 	}
 
 	void COutputMerger::DestroyDepthBuffer()
 	{
-		for ( int i = 0; i < m_height; ++i )
-		{
-			delete m_ppDepthBuffer[i];
-		}
-		delete m_ppDepthBuffer;
+		delete []m_pDepthBuffer;
 	}
 
 	void COutputMerger::SetFrameBuffer( void* pbuffer, int dpp )
@@ -42,7 +34,7 @@ namespace xtozero
 
 	bool COutputMerger::ProcessDepthTest( int x, int y, float depth )
 	{
-		if ( m_ppDepthBuffer )
+		if ( m_pDepthBuffer )
 		{
 			if ( m_width <= x && x < 0 )
 			{
@@ -54,9 +46,9 @@ namespace xtozero
 			}
 			else
 			{
-				if ( m_ppDepthBuffer[x][y] >= depth )
+				if ( m_pDepthBuffer[ y * m_width + x ] >= depth )
 				{
-					m_ppDepthBuffer[x][y] = depth;
+					m_pDepthBuffer[ y * m_width + x ] = depth;
 					return true;
 				}
 				else

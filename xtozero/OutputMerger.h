@@ -8,7 +8,7 @@ namespace xtozero
 	class COutputMerger
 	{
 	private:
-		unsigned char** m_ppDepthBuffer;
+		unsigned char* m_pDepthBuffer;
 		BYTE* m_pFrameBuffer;
 		int m_dpp;
 
