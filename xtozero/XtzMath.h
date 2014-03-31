@@ -10,6 +10,7 @@
 namespace xtozero
 {
 	class Vector3;
+	class Vector4;
 
 	class Matrix4
 	{
@@ -445,6 +446,251 @@ namespace xtozero
 	inline Vector3 Vector3::operator%(const Vector3& v3)
 	{
 		return CrossProduct( v3 );
+	}
+
+	class Vector4
+	{
+		// Fields
+		//
+	public:
+		float X, Y, Z, W;
+
+		// Methods
+		//
+	public:
+		// ctor / dtor		
+		Vector4(void);
+
+		Vector4(float x, float y, float z, float w = 1.0f);
+
+		~Vector4(void);
+
+		void Set(float x, float y, float z, float w = 1.0f);
+
+		inline float Length(void);
+
+		inline void Normalize(void);
+
+		// casting
+		//operator float*();
+
+		//operator const float*() const;
+
+		//// unary operators
+		//Vector3 operator+() const;
+
+		//Vector3 operator-() const;
+
+		// binary operators
+		inline Vector4 operator+(const Vector4& rhs) const;
+
+		inline Vector4 operator+(float rhs) const;
+
+		inline Vector4 operator-(const Vector4& rhs) const;
+
+		inline Vector4 operator-(float rhs) const;
+
+		inline Vector4 operator*(const Vector4& rhs) const;
+
+		inline Vector4 operator*(float rhs) const;
+
+		inline Vector4 operator/(const Vector4& rhs) const;
+
+		inline Vector4 operator/(float rhs) const;
+
+		// assignment operators
+		inline const Vector4& operator+=(const Vector4 &v);
+
+		inline const Vector4& operator-=(const Vector4 &v);
+
+		inline const Vector4& operator/=(float offset);
+
+		inline const Vector4& operator*=(float offset);
+
+		inline const Vector4& operator=(const Vector4& rhs);
+
+		inline float DotProduct(const Vector4& v3);
+
+		inline float operator^(const Vector4& v3);
+
+		inline Vector4 CrossProduct(const Vector4& v3);
+
+		inline Vector4 operator%(const Vector4& v3);
+
+		// equality operators
+		inline bool operator==(const Vector4&) const;
+
+		inline bool operator!=(const Vector4&) const;
+
+		Vector4& Transform(Matrix4& mat)
+		{
+			Vector4 tmp;
+			tmp.X = mat.A[0][0] * X + mat.A[1][0] * Y + mat.A[2][0] * Z + mat.A[3][0];
+			tmp.Y = mat.A[0][1] * X + mat.A[1][1] * Y + mat.A[2][1] * Z + mat.A[3][1];
+			tmp.Z = mat.A[0][2] * X + mat.A[1][2] * Y + mat.A[2][2] * Z + mat.A[3][2];
+			tmp.W = mat.A[0][3] * X + mat.A[1][3] * Y + mat.A[2][3] * Z + mat.A[3][3];
+
+			*this = tmp;
+
+			return *this;
+		}
+	};
+
+	inline Vector4::Vector4(void)
+	{
+		Set(0.0f, 0.0f, 0.0f, 1.0f);
+	}
+
+	inline Vector4::Vector4(float x, float y, float z, float w)
+	{
+		Set(x, y, z, w);
+	}
+
+	inline Vector4::~Vector4(void)
+	{
+	}
+
+
+	inline void Vector4::Set(float x, float y, float z, float w)
+	{
+		X = x;
+		Y = y;
+		Z = z;
+		W = w;
+	}
+
+	inline float Vector4::Length(void)
+	{
+		return sqrt(X * X + Y * Y + Z * Z);
+	}
+
+	inline void Vector4::Normalize(void)
+	{
+		*this /= Length();
+	}
+
+	inline Vector4 Vector4::operator+(const Vector4& rhs) const
+	{
+		return Vector4(X + rhs.X,
+			Y + rhs.Y,
+			Z + rhs.Z);
+	}
+
+	inline Vector4 Vector4::operator+(float rhs) const
+	{
+		return Vector4(X + rhs,
+			Y + rhs,
+			Z + rhs);
+	}
+
+	inline Vector4 Vector4::operator-(const Vector4& rhs) const
+	{
+		return Vector4(X - rhs.X,
+			Y - rhs.Y,
+			Z - rhs.Z);
+	}
+
+	inline Vector4 Vector4::operator-(float rhs) const
+	{
+		return Vector4(X - rhs,
+			Y - rhs,
+			Z - rhs);
+	}
+
+	inline Vector4 Vector4::operator*(const Vector4& rhs) const
+	{
+		return Vector4(X * rhs.X,
+			Y * rhs.Y,
+			Z * rhs.Z);
+	}
+
+	inline Vector4 Vector4::operator*(float rhs) const
+	{
+		return Vector4(X * rhs,
+			Y * rhs,
+			Z * rhs);
+	}
+
+	inline Vector4 Vector4::operator/(const Vector4& rhs) const
+	{
+		return Vector4(X / rhs.X,
+			Y / rhs.Y,
+			Z / rhs.Z);
+	}
+
+	inline Vector4 Vector4::operator/(float rhs) const
+	{
+		return Vector4(X / rhs,
+			Y / rhs,
+			Z / rhs);
+	}
+
+	inline const Vector4& Vector4::operator+=(const Vector4 &v)
+	{
+		X += v.X;
+		Y += v.Y;
+		Z += v.Z;
+
+		return *this;
+	}
+
+	inline const Vector4& Vector4::operator-=(const Vector4 &v)
+	{
+		X -= v.X;
+		Y -= v.Y;
+		Z -= v.Z;
+
+		return *this;
+	}
+
+	inline const Vector4& Vector4::operator/=(float offset)
+	{
+		X /= offset;
+		Y /= offset;
+		Z /= offset;
+
+		return *this;
+	}
+
+	inline const Vector4& Vector4::operator*=(float offset)
+	{
+		X *= offset;
+		Y *= offset;
+		Z *= offset;
+
+		return *this;
+	}
+
+	inline const Vector4& Vector4::operator=(const Vector4& rhs)
+	{
+		X = rhs.X;
+		Y = rhs.Y;
+		Z = rhs.Z;
+
+		return *this;
+	}
+
+	inline float Vector4::DotProduct(const Vector4& v3)
+	{
+		return X * v3.X + Y * v3.Y + Z * v3.Z;
+	}
+
+
+	inline float Vector4::operator^(const Vector4& v3)
+	{
+		return DotProduct(v3);
+	}
+
+	inline Vector4 Vector4::CrossProduct(const Vector4& v3)
+	{
+		return Vector4(Y * v3.Z - Z * v3.Y,
+			Z * v3.X - X * v3.Z,
+			X * v3.Y - Y * v3.X);
+	}
+
+	inline Vector4 Vector4::operator%(const Vector4& v3)
+	{
+		return CrossProduct(v3);
 	}
 }
 

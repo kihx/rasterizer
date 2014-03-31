@@ -15,7 +15,7 @@ namespace xtozero
 		CRsElementDesc( ) {}
 		~CRsElementDesc( ) {}
 
-		std::vector<Vector3> m_vertices;
+		std::vector<Vector4> m_vertices;
 		std::vector<Vector3> m_Color;
 		std::map<int, std::vector<int>> m_faces;
 		COORDINATE m_coodinate;

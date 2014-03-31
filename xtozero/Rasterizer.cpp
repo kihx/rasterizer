@@ -31,8 +31,8 @@ namespace xtozero
 			}
 			else
 			{
-				const Vector3& start = rsInput.m_vertices[*index];
-				const Vector3& end = rsInput.m_vertices[*(index + 1)];
+				const Vector4& start = rsInput.m_vertices[*index];
+				const Vector4& end = rsInput.m_vertices[*(index + 1)];
 
 				//기울기를 구함
 				dy = end.Y - start.Y;
@@ -208,8 +208,13 @@ namespace xtozero
 
 		if ( rsInput.m_coodinate == COORDINATE::OBJECT_COORDINATE )
 		{
-			for ( std::vector<Vector3>::iterator& iter = rsInput.m_vertices.begin( ); iter != rsInput.m_vertices.end( ); ++iter )
+			for ( std::vector<Vector4>::iterator& iter = rsInput.m_vertices.begin( ); iter != rsInput.m_vertices.end( ); ++iter )
 			{
+				(*iter).X /= (*iter).W;
+				(*iter).Y /= (*iter).W;
+				(*iter).Z /= (*iter).W;
+				(*iter).W /= (*iter).W;
+
 				(*iter).X = ((*iter).X * m_viewport.m_right * 0.5f) + m_viewport.m_right * 0.5f;
 				(*iter).Y = -((*iter).Y * m_viewport.m_bottom * 0.5f) + m_viewport.m_bottom * 0.5f;
 			}
