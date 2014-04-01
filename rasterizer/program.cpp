@@ -242,6 +242,7 @@ static void LoadModuleWoocom()
 
 	g_ModuleContext.InstallFunctionLoadMeshFromFile( "WLoadMesh" );
 	g_ModuleContext.InstallFunctionRenderToBuffer( "WRender" );
+	g_ModuleContext.InstallFunctionSetTransform("WTransform");
 
 	printf( "\n<woocom>\n\n" );
 }

@@ -60,11 +60,15 @@ public:
 	void Render();
 	void Clear( void* pImage, int width, int height, unsigned int clearColor );
 	void PaintPixel( int x, int y, const unsigned char* rgb);
+	bool DepthTest(int x, int y, float z);
 
 	void ResetFillInfo();
 	void InsertLineInfo(int lineIndex, int posX, const unsigned char* rgb);
 	void SortFillInfo();
 	void DrawFillInfo();
+
+	// ¹öÅØ½º Transform
+	void VertexProcess(Matrix4& mat, Vector3& vertex);
 
 	void SetTransform(int type, const Matrix4& transform);
 	const Matrix4& GetWorld() const;
@@ -78,10 +82,13 @@ private:
 	int m_screenWidth;
 	int m_screenHeight;
 	int m_colorDepth;
+	std::vector<float> m_depthBuffer;
 
 	bool m_isSorted;
 	std::vector< EdgeInfo >	m_fillInfo;
+
 	Matrix4	m_world;
 	Matrix4 m_view;
 	Matrix4 m_proj;
+	Matrix4 m_wvp;
 };

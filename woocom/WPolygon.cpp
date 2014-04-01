@@ -3,6 +3,7 @@
 #include "Utility.h"
 #include "WModule.h"
 #include "../utility/math3d.h"
+#include "../utility/math3d.cpp"
 
 using namespace Utility;
 void WPolygon::DrawOutline(WModule* pPainter)
@@ -30,10 +31,15 @@ void WPolygon::DrawOutline(WModule* pPainter)
 
 void WPolygon::DrawSolid(WModule* pPainter)
 {
+	// 미리 계산
+	Matrix4 wvp = pPainter->GetWorld();
+	wvp *= pPainter->GetView();
+	wvp *= pPainter->GetProj();
+
 	int numFace = m_data->GetFaceNum();
 	for (int i = 0; i< numFace; ++i)
 	{
-		unsigned char color[3] = { 255, 0, 0 };
+		unsigned char color[3] = { rand() % 255, rand() % 255, rand() % 255 };
 		int numVert = m_data->GetVertexNum(i);
 
 		if (numVert == 0)
@@ -41,11 +47,13 @@ void WPolygon::DrawSolid(WModule* pPainter)
 			return;
 		}
 
-		const Vector3* p1 = m_data->GetVertex(i, numVert - 1);
+		Vector3 p1 = *m_data->GetVertex(i, numVert - 1);
+		pPainter->VertexProcess(wvp, p1);
 		for (int vertexIndex = 0; vertexIndex < numVert; ++vertexIndex)
 		{
-			const Vector3* p2 = m_data->GetVertex(i, vertexIndex);
-			InsertLineInfo(pPainter, p1, p2, color);
+			Vector3 p2 = *m_data->GetVertex(i, vertexIndex);
+			pPainter->VertexProcess(wvp, p2);
+			InsertLineInfo(pPainter, &p1, &p2, color);
 			p1 = p2;
 		}
 

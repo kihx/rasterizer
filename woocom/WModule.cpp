@@ -18,8 +18,8 @@ WModule::WModule(void* buffer, int width, int height, int bpp)
 	: m_buffer(buffer), m_screenWidth(width), m_screenHeight(height), m_colorDepth(bpp),
 	m_isSorted(false)
 {
-	m_fillInfo.reserve(height);
 	m_fillInfo.resize(height);
+	m_depthBuffer.resize(width * height, 1.0f);
 }
 
 WModule::~WModule()
@@ -42,6 +42,8 @@ void WModule::Clear(void* pImage, int width, int height, unsigned int clearColor
 		buffer[i+1] = clearColor >> 8 & 0xff;
 		buffer[i+2] = clearColor & 0xff;
 	}
+	m_depthBuffer.clear();
+	m_depthBuffer.resize(width * height, 1.0f);
 }
 
 void WModule::PaintPixel(int x, int y, const unsigned char* rgb)
@@ -68,6 +70,21 @@ void WModule::PaintPixel(int x, int y, const unsigned char* rgb)
 	buffer[index] = rgb[0];
 	buffer[index + 1] = rgb[1];
 	buffer[index + 2] = rgb[2];
+}
+
+bool WModule::DepthTest(int x, int y, float z)
+{
+	// depth test
+	int depthIndex = m_screenWidth * y + x;
+	if (m_depthBuffer[depthIndex] < z)
+	{
+		return false;
+	}
+	else
+	{
+		m_depthBuffer[depthIndex] = z;
+		return true;
+	}
 }
 
 void WModule::ResetFillInfo()
@@ -126,6 +143,13 @@ void WModule::DrawScanline(int lineIndex, const EdgeInfo& info)
 			PaintPixel(offsetX, lineIndex, first.m_rgb);
 		}
 	}	
+}
+
+void WModule::VertexProcess( Matrix4& mat, Vector3& vertex)
+{
+	vertex.Transform(mat);
+	vertex.X = vertex.X * (m_screenWidth * 0.5f) + (m_screenWidth * 0.5f);
+	vertex.Y = -vertex.Y * (m_screenHeight * 0.5f) + (m_screenHeight * 0.5f);
 }
 
 void WModule::SetTransform(int type, const Matrix4& transform)

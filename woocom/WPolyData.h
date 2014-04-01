@@ -39,6 +39,19 @@ public:
 		return m_faces.size();
 	}
 
+	Vector3* GetVertex(size_t faceIndex, size_t vertexIndex)
+	{
+		if (faceIndex >= m_faces.size())
+		{
+			return nullptr;
+		}
+		if (vertexIndex >= m_faces[faceIndex]->m_indices.size())
+		{
+			return nullptr;
+		}
+		return m_vertices[m_faces[faceIndex]->m_indices[vertexIndex]];
+	}
+
 	const Vector3* GetVertex(size_t faceIndex, size_t vertexIndex) const
 	{
 		if (faceIndex >= m_faces.size())
