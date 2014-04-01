@@ -69,17 +69,15 @@ namespace kih
 		return static_cast< byte >( Clamp<float>( f, 0.0f, 1.0f ) * 255.0f );
 	}
 
-	template<typename T1, typename T2>
-	inline T2 Float_ToInteger( T1 f )
+	template<typename T>
+	inline T Float_ToInteger( float f )
 	{
-		static_assert( std::is_floating_point<T1>::value, "input type must be floating point" );
-		static_assert( std::is_integral<T2>::value, "return type must be integer" );
-		return static_cast< T2 >( f );
+		static_assert( std::is_integral<T>::value, "return type must be integer" );
+		return static_cast<T>( Trunc( f ) );
 	}
 
-	template<>
-	inline int Float_ToInteger( float f )
+	inline float Lerp( float a, float b, float ratio )
 	{
-		return Trunc( f );
+		return a + ( b - a ) * ratio;
 	}
 };

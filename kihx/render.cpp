@@ -369,19 +369,21 @@ namespace kih
 			float XMin;
 			float XMax;
 			float Slope;
-			float Depth;
+			float ZStart;
+			float ZEnd;
 
 			//const Color32& ColorL;
 			//const Color32& ColorR;
 
 			EdgeTableElement() = delete;
 
-			explicit EdgeTableElement( float yMax, float xMin, float xMax, float slope, float depth /*, const Color32& colorL, const Color32& colorR*/ ) :
+			explicit EdgeTableElement( float yMax, float xMin, float xMax, float slope, float zStart, float zEnd /*, const Color32& colorL, const Color32& colorR*/ ) :
 				YMax( yMax ),
 				XMin( xMin ),
 				XMax( xMax ),
 				Slope( slope ),
-				Depth( depth)/*,
+				ZStart( zStart ),
+				ZEnd( zEnd )/*,
 				ColorL( colorL ),
 				ColorR( colorR )*/
 			{
@@ -392,16 +394,14 @@ namespace kih
 
 		struct ActiveEdgeTableElement
 		{
-			const EdgeTableElement& ETElement;
+			const EdgeTableElement& ET;
 			float CurrentX;
-			float CurrentDepth;
 
 			ActiveEdgeTableElement() = delete;
 
 			explicit ActiveEdgeTableElement( const EdgeTableElement& etElem ) :
-				ETElement( etElem ),
-				CurrentX( etElem.Slope > 0.0f ? etElem.XMin : etElem.XMax ),
-				CurrentDepth( etElem.Depth )
+				ET( etElem ),
+				CurrentX( etElem.Slope > 0.0f ? etElem.XMin : etElem.XMax )
 			{
 			}
 
@@ -483,11 +483,11 @@ namespace kih
 					float slope = ( dy == 0.0f ) ? 0.0f : ( dx / dy );
 
 					// Select a start scanline with Y-axis clipping.
-					unsigned short startY = Float_ToInteger<float, unsigned short>( std::ceil( yMin ) );
+					unsigned short startY = Float_ToInteger<unsigned short>( std::ceil( yMin ) );
 					startY = Clamp<unsigned short>( startY, 0, height - 1 );
 
 					// Push this element at the selected scanline.
-					m_edgeTable[startY].emplace_back( yMax, xMin, xMax, slope, zStart );
+					m_edgeTable[startY].emplace_back( yMax, xMin, xMax, slope, zStart, zEnd );
 
 					// Update next indices.
 					v0Index = v1Index;
@@ -520,7 +520,7 @@ namespace kih
 				while ( iter != aet.end() )
 				{
 					const ActiveEdgeTableElement& elem = *iter;
-					if ( y >= elem.ETElement.YMax )
+					if ( y >= elem.ET.YMax )
 					{
 						iter = aet.erase( iter );
 					}
@@ -557,7 +557,7 @@ namespace kih
 					ActiveEdgeTableElement& elemLeft = *iter;
 					if ( ++iter == aet.end() )
 					{
-						elemLeft.CurrentX += elemLeft.ETElement.Slope;
+						elemLeft.CurrentX += elemLeft.ET.Slope;
 						break;
 					}
 					ActiveEdgeTableElement& elemRight = *iter;
@@ -565,35 +565,56 @@ namespace kih
 					// Approximate intersection pixels betweeen edges on the scanline.
 					if ( elemLeft.CurrentX != elemRight.CurrentX )
 					{
-						unsigned short xLeft = Float_ToInteger<float, unsigned short>( std::round( elemLeft.CurrentX ) );
-						unsigned short xRight = Float_ToInteger<float, unsigned short>( std::round( elemRight.CurrentX ) );
+						unsigned short xLeft = Float_ToInteger<unsigned short>( std::round( elemLeft.CurrentX ) );
+						unsigned short xRight = Float_ToInteger<unsigned short>( std::round( elemRight.CurrentX ) );
 
 						// clipping on RT
 						xLeft = Max<unsigned short>( xLeft, 0 );
 						xRight = Min<unsigned short>( xRight, width );
 
-						// Push inside pixels between intersections into the output stream.
-						for ( unsigned short x = xLeft; x < xRight; ++x )
+						if ( xLeft != xRight )
 						{
-							// FIXME: depth update
-							outputStream->Push( x, y, elemLeft.CurrentDepth, color );	
-							//outputStream->Push( x, y, 0.0f/*, elemLeft.ETElement.ColorL*/ );	
+							// Compute lerp ratio for the left-end pixel and the right-end pixel.
+							float lerpRatioLeft = ( elemLeft.CurrentX - elemLeft.ET.XMin ) / max( elemLeft.ET.XMax - elemLeft.ET.XMin, FLT_EPSILON );
+							float lerpRatioRight = ( elemRight.CurrentX - elemRight.ET.XMin ) / max( elemRight.ET.XMax - elemRight.ET.XMin, FLT_EPSILON );
+							
+							// Lerp depth values of L and R between their own edges.
+							float depthLeft = Lerp( elemLeft.ET.ZStart, elemLeft.ET.ZEnd, lerpRatioLeft );
+							float depthRight = Lerp( elemRight.ET.ZStart, elemRight.ET.ZEnd, lerpRatioRight );
+
+							// TODO: other lerp vars...
+
+							// an incremetal approach to lerp depth
+							float depthRatioFactor = 1.0f / ( xRight - xLeft );
+							float ddxDepth = ( depthRight - depthLeft ) * depthRatioFactor;
+							float interpolatedDepth = depthLeft;
+
+							// Push inside pixels between intersections into the output stream.
+							for ( unsigned short x = xLeft; x < xRight; ++x )
+							{
+#if 0	// directly compute lerp depth (not used)
+								// Lerp a depth value at the point.
+								float interpolatedDepth = Lerp( depthLeft, depthRight, ( x - xLeft ) * depthRatioFactor );
+#endif
+
+								outputStream->Push( x, y, interpolatedDepth, color );
+
+								// Update the next depth value incrementally.
+								interpolatedDepth += ddxDepth;
+							}
 						}
 					}
 
 					// Update the next position incrementally.
-					elemLeft.CurrentX += elemLeft.ETElement.Slope;
-					elemRight.CurrentX += elemRight.ETElement.Slope;
-
-					elemLeft.CurrentDepth += elemLeft.ETElement.Slope;
-					elemRight.CurrentDepth += elemRight.ETElement.Slope;
+					elemLeft.CurrentX += elemLeft.ET.Slope;
+					elemRight.CurrentX += elemRight.ET.Slope;
 				}
 			}
 
-			//for ( unsigned short y = 0; y < height; ++y )
-			//{
-			//	m_edgeTable[y].clear();
-			//}
+			for ( unsigned short y = 0; y < height; ++y )
+			{
+				m_edgeTable[y].clear();
+			}
 		}
 
 		void TransformViewport( std::shared_ptr<RasterizerInputStream> inputStream, unsigned short width, unsigned short height )
@@ -768,6 +789,11 @@ namespace kih
 				}
 
 				Color32 color = fragment.Color;
+
+#if 0	// depth visualization
+				byte d = Float_ToByte( fragment.Depth );
+				color.R = color.G = color.B = d;
+#endif
 
 				// TODO: pixel shading
 
