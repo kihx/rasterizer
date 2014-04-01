@@ -14,6 +14,6 @@
 
 #include "CoolD_Type.h"
 
-EXTERN_FORM DLL_API void __cdecl coold_LoadMeshFromFile( const Dchar* filename );
-EXTERN_FORM DLL_API void __cdecl coold_RenderToBuffer( void* buffer, Dint width, Dint height, Dint bpp );
-EXTERN_FORM DLL_API void __cdecl coold_SetTransform(Dint transformType, const Dfloat* matrix4x4);
+EXTERN_FORM DLL_API Dvoid __cdecl coold_LoadMeshFromFile( const Dchar* filename );
+EXTERN_FORM DLL_API Dvoid __cdecl coold_RenderToBuffer( Dvoid* buffer, Dint width, Dint height, Dint bpp );
+EXTERN_FORM DLL_API Dvoid __cdecl coold_SetTransform(Dint transformType, const Dfloat* matrix4x4);

@@ -1,46 +1,37 @@
 #include "CoolD_AreaFilling.h"
 #include "CoolD_Inlines.h"
 #include "CoolD_CustomMesh.h"
+#include "CoolD_Transform.h"
 
 namespace CoolD
 {
-	AreaFilling::AreaFilling( void* buffer, const int width, const int height )
-		: m_Buffer( (Buffer*)buffer ), m_Width(width), m_Height(height)
+	AreaFilling::AreaFilling( Dvoid* buffer, const int width, const int height )
+		: m_Buffer((Duchar*)buffer), m_Width(width), m_Height(height)
 	{
 	}
 
 	AreaFilling::~AreaFilling()
 	{			
-		m_ListMesh.clear();
 		m_ListLine.clear();
 		m_ActiveTable.clear();
-		m_EdgeTable.clear();
+		m_EdgeTable.clear();		
 	}
 
-	void AreaFilling::AddMesh( CustomMesh* const pMesh)
-	{
-		m_ListMesh.push_back( pMesh );
-	}
-
-	void AreaFilling::Render()
-	{
-		assert(!m_ListMesh.empty());	//비어 있으면 당연히 안됨
-
-		for( auto& mesh : m_ListMesh )
-		{			
-			TimeForm start = chrono::system_clock::now();
-			
-			for( Duint faceNum = 1; faceNum <= mesh->GetFaceSize(); ++faceNum )
-			{
-				const BaseFace& face = CreatePointsToLines(mesh, faceNum);	//메쉬에서 어떤 면을 그릴 것 인지
-				CreateEdgeTable( );	
-				CreateChainTable( );
-				DrawFace( MixDotColor(face.color) );
-			}
-
-			TimeForm end = chrono::system_clock::now();
-			chrono::milliseconds mill = chrono::duration_cast<chrono::milliseconds>(end - start);		//test 시간 측정				
+	Dvoid AreaFilling::Render( const CustomMesh* pMesh )
+	{							
+		TimeForm start = chrono::system_clock::now();
+		
+		for( Duint faceNum = 1; faceNum <= pMesh->GetFaceSize(); ++faceNum )
+		{
+			const BaseFace& face = CreatePointsToLines(pMesh, faceNum);	//메쉬에서 어떤 면을 그릴 것 인지
+			CreateEdgeTable( );	
+			CreateChainTable( );
+			DrawFace( MixDotColor(face.color) );
 		}
+
+		TimeForm end = chrono::system_clock::now();
+		chrono::milliseconds mill = chrono::duration_cast<chrono::milliseconds>(end - start);		//test 시간 측정				
+		
 	}
 
 	//-----------------------------------------------------------------------
@@ -75,7 +66,7 @@ namespace CoolD
 	//-----------------------------------------------------------------------
 	//엣지 테이블 만들기
 	//-----------------------------------------------------------------------
-	void AreaFilling::CreateEdgeTable( )
+	Dvoid AreaFilling::CreateEdgeTable( )
 	{
 		assert( !m_ListLine.empty() );	//비어 있으면 당연히 안됨
 
@@ -104,7 +95,7 @@ namespace CoolD
 	//-----------------------------------------------------------------------
 	//체인 테이블 생성 및 PreProcessing
 	//-----------------------------------------------------------------------
-	void AreaFilling::CreateChainTable( )
+	Dvoid AreaFilling::CreateChainTable( )
 	{
 		assert( !m_ListLine.empty() );	//비어 있으면 당연히 안됨
 
@@ -132,7 +123,7 @@ namespace CoolD
 
 			for( auto& chainIter = currentLine.begin(); chainIter != currentLine.end(); )
 			{
-				bool isOnceCount = true;
+				Dbool isOnceCount = true;
 				for( auto& innerIter : currentLine )
 				{
 					if( (*chainIter).lineKey == innerIter.lineKey )	//같으면 리턴
@@ -187,7 +178,7 @@ namespace CoolD
 	//-------------------------------------------------------------------
 	//해당 위치 점 하나 찍기
 	//-------------------------------------------------------------------
-	void AreaFilling::DrawDot(const Duint x, const Duint y, const Dulong DotColor)
+	Dvoid AreaFilling::DrawDot(const Duint x, const Duint y, const Dulong DotColor)
 	{
 		Duchar red = (DotColor >> 24);
 		Duchar green = (DotColor >> 16) & 0x000000ff;
@@ -207,7 +198,7 @@ namespace CoolD
 	//-------------------------------------------------------------------
 	//현재 라인의 노드 사이 점 찍기
 	//-------------------------------------------------------------------
-	void AreaFilling::DrawLine( list<EdgeNode>& renderLine, const Dint currentHeight, const Dulong dotColor)
+	Dvoid AreaFilling::DrawLine(list<EdgeNode>& renderLine, const Dint currentHeight, const Dulong dotColor)
 	{
 		Dint beginX = -1;
 		Dint endX = -1;
@@ -236,14 +227,14 @@ namespace CoolD
 	//-------------------------------------------------------------------
 	// 메쉬의 해당 면 그리기
 	//-------------------------------------------------------------------
-	void AreaFilling::DrawFace(const Dulong dotColor)
+	Dvoid AreaFilling::DrawFace(const Dulong dotColor)
 	{
 		assert( !m_ActiveTable.empty() );
 
 		list<EdgeNode> continueRenderLine;
 		auto& activeIter = m_ActiveTable.begin();
 
-		m_ActiveTable.sort([] (const ActiveLine& lhs, const ActiveLine& rhs) -> bool { return lhs.height < rhs.height; } );
+		m_ActiveTable.sort([] (const ActiveLine& lhs, const ActiveLine& rhs) -> Dbool { return lhs.height < rhs.height; } );
 		for( Dint y = (*m_ActiveTable.begin()).height;; ++y )	//한줄한줄 그려나가야 하기 때문에 
 		{
 			if( y == (*activeIter).height )	//라인 정점과 높이가 겹치는 부분
@@ -300,7 +291,7 @@ namespace CoolD
 	//라인 연결 여부 확인
 	//-------------------------------------------------------------------
 	
-	bool AreaFilling::CheckContinueLine(const LineKey& lhs, const LineKey& rhs) const
+	Dbool AreaFilling::CheckContinueLine(const LineKey& lhs, const LineKey& rhs) const
 	{	
 		if( lhs.beginIndex	== rhs.endIndex ||			
 			lhs.endIndex	== rhs.beginIndex )
@@ -309,5 +300,5 @@ namespace CoolD
 		}
 
 		return false;
-	}	
+	}		
 }

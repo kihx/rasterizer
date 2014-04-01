@@ -13,8 +13,12 @@
 #define WHITE	0xffffffff
 #define BLACK	0x000000ff
 
+//Singleton
+#define GETSINGLE(p)	p::GetInstance()
+#define DESTROY(p)		p::DestroyInstance()
+
 //¹Ý¿Ã¸²
-#define ROUND_Off(x, dig) (float)(floor((x) * pow(10,dig) + 0.5) / pow(10,dig))
+#define ROUND_Off(x, dig) (Dfloat)(floor((x) * pow(10,dig) + 0.5) / pow(10,dig))
 
 //std macro
 #define STD_FIND_IF(type, func) find_if(type.begin(), type.end(), func)

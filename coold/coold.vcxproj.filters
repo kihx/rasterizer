@@ -9,9 +9,8 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
     </Filter>
-    <Filter Include="Resource Files">
-      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
-      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    <Filter Include="Math">
+      <UniqueIdentifier>{1ce2c5a8-a1e9-4a1f-a2ac-7d1586e1270c}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -36,7 +35,37 @@
     <ClInclude Include="CoolD_AreaFilling.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="CoolD_DMatrix.h">
+    <ClInclude Include="CoolD_Transform.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CoolD_Math.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="CoolD_Matrix33.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="CoolD_Matrix44.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="CoolD_Quat.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="CoolD_Vector2.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="CoolD_Vector3.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="CoolD_Vector4.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="CoolD_Struct.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CoolD_Singleton.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CoolD_MeshManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -48,6 +77,33 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="CoolD_AreaFilling.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CoolD_Transform.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CoolD_Math.cpp">
+      <Filter>Math</Filter>
+    </ClCompile>
+    <ClCompile Include="CoolD_Matrix33.cpp">
+      <Filter>Math</Filter>
+    </ClCompile>
+    <ClCompile Include="CoolD_Matrix44.cpp">
+      <Filter>Math</Filter>
+    </ClCompile>
+    <ClCompile Include="CoolD_Quat.cpp">
+      <Filter>Math</Filter>
+    </ClCompile>
+    <ClCompile Include="CoolD_Vector2.cpp">
+      <Filter>Math</Filter>
+    </ClCompile>
+    <ClCompile Include="CoolD_Vector3.cpp">
+      <Filter>Math</Filter>
+    </ClCompile>
+    <ClCompile Include="CoolD_Vector4.cpp">
+      <Filter>Math</Filter>
+    </ClCompile>
+    <ClCompile Include="CoolD_MeshManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

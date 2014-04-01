@@ -1,7 +1,7 @@
 #pragma once
 #include "CoolD_Type.h"
 
-void ClearColorBuffer( void* pImage, Duint width, Duint height, Dulong clearColor )
+Dvoid ClearColorBuffer( Dvoid* pImage, Duint width, Duint height, Dulong clearColor )
 {
 	Duchar* buffer = (Duchar*)pImage;
 
@@ -25,3 +25,5 @@ void ClearColorBuffer( void* pImage, Duint width, Duint height, Dulong clearColo
 		}
 	}
 }
+
+

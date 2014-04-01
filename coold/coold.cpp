@@ -7,54 +7,66 @@
 #include "CoolD_Defines.h"
 #include "CoolD_Inlines.h"
 #include "CoolD_AreaFilling.h"
-#include "CoolD_DMatrix.h"
+#include "CoolD_Transform.h"
+#include "CoolD_Matrix33.h"
+#include "CoolD_Matrix44.h"
+#include "CoolD_Vector3.h"
+#include "CoolD_MeshManager.h"
 
 using namespace CoolD;
 
-//BOOL WINAPI DllMain( HINSTANCE hInstDll, DWORD fdwReason, LPVOID fImpLoad )
+//Dbool WINAPI DllMain( HINSTANCE hInstDll, DWORD fdwReason, LPVOID fImpLoad )
 //{
-//	return TRUE;
+//	return true;
 //}
 
-list<Line*> listLine;
-map<Dint, list<Line*>> chainTable;
-map<LineKey, EdgeNode*> edgeTable;
-
-CustomMesh* g_pMesh = nullptr;
-
-EXTERN_FORM DLL_API void __cdecl coold_LoadMeshFromFile( const Dchar* filename )
+EXTERN_FORM DLL_API Dvoid __cdecl coold_LoadMeshFromFile( const Dchar* filename )
 {
-	if( g_pMesh )
-	{
-		Safe_Delete( g_pMesh );
-	}
-	
-	g_pMesh = CoolD::CustomMesh::CreateMeshFromFile( filename );
+	GETSINGLE(MeshManager).Clear();
+	GETSINGLE(MeshManager).LoadMesh(filename);
 }
 
-EXTERN_FORM DLL_API void __cdecl coold_RenderToBuffer( void* buffer, Dint width, Dint height, Dint bpp )
+EXTERN_FORM DLL_API Dvoid __cdecl coold_RenderToBuffer( Dvoid* buffer, Dint width, Dint height, Dint bpp )
 {
 	ClearColorBuffer(buffer, width, height, BLACK );
 
-	CoolD::AreaFilling areaFilling(buffer, width, height);
-	areaFilling.AddMesh(g_pMesh);
-	areaFilling.Render();
+	GETSINGLE(TransformHandler).CreateViewport(0, 0, width, height);
+	
+	CoolD::AreaFilling areaFilling(buffer, width, height);		
+
+	const list<CustomMesh*>& RenderList = GETSINGLE(MeshManager).AdjustTransform();
+	
+	for(auto& pMesh : RenderList)
+	{
+		areaFilling.Render( pMesh );
+	}	
 }
 
-EXTERN_FORM DLL_API void __cdecl coold_SetTransform(Dint transformType, const Dfloat* matrix4x4)
-{
+EXTERN_FORM DLL_API Dvoid __cdecl coold_SetTransform(Dint transformType, const Dfloat* matrix4x4)
+{	//넘겨 받은 값을 사용하지 않는다. 다만 program.cpp에 있는 값을 동일하게 적용한다.
 	switch( transformType )
 	{
-	case 0 :	//World
-		
+	case 0:	//World
+		{
+				Matrix44 matWorld;
+				Matrix44 matScale;
+				matScale.Scaling(10.0f, 10.0f, 10.0f);
+				matWorld = matScale;
+				GETSINGLE(TransformHandler).SetTransform(WORLD, matWorld);
+		}
 		break;
 	case 1:	//View
 		{
-			DMatrix<Dfloat> test( 4, 4, matrix4x4 );			
+				Vector3 vEyePt(1.5f, 3.0f, -5.0f);
+				Vector3 vLookatPt(0.0f, 0.0f, 0.0f);
+				Vector3 vUpVec(0.0f, 1.0f, 0.0f);				
+				GETSINGLE(TransformHandler).CreateView(vEyePt, vLookatPt, vUpVec);
 		}
 		break;
-	case 2 :	//Projection
-
+	case 2:	//Projection
+		{				
+				GETSINGLE(TransformHandler).CreatePerspective(kPI / 4.0f, 1.0f, 1.0f, 100.0f);
+		}
 		break;
 	}
 }
