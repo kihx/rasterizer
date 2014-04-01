@@ -48,6 +48,11 @@ inline void Swap( T& lhs, T& rhs, typename std::enable_if< !std::is_scalar<T>::v
 	rhs = std::move( tmp );
 }
 
+// http://stackoverflow.com/questions/1500363/compile-time-sizeof-array-without-using-a-macro
+template<class T, size_t N>
+char( &SizeOfArray( const T( &a )[N] ) )[N];
+
+
 
 // utility classes
 //

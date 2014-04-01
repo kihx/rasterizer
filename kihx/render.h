@@ -35,7 +35,23 @@ namespace kih
 	class PixelProcessor;
 	class OutputMerger;
 	class RenderingContext;
+
 	
+	/* enum class DepthFunc
+	*/
+	enum class DepthFunc
+	{
+		None = 0,
+		Not,
+		Equal,
+		Less,
+		LessEqual,
+		Greater,
+		GreaterEqual,
+		/* the number of enum elements */
+		Size
+	};
+
 
 	/* class ConstantBuffer
 	*/
@@ -207,10 +223,11 @@ namespace kih
 	public:
 		explicit RenderingContext( size_t numRenderTargets );
 
+		// draw
 		void Clear( byte r, byte g, byte b, byte a, float z = 1.0f, int stencil = 0 );
-
 		void Draw( std::shared_ptr<IMesh> mesh );
 
+		// render targets
 		std::shared_ptr<Texture> GetRenderTaget( size_t index )
 		{
 			assert( ( index >= 0 && index < m_renderTargets.size() ) && "out of ranged index" );
@@ -225,10 +242,15 @@ namespace kih
 		bool SetRenderTarget( std::shared_ptr<Texture> texture, size_t index );
 		bool SetDepthStencil( std::shared_ptr<Texture> texture );
 
+		// constant buffers
 		ConstantBuffer& GetSharedConstantBuffer()
 		{
 			return m_sharedConstantBuffer;
 		}
+
+		// depth buffering
+		void SetDepthFunc( DepthFunc func );
+		void SetDepthWritable( bool writable );
 
 	private:
 		void DrawInternal( std::shared_ptr<IMesh> mesh, int numVerticesPerPrimitive );
@@ -293,6 +315,8 @@ namespace kih
 		Matrix4 m_projMatrix;
 	};
 };
+
+using kih::DepthFunc;
 
 using kih::RenderingContext;
 using kih::RenderingDevice;
