@@ -32,9 +32,11 @@ void WPolygon::DrawOutline(WModule* pPainter)
 void WPolygon::DrawSolid(WModule* pPainter)
 {
 	// 미리 계산
-	Matrix4 wvp = pPainter->GetWorld();
-	wvp *= pPainter->GetView();
-	wvp *= pPainter->GetProj();
+	Matrix4 world = pPainter->GetWorld();
+	Matrix4 view = pPainter->GetView();
+	Matrix4 proj = pPainter->GetProj();
+
+	Matrix4 wvp = world * view * proj;
 
 	int numFace = m_data->GetFaceNum();
 	for (int i = 0; i< numFace; ++i)
@@ -99,15 +101,18 @@ void WPolygon::InsertLineInfo(WModule* pPainter, const Vector3* v1, const Vector
 	// b = y - ax ( v1 대입 )
 	float n = v1->Y - (gradient * v1->X);
 
-	float startY = v1->Y;
+	Vector3 start = *v1;
 	float endY = roundf(v2->Y);
 	if (v1->Y > v2->Y)
 	{
-		startY = v2->Y;
+		start = *v2;
 		endY = roundf(v1->Y);
 	}
 
-	float y = roundf(startY);
+	// 처음 시작이 부정확해서 시작점은 버텍스 좌표를 찍어준다.
+	pPainter->InsertLineInfo(Float2Int(start.Y), Float2Int(start.X), color);
+
+	float y = roundf(start.Y) + 1.0f;
 	while (y < endY)
 	{
 		float x = (y - n) / gradient;

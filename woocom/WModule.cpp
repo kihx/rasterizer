@@ -14,16 +14,29 @@
 std::shared_ptr<WModule> g_pPainter;
 std::shared_ptr<WIDrawable> g_pDrawObj;
 
-WModule::WModule(void* buffer, int width, int height, int bpp) 
-	: m_buffer(buffer), m_screenWidth(width), m_screenHeight(height), m_colorDepth(bpp),
-	m_isSorted(false)
+WModule::WModule() : m_isSorted(false), m_isInit(false)
 {
-	m_fillInfo.resize(height);
-	m_depthBuffer.resize(width * height, 1.0f);
 }
 
 WModule::~WModule()
 {
+}
+
+void WModule::Init(void* buffer, int width, int height, int bpp)
+{
+	m_isInit = true;
+	m_buffer = buffer;
+	m_screenWidth = width;
+	m_screenHeight = height;
+	m_colorDepth = bpp;
+
+	m_fillInfo.resize(height);
+	m_depthBuffer.resize(width * height, 1.0f);
+}
+
+bool WModule::IsInitialized()
+{
+	return m_isInit;
 }
 
 void WModule::Render()
@@ -36,7 +49,7 @@ void WModule::Clear(void* pImage, int width, int height, unsigned int clearColor
 {
 	char* buffer = (char*)pImage;
 	int loopCount = (width * height * m_colorDepth / 8) - ( m_colorDepth / 8 );
-	for( int i = 0; i < loopCount; i = i + m_colorDepth )
+	for( int i = 0; i < loopCount; i = i + m_colorDepth / 8 )
 	{
 		buffer[i] = clearColor >> 16 & 0xff;
 		buffer[i+1] = clearColor >> 8 & 0xff;
@@ -72,6 +85,14 @@ void WModule::PaintPixel(int x, int y, const unsigned char* rgb)
 	buffer[index + 2] = rgb[2];
 }
 
+void WModule::ZBufferPaintPixel(int x, int y, float z, const unsigned char* rgb)
+{
+	if (DepthTest(x, y, z))
+	{
+		PaintPixel(x, y, rgb);
+	}
+}
+
 bool WModule::DepthTest(int x, int y, float z)
 {
 	// depth test
@@ -101,6 +122,12 @@ void WModule::InsertLineInfo(int lineIndex, int posX, const unsigned char* rgb)
 {
 	m_fillInfo[lineIndex].Insert(posX, rgb);
 
+	m_isSorted = false;
+}
+
+void WModule::InsertLineDepthInfo(int lineIndex, int posX, float depth, const unsigned char* rgb)
+{
+	m_fillInfo[lineIndex].Insert(posX, depth, rgb);
 	m_isSorted = false;
 }
 
@@ -134,13 +161,16 @@ void WModule::DrawScanline(int lineIndex, const EdgeInfo& info)
 
 		if (first.m_x == second.m_x)
 		{
-			PaintPixel(first.m_x, lineIndex, first.m_rgb);
+			ZBufferPaintPixel(first.m_x, lineIndex, first.m_z, first.m_rgb);
 			return;
 		}
 
+		float dx = second.m_x - first.m_x;
+		float dz = second.m_z - first.m_z;
 		for (int offsetX = first.m_x; offsetX <= second.m_x; ++offsetX)
 		{
-			PaintPixel(offsetX, lineIndex, first.m_rgb);
+			float z = first.m_z + dz * ((offsetX - first.m_x) / dx);
+			ZBufferPaintPixel(offsetX, lineIndex, z, first.m_rgb);
 		}
 	}	
 }
@@ -148,8 +178,12 @@ void WModule::DrawScanline(int lineIndex, const EdgeInfo& info)
 void WModule::VertexProcess( Matrix4& mat, Vector3& vertex)
 {
 	vertex.Transform(mat);
-	vertex.X = vertex.X * (m_screenWidth * 0.5f) + (m_screenWidth * 0.5f);
-	vertex.Y = -vertex.Y * (m_screenHeight * 0.5f) + (m_screenHeight * 0.5f);
+
+	float fHalfWidth = m_screenWidth * 0.5f;
+	float fHalfHeight = m_screenHeight * 0.5f;
+	
+	vertex.X = vertex.X * fHalfWidth + fHalfWidth;
+	vertex.Y = vertex.Y * fHalfHeight + fHalfHeight;
 }
 
 void WModule::SetTransform(int type, const Matrix4& transform)
@@ -207,10 +241,17 @@ void WRender(void* buffer, int width, int height, int colorDepth)
 {
 	if( g_pPainter == nullptr )
 	{
-		g_pPainter = std::shared_ptr<WModule>(new WModule(buffer, width, height, colorDepth));
+		g_pPainter = std::shared_ptr<WModule>(new WModule());
+		g_pPainter->Init(buffer, width, height, colorDepth);
 	}
 
-	g_pPainter->Render();
+	if (!g_pPainter->IsInitialized())
+	{
+		g_pPainter->Init(buffer, width, height, colorDepth);
+	}
+
+	//g_pPainter->Render();
+	g_pPainter->Clear(buffer, width, height, 0x000000);
 	
 	if (g_pDrawObj)
 	{
@@ -230,6 +271,11 @@ void WClear( void* pImage, int width, int height, unsigned long clearColor )
 
 void WTransform(int transformType, const float* matrix4x4)
 {
+	if (g_pPainter == nullptr)
+	{
+		g_pPainter = std::shared_ptr<WModule>(new WModule());
+	}
+
 	if (g_pPainter)
 	{
 		g_pPainter->SetTransform(transformType, Utility::Float2Matrix4(matrix4x4));
