@@ -101,6 +101,7 @@
     <ClInclude Include="targetver.h" />
     <ClInclude Include="render.h" />
     <ClInclude Include="texture.h" />
+    <ClInclude Include="threading.h" />
     <ClInclude Include="type.h" />
     <ClInclude Include="vector.h" />
   </ItemGroup>

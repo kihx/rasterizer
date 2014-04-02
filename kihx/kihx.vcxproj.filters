@@ -11,6 +11,9 @@
     <Filter Include="Math">
       <UniqueIdentifier>{2d739c3e-7b48-4038-b660-be7ff3e0643b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Threading">
+      <UniqueIdentifier>{7d506067-97d7-49fc-9ac0-7c34a7d67b42}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -60,6 +63,9 @@
     </ClInclude>
     <ClInclude Include="mathlib.h">
       <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="threading.h">
+      <Filter>Threading</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
