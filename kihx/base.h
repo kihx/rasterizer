@@ -50,8 +50,14 @@ inline void Swap( T& lhs, T& rhs, typename std::enable_if< !std::is_scalar<T>::v
 
 // http://stackoverflow.com/questions/1500363/compile-time-sizeof-array-without-using-a-macro
 template<class T, size_t N>
-char( &SizeOfArray( const T( &a )[N] ) )[N];
-
+char( &_SizeOfArray( const T( &a )[N] ) )[N];
+// VS 2013 does not support constexpr
+//template<typename... Args>
+//constexpr size_t SizeOfArray( Args&&... args )
+//{
+//	return sizeof( _SizeOfArray( args ) );
+//}
+#define SIZEOF_ARRAY( a )	( sizeof( _SizeOfArray( a ) ) )
 
 
 // utility classes

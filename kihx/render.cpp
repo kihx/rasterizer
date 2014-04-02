@@ -7,7 +7,6 @@
 #include "random.h"
 
 #include <list>
-#include <functional>
 
 
 namespace kih
@@ -503,6 +502,7 @@ namespace kih
 		void GatherPixelsBeingDrawnFromScanlines( std::shared_ptr<RasterizerOutputStream> outputStream, unsigned short width, unsigned short height )
 		{
 			assert( outputStream );
+			assert( GetContext() );
 			assert( height == m_edgeTable.size() && "target height and scanline are mismatched" );
 			
 			// random color for debugging
@@ -511,6 +511,7 @@ namespace kih
 			byte seedB = static_cast<byte>( Random::Next( 0, 255 ) );
 			Color32 color( seedR, seedG, seedB, 255 );
 
+			// active edge table
 			std::list<ActiveEdgeTableElement> aet;
 
 			// for each scanline
@@ -597,7 +598,6 @@ namespace kih
 								// Lerp a depth value at the point.
 								float interpolatedDepth = Lerp( depthLeft, depthRight, ( x - xLeft ) * depthRatioFactor );
 #endif
-
 								outputStream->Push( x, y, interpolatedDepth, color );
 
 								// Update the next depth value incrementally.
@@ -666,17 +666,14 @@ namespace kih
 	class PixelProcessor : public BaseRenderingProcessor<PixelProcInputStream, PixelProcOutputStream>
 	{
 		NONCOPYABLE_CLASS( PixelProcessor );
-	
-		// function for depth test
-		using DepthTestFunc = std::function< bool( byte /*ref*/, byte /*value*/ ) >;
-
+		
 		/* class PixelProcessor::DepthTestParamPack
 				: A parameter pack for depth test to reduce iterative work.
 		*/
-		class DepthTestParamPack
+		class DepthBufferingParamPack
 		{
 		public:
-			explicit DepthTestParamPack( std::shared_ptr<Texture> ds ) :
+			explicit DepthBufferingParamPack( std::shared_ptr<Texture> ds ) :
 				m_ds( ds ),
 				m_ptr( nullptr )
 			{
@@ -688,6 +685,10 @@ namespace kih
 
 				m_ds = ds;
 
+				// TODO: implementation for a floating point depth buffer
+				// Currently, we assume that the size of a depth buffer is one byte.
+				assert( ( ds->Format() == ColorFormat::D8S24 ) && "floating point depth buffer is not implemented yet" );
+
 				// Get raw memory from the depth stencil.
 				if ( !m_ds->Lock( reinterpret_cast< void** >( &m_ptr ) ) )
 				{
@@ -698,7 +699,7 @@ namespace kih
 				m_stride = GetBytesPerPixel( m_ds->Format() );
 			}
 
-			~DepthTestParamPack()
+			~DepthBufferingParamPack()
 			{
 				if ( m_ds )
 				{
@@ -725,8 +726,7 @@ namespace kih
 
 	public:
 		explicit PixelProcessor( RenderingContext* pRenderingContext ) :
-			BaseRenderingProcessor( pRenderingContext ),
-			m_depthWritable( false )
+			BaseRenderingProcessor( pRenderingContext )
 		{
 		}
 
@@ -767,13 +767,9 @@ namespace kih
 			int strideRT = GetBytesPerPixel( rt->Format() );
 
 				
-			// Make a parameter pack for depth test.
+			// Make a parameter pack for depth writing.
 			std::shared_ptr<Texture> ds = GetContext()->GetDepthStencil();
-			DepthTestParamPack depthTestParam( ds );
-			// TODO: implementation for a floating point depth buffer
-			// Currently, we assume that the size of a depth buffer is one byte.
-			assert( ( ds == nullptr || ds->Format() == ColorFormat::D8S24 ) && "floating point depth buffer is not implemented yet" );
-
+			DepthBufferingParamPack depthBufferingParam( ds );			
 
 			// Load pixel shader constants.
 			//const Vector4& diffuseColor = GetSharedConstantBuffer().GetVector4( ConstantBuffer::DiffuseColor );
@@ -785,9 +781,10 @@ namespace kih
 			{
 				const auto& fragment = inputStream->GetData( i );
 					
-				if ( depthTestParam.IsValid() )
+				// depth buffering
+				if ( depthBufferingParam.IsValid() )
 				{
-					if ( !DoDepthTestAndDepthWrite( depthTestParam, fragment ) )
+					if ( !DoDepthBuffering( depthBufferingParam, fragment ) )
 					{
 						continue;
 					}
@@ -813,80 +810,45 @@ namespace kih
 			}
 
 			return m_outputStream;
-		}		
-
-		void SetDepthFunc( DepthFunc func )
-		{
-#if 0
-			static DepthTestFunc Not = []( byte ref, byte value ) { return ref != value; };
-			static DepthTestFunc Equal = []( byte ref, byte value ) { return ref == value; };
-			static DepthTestFunc Less = []( byte ref, byte value ) { return ref < value; };
-			static DepthTestFunc LessEqual = []( byte ref, byte value ) { return ref <= value; };
-			static DepthTestFunc Greater = []( byte ref, byte value ) { return ref > value; };
-			static DepthTestFunc GreaterEqual = []( byte ref, byte value ) { return ref >= value; };
-#endif
-
-			// depth functions in lamda expression
-			static DepthTestFunc DepthFunctions[] =
-			{
-				nullptr,												// None
-				[]( byte ref, byte value ) { return ref != value; },	// Not
-				[]( byte ref, byte value ) { return ref == value; },	// Equal
-				[]( byte ref, byte value ) { return ref < value; },		// Less
-				[]( byte ref, byte value ) { return ref <= value; },	// LessEqual
-				[]( byte ref, byte value ) { return ref > value; },		// Greater
-				[]( byte ref, byte value ) { return ref >= value; }		// GreaterEqual
-			};
-
-			static_assert( sizeof( SizeOfArray( DepthFunctions ) ) == static_cast< size_t >( DepthFunc::Size ), "incomplete depthfunc" );	
-
-			m_funcDepthTest = DepthFunctions[static_cast< int >( func )];
-		}
-
-		void SetDepthWritable( bool writable )
-		{
-			m_depthWritable = writable;
 		}
 
 	private:
-		bool DoDepthTestAndDepthWrite( DepthTestParamPack& param, const PixelProcData& fragment )
+		bool DoDepthBuffering( DepthBufferingParamPack& param, const PixelProcData& fragment )
 		{	
 			assert( param.IsValid() );
+			assert( GetContext() );
 
-			byte* base = param.GetAddress( fragment );
-			if ( base == nullptr )
+			byte* addr = param.GetAddress( fragment );
+			if ( addr == nullptr )
 			{
 				LOG_WARNING( "invalid operation" );
-				return true;	// This is the correct because no depth buffer means that a depth test is always passed).
+				return true;	// This is correct because no depth func means that a depth test is always passed.
 			}
 
-			byte& ref = *base;
-			byte depth = Float_ToByte( fragment.Depth );
+			byte& dst = *addr;
+			byte src = Float_ToByte( fragment.Depth );
 
 #if 0
 			// inline lamda with [=] capture block
 			using DepthTestFunc = std::function< bool() >;
-			DepthTestFunc lessEqual = [=]() { return ref <= depth; };
+			DepthTestFunc lessEqual = [=]() { return value <= ref; };
 #endif
 
-			// Call a functional object of depth test.
-			if ( m_funcDepthTest && m_funcDepthTest( ref, depth ) )
+			// Call a functional object for depth test.
+			if ( !GetContext()->CallDepthFunc( src, dst ) )
 			{
 				return false;
 			}
 
 			// depth write
-			if ( m_depthWritable )
+			// FIXME: perform this in an output merger
+			if ( GetContext()->IsDepthWritable() )
 			{
-				ref = depth;
+				dst = src;
 			}
 
 			return true;
-		}
-
-	private:
-		DepthTestFunc m_funcDepthTest;
-		bool m_depthWritable;
+		}	
 	};
 
 
@@ -925,7 +887,8 @@ namespace kih
 		m_vertexProcessor( std::make_unique<VertexProcessor>( this ) ),
 		m_rasterizer( std::make_unique<Rasterizer>( this ) ),
 		m_pixelProcessor( std::make_unique<PixelProcessor>( this ) ),
-		m_outputMerger( std::make_unique<OutputMerger>( this ) )
+		m_outputMerger( std::make_unique<OutputMerger>( this ) ),
+		m_depthWritable( false )
 	{
 		m_renderTargets.resize( numRenderTargets );
 		/* nullptr initialization is not necessary.
@@ -1092,16 +1055,39 @@ namespace kih
 		return false;
 	}
 
-	void RenderingContext::SetDepthFunc( DepthFunc func )
-	{
-		assert( m_pixelProcessor );
-		m_pixelProcessor->SetDepthFunc( func );
-	}
-
 	void RenderingContext::SetDepthWritable( bool writable )
 	{
-		assert( m_pixelProcessor );
-		m_pixelProcessor->SetDepthWritable( writable );
+		m_depthWritable = writable;
+	}
+
+	void RenderingContext::SetDepthFunc( DepthFunc func )
+	{
+		// depth functions in lamda expression
+		static DepthTestFunc DepthFunctions[] =
+		{
+			nullptr,												// None
+			[]( byte src, byte dst ) { return src != dst; },	// Not
+			[]( byte src, byte dst ) { return src == dst; },	// Equal
+			[]( byte src, byte dst ) { return src < dst; },		// Less
+			[]( byte src, byte dst ) { return src <= dst; },	// LessEqual
+			[]( byte src, byte dst ) { return src > dst; },		// Greater
+			[]( byte src, byte dst ) { return src >= dst; }		// GreaterEqual
+		};
+
+		static_assert( SIZEOF_ARRAY( DepthFunctions ) == static_cast< size_t >( DepthFunc::Size ), "incomplete depthfunc" );
+
+		m_funcDepthTest = DepthFunctions[static_cast< int >( func )];
+	}
+
+	bool RenderingContext::CallDepthFunc( byte src, byte dst )
+	{
+		if ( m_funcDepthTest )
+		{
+			return m_funcDepthTest( src, dst );
+		}
+
+		// This is correct because no depth func means that a depth test is always passed.
+		return true;
 	}
 
 	void RenderingContext::DrawInternal( std::shared_ptr<IMesh> mesh, int numVerticesPerPrimitive )

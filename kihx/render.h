@@ -5,6 +5,7 @@
 
 #include <memory>
 #include <vector>
+#include <functional>
 
 
 namespace kih
@@ -218,7 +219,9 @@ namespace kih
 	*/
 	class RenderingContext final
 	{
-		NONCOPYABLE_CLASS( RenderingContext )
+		NONCOPYABLE_CLASS( RenderingContext );
+		
+		using DepthTestFunc = std::function< bool( byte /*value*/, byte /*ref*/ ) >;
 
 	public:
 		explicit RenderingContext( size_t numRenderTargets );
@@ -249,23 +252,37 @@ namespace kih
 		}
 
 		// depth buffering
-		void SetDepthFunc( DepthFunc func );
+		bool IsDepthWritable() const 
+		{
+			return m_depthWritable;
+		}
+
 		void SetDepthWritable( bool writable );
+
+		void SetDepthFunc( DepthFunc func );
+		bool CallDepthFunc( byte src, byte dst );
 
 	private:
 		void DrawInternal( std::shared_ptr<IMesh> mesh, int numVerticesPerPrimitive );
 
 	private:
+		// pipe
 		std::unique_ptr<InputAssembler> m_inputAssembler;
 		std::unique_ptr<VertexProcessor> m_vertexProcessor;
 		std::unique_ptr<Rasterizer> m_rasterizer;
 		std::unique_ptr<PixelProcessor> m_pixelProcessor;
 		std::unique_ptr<OutputMerger> m_outputMerger;
 		
+		// render target
 		std::vector< std::shared_ptr<Texture> > m_renderTargets;
 		std::shared_ptr<Texture> m_depthStencil;
 
+		// constant buffer
 		ConstantBuffer m_sharedConstantBuffer;
+
+		// depth buffering
+		DepthTestFunc m_funcDepthTest;
+		bool m_depthWritable;
 	};
 
 
