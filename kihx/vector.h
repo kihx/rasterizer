@@ -1,7 +1,7 @@
 #pragma once
 
-
 #include "base.h"
+#include "mathlib.h"
 
 
 namespace kih

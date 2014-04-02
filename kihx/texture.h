@@ -19,7 +19,7 @@ namespace kih
 		D8S24 = 1000	// depth 8 and stencil 24 bits
 	};
 
-	inline int GetBytesPerPixel( ColorFormat format )
+	FORCEINLINE int GetBytesPerPixel( ColorFormat format )
 	{
 		switch ( format )
 		{
@@ -35,7 +35,7 @@ namespace kih
 		}
 	}
 
-	inline ColorFormat GetSuitableColorFormatFromBpp( int bpp )
+	FORCEINLINE ColorFormat GetSuitableColorFormatFromBpp( int bpp )
 	{
 		switch ( bpp )
 		{
@@ -48,7 +48,7 @@ namespace kih
 		}
 	}
 
-	inline ColorFormat GetSuitableDepthStencilFormatFromBpp( int bpp )
+	FORCEINLINE ColorFormat GetSuitableDepthStencilFormatFromBpp( int bpp )
 	{
 		switch ( bpp )
 		{
@@ -61,14 +61,14 @@ namespace kih
 		}
 	}
 
-	inline bool ColorFormat_IsColor( ColorFormat format )
+	FORCEINLINE bool ColorFormat_IsColor( ColorFormat format )
 	{
 		unsigned int e = static_cast<unsigned int>( format );
 		return ( e >= static_cast< unsigned int >( ColorFormat::R8G8B8 ) &&
 			e < static_cast< unsigned int >( ColorFormat::D8S24 ) );
 	}
 
-	inline bool ColorFormat_IsDepthStencil( ColorFormat format )
+	FORCEINLINE bool ColorFormat_IsDepthStencil( ColorFormat format )
 	{
 		return !ColorFormat_IsColor( format );
 	}
@@ -92,127 +92,53 @@ namespace kih
 		};
 
 	protected:
-		Texture() :
-			m_width( -1 ),
-			m_height( -1 ),
-			m_format( ColorFormat::Unknown ),
-			m_flags( 0 ),
-			m_pMemory( nullptr )
-		{
-		}
-
+		Texture();
 	public:
-		virtual ~Texture()
-		{
-		}
+		virtual ~Texture();
 
 	public:
 		// factory
 		static std::shared_ptr<Texture> Create( int width, int height, ColorFormat format, void* pExternalMemory );
 
 	public:
-		int Width() const
+		FORCEINLINE int Width() const
 		{
 			return m_width;
 		}
 
-		int Height() const
+		FORCEINLINE int Height() const
 		{
 			return m_height;
 		}
 
-		ColorFormat Format() const
+		FORCEINLINE ColorFormat Format() const
 		{
 			return m_format;
 		}
 
-		bool HasFlag( unsigned int flags )
+		FORCEINLINE bool HasFlag( unsigned int flags )
 		{
 			return ( m_flags & flags ) != 0;
 		}
 
-		void AddFlags( unsigned int flags )
+		FORCEINLINE void AddFlags( unsigned int flags )
 		{
 			m_flags |= flags;
 		}
 
-		void RemoveFlags( unsigned int flags )
+		FORCEINLINE void RemoveFlags( unsigned int flags )
 		{
 			m_flags &= ~flags;
 		}
 
-		bool Lock( void** ppMemory )
-		{
-			if ( HasFlag( FL_LOCKED ) )
-			{
-				// already locked
-				return false;
-			}
+		bool Lock( void** ppMemory );
+		void Unlock();
 
-			if ( m_pMemory == nullptr )
-			{
-				// not allocated memory
-				return false;
-			}
+		bool WriteTexel( int x, int y, byte r, byte g, byte b );
 
-			AddFlags( FL_LOCKED );
-			*ppMemory = m_pMemory;
-			return true;
-		}
+		void SetExternalMemory( void* pMemory );
 
-		void Unlock()
-		{
-			RemoveFlags( FL_LOCKED );
-		}
-
-		bool WriteTexel( int x, int y, byte r, byte g, byte b )
-		{
-			if ( !HasFlag( FL_LOCKED ) )
-			{
-				return false;
-			}
-
-			assert( ( x >= 0 && x < m_width ) && "out of ranged x-coordinate" );
-			assert( ( y >= 0 && y < m_height ) && "out of ranged y-coordinate" );
-			
-			int stride = GetBytesPerPixel( Format() );
-
-			if ( byte* buffer = static_cast< byte* >( m_pMemory ) )
-			{
-				byte* base = buffer + ( ( ( m_width * y ) + x ) * stride );
-				*( base + 0 ) = r;
-				*( base + 1 ) = g;
-				*( base + 2 ) = b;
-				//*( base + 3 ) = a;
-			}
-
-			return true;
-		}
-
-		bool WriteTexel( int x, int y, const byte* color )
-		{
-			return WriteTexel( x, y, color[0], color[1], color[2] );
-		}
-
-		void SetExternalMemory( void* pMemory )
-		{
-			assert( pMemory && "nullptr external memory" );
-
-			Purge();
-
-			AddFlags( FL_EXTERNAL_MEMORY );
-			m_pMemory = pMemory;
-		}
-
-		void Purge()
-		{
-			// release internal memory only
-			if ( !HasFlag( FL_EXTERNAL_MEMORY ) )
-			{
-				free( m_pMemory );
-			}
-			m_pMemory = nullptr;
-		}
+		void Purge();
 
 	private:
 		int m_width;

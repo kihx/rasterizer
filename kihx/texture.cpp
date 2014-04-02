@@ -26,4 +26,85 @@ namespace kih
 
 		return texture;
 	}
+
+	Texture::Texture() :
+		m_width( -1 ),
+		m_height( -1 ),
+		m_format( ColorFormat::Unknown ),
+		m_flags( 0 ),
+		m_pMemory( nullptr )
+	{
+	}
+
+	Texture::~Texture()
+	{
+	}
+
+	bool Texture::Lock( void** ppMemory )
+	{
+		if ( HasFlag( FL_LOCKED ) )
+		{
+			// already locked
+			return false;
+		}
+
+		if ( m_pMemory == nullptr )
+		{
+			// not allocated memory
+			return false;
+		}
+
+		AddFlags( FL_LOCKED );
+		*ppMemory = m_pMemory;
+		return true;
+	}
+
+	void Texture::Unlock()
+	{
+		RemoveFlags( FL_LOCKED );
+	}
+
+	bool Texture::WriteTexel( int x, int y, byte r, byte g, byte b )
+	{
+		if ( !HasFlag( FL_LOCKED ) )
+		{
+			return false;
+		}
+
+		assert( ( x >= 0 && x < m_width ) && "out of ranged x-coordinate" );
+		assert( ( y >= 0 && y < m_height ) && "out of ranged y-coordinate" );
+
+		int stride = GetBytesPerPixel( Format() );
+
+		if ( byte* buffer = static_cast< byte* >( m_pMemory ) )
+		{
+			byte* base = buffer + ( ( ( m_width * y ) + x ) * stride );
+			*( base + 0 ) = r;
+			*( base + 1 ) = g;
+			*( base + 2 ) = b;
+			//*( base + 3 ) = a;
+		}
+
+		return true;
+	}
+
+	void Texture::SetExternalMemory( void* pMemory )
+	{
+		assert( pMemory && "nullptr external memory" );
+
+		Purge();
+
+		AddFlags( FL_EXTERNAL_MEMORY );
+		m_pMemory = pMemory;
+	}
+
+	void Texture::Purge()
+	{
+		// release internal memory only
+		if ( !HasFlag( FL_EXTERNAL_MEMORY ) )
+		{
+			free( m_pMemory );
+		}
+		m_pMemory = nullptr;
+	}
 };

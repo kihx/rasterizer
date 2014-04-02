@@ -7,6 +7,7 @@
 #include <type_traits>
 
 
+
 // macros
 //
 #define LOG_WARNING( msg )	{ printf( "[Warning] %s, in %s at %d\n", msg, __FUNCTION__, __LINE__ ); }
@@ -23,129 +24,144 @@
 //-------------------------------------------------------------- 
 
 
+#define NONCOPYABLE_STRUCT( StructName )	\
+	StructName::StructName( const StructName& ) = delete;	\
+	StructName& operator=( const StructName& ) = delete;
+
 #define NONCOPYABLE_CLASS( ClassName )	\
 	private:	\
-		ClassName::ClassName( const ClassName& ) = delete;	\
-		ClassName& operator=( const ClassName& ) = delete;
+		NONCOPYABLE_STRUCT( ClassName )
 
 
-// utility functions
-//
-template<typename T>
-inline void Swap( T& lhs, T& rhs, typename std::enable_if< std::is_scalar<T>::value >::type* = nullptr )
+namespace kih
 {
-	// if T is scalar type, we do not use move semantics
-	T tmp = lhs;
-	lhs = rhs;
-	rhs = tmp;
-}
-
-template<typename T>
-inline void Swap( T& lhs, T& rhs, typename std::enable_if< !std::is_scalar<T>::value >::type* = nullptr )
-{
-	T tmp = std::move( lhs );
-	lhs = std::move( rhs );
-	rhs = std::move( tmp );
-}
-
-// http://stackoverflow.com/questions/1500363/compile-time-sizeof-array-without-using-a-macro
-template<class T, size_t N>
-char( &_SizeOfArray( const T( &a )[N] ) )[N];
-// VS 2013 does not support constexpr
-//template<typename... Args>
-//constexpr size_t SizeOfArray( Args&&... args )
-//{
-//	return sizeof( _SizeOfArray( args ) );
-//}
-#define SIZEOF_ARRAY( a )	( sizeof( _SizeOfArray( a ) ) )
-
-
-// utility classes
-//
-template<class T>
-class Singleton
-{
-public:
-	template<typename... Args>
-	static T* GetInstance( Args&&... args )
+	// utility functions
+	//
+	template<typename T>
+	inline void Swap( T& lhs, T& rhs, typename std::enable_if< std::is_scalar<T>::value >::type* = nullptr )
 	{
-		static_assert(
-			std::is_class<T>::value &&
-			!std::is_polymorphic<T>::value &&
-			!std::is_pointer<T>::value,
-			"invalid type of Singleton" );
+		// if T is scalar type, we do not use move semantics
+		T tmp = lhs;
+		lhs = rhs;
+		rhs = tmp;
+	}
 
-		if ( s_instance == nullptr )
+	template<typename T>
+	inline void Swap( T& lhs, T& rhs, typename std::enable_if< !std::is_scalar<T>::value >::type* = nullptr )
+	{
+		T tmp = std::move( lhs );
+		lhs = std::move( rhs );
+		rhs = std::move( tmp );
+	}
+
+	// http://stackoverflow.com/questions/1500363/compile-time-sizeof-array-without-using-a-macro
+	template<class T, size_t N>
+	char( &_SizeOfArray( const T( &a )[N] ) )[N];
+	// VS 2013 does not support constexpr
+	//template<typename... Args>
+	//constexpr size_t SizeOfArray( Args&&... args )
+	//{
+	//	return sizeof( _SizeOfArray( args ) );
+	//}
+	#define SIZEOF_ARRAY( a )	( sizeof( _SizeOfArray( a ) ) )
+
+
+	// utility classes
+	//
+	/* class Singleton
+	*/
+	template<class T>
+	class Singleton
+	{
+	public:
+		template<typename... Args>
+		static T* GetInstance( Args&&... args )
 		{
-			s_instance = new T( std::forward<Args>( args )... );
+			static_assert(
+				std::is_class<T>::value &&
+				!std::is_polymorphic<T>::value &&
+				!std::is_pointer<T>::value,
+				"invalid type of Singleton" );
+
+			if ( s_instance == nullptr )
+			{
+				s_instance = new T( std::forward<Args>( args )... );
+			}
+
+			return s_instance;
 		}
-	
-		return s_instance;
-	}
 
-	static void DestroyInstance()
-	{
-		delete s_instance;
-		s_instance = nullptr;
-	}
-
-private:
-	static T* s_instance;
-};
-
-template <class T> 
-T* Singleton<T>::s_instance = nullptr;
-
-
-
-template<class T>
-class LockGuard
-{
-public:
-	LockGuard( std::shared_ptr<T> obj ) :
-		m_obj( obj )
-	{
-		m_obj->Lock();
-	}
-
-	~LockGuard()
-	{
-		m_obj->Unlock();
-	}
-
-private:
-	std::shared_ptr<T> m_obj;
-};
-
-template<class T>
-class LockGuardPtr
-{
-public:
-	LockGuardPtr( std::shared_ptr<T> obj ) :
-		m_obj( obj ),
-		m_ptr( nullptr )
-	{
-		if ( m_obj )
+		static void DestroyInstance()
 		{
-			m_obj->Lock( &m_ptr );
+			delete s_instance;
+			s_instance = nullptr;
 		}
-	}
 
-	~LockGuardPtr()
+	private:
+		static T* s_instance;
+	};
+
+	template <class T>
+	T* Singleton<T>::s_instance = nullptr;
+
+
+	/* class LockGuard
+	*/
+	template<class T>
+	class LockGuard
 	{
-		if ( m_obj )
+	public:
+		LockGuard( std::shared_ptr<T> obj ) :
+			m_obj( obj )
+		{
+			m_obj->Lock();
+		}
+
+		~LockGuard()
 		{
 			m_obj->Unlock();
 		}
-	}
 
-	void* Ptr()
+	private:
+		std::shared_ptr<T> m_obj;
+	};
+
+
+	/* class LockGuardPtr
+	*/
+	template<class T>
+	class LockGuardPtr
 	{
-		return m_ptr;
-	}
+	public:
+		LockGuardPtr( std::shared_ptr<T> obj ) :
+			m_obj( obj ),
+			m_ptr( nullptr )
+		{
+			if ( m_obj )
+			{
+				m_obj->Lock( &m_ptr );
+			}
+		}
 
-private:
-	std::shared_ptr<T> m_obj;
-	void* m_ptr;
+		~LockGuardPtr()
+		{
+			if ( m_obj )
+			{
+				m_obj->Unlock();
+			}
+		}
+
+		FORCEINLINE void* Ptr()
+		{
+			return m_ptr;
+		}
+
+	private:
+		std::shared_ptr<T> m_obj;
+		void* m_ptr;
+	};
 };
 
+using kih::Singleton;
+using kih::LockGuard;
+using kih::LockGuardPtr;

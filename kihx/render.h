@@ -2,8 +2,8 @@
 
 #include "base.h"
 #include "matrix.h"
+#include "buffer.h"
 
-#include <memory>
 #include <vector>
 #include <functional>
 
@@ -14,7 +14,6 @@ namespace kih
 	class IrregularMesh;
 	class OptimizedMesh;
 
-	class ConstantBuffer;
 	class Texture;
 
 	class VertexProcInputStream;	
@@ -52,167 +51,6 @@ namespace kih
 		/* the number of enum elements */
 		Size
 	};
-
-
-	/* class ConstantBuffer
-	*/
-	class ConstantBuffer final
-	{
-	public:
-		static const int Capacity = 128;
-
-		enum NamedIndex
-		{
-			#define	ENUM_MATRIX(e)	( e + 4 )
-			#define	ENUM_VECTOR(e)	( e + 1 )
-
-			WorldMatrix = 0,
-			ViewMatrix = ENUM_MATRIX( WorldMatrix ),
-			ProjectionMatrix = ENUM_MATRIX( ViewMatrix ),
-			WVPMatrix = ENUM_MATRIX( ProjectionMatrix ),
-			DiffuseColor = ENUM_MATRIX( WVPMatrix ),
-		};
-
-		ConstantBuffer() = default;
-
-		const Vector4& GetVector4( int index )
-		{
-			assert( index >= 0 && index < Capacity );
-			return m_constantBuffer[index];
-		}
-
-		const Matrix4& GetMatrix4( int index )
-		{
-			assert( index >= 0 && index < Capacity );
-			// FIXME: is safe such type casting?
-			return *( reinterpret_cast< Matrix4* >( &m_constantBuffer[index] ) );
-		}
-
-		void SetFloat4( int index, const float* value )
-		{
-			assert( index >= 0 && index < Capacity );
-			m_constantBuffer[index].X = value[0];
-			m_constantBuffer[index].Y = value[1];
-			m_constantBuffer[index].Z = value[2];
-			m_constantBuffer[index].W = value[3];
-		}
-
-		void SetVector4( int index, const Vector4& value )
-		{
-			assert( index >= 0 && index < Capacity );
-			m_constantBuffer[index] = value;
-		}
-
-		void SetMatrix4( int index, const Matrix4& value )
-		{
-			SetFloat4( index, value.A[0] );
-			SetFloat4( index + 1, value.A[1] );
-			SetFloat4( index + 2, value.A[2] );
-			SetFloat4( index + 3, value.A[3] );
-		}
-
-	private:
-		Vector4 m_constantBuffer[Capacity];
-	};
-
-
-	/* class BaseRenderingProcessor
-	*/
-	template<class InputStream, class OutputStream>
-	class BaseRenderingProcessor
-	{
-	public:
-		explicit BaseRenderingProcessor( RenderingContext* pContext ) :
-			m_pRenderingContext( pContext )
-		{
-			assert( m_pRenderingContext );
-
-			m_outputStream = std::make_shared<OutputStream>();
-		}
-
-		virtual ~BaseRenderingProcessor() = default;
-
-		virtual std::shared_ptr<OutputStream> Process( std::shared_ptr<InputStream> inputStream ) = 0;				
-
-		ConstantBuffer& GetSharedConstantBuffer()
-		{
-			assert( m_pRenderingContext );
-			return m_pRenderingContext->GetSharedConstantBuffer();
-		}
-
-	protected:
-		RenderingContext* GetContext()
-		{
-			return m_pRenderingContext;
-		}
-
-	protected:
-		std::shared_ptr<OutputStream> m_outputStream;
-
-	private:
-		RenderingContext* m_pRenderingContext;
-	};
-
-
-	/* class BaseInputOutputStream
-	*/
-	template<class Data>
-	class BaseInputOutputStream
-	{
-		NONCOPYABLE_CLASS( BaseInputOutputStream );
-
-	public:
-		BaseInputOutputStream() = default;
-		virtual ~BaseInputOutputStream() = default;
-
-		template <typename... Args>
-		void Push( Args&&... args )
-		{
-			m_streamSource.emplace_back( args... );
-		}
-
-		const Data* GetStreamSource() const
-		{
-			if ( m_streamSource.empty() )
-			{
-				return nullptr;
-			}
-			else
-			{
-				return &m_streamSource[0];
-			}
-		}
-
-		const Data& GetDataConst( size_t index ) const
-		{
-			assert( ( index >= 0 && index < Size() ) && "out of ranged index" );
-			return m_streamSource[index];
-		}
-
-		Data& GetData( size_t index )
-		{
-			assert( ( index >= 0 && index < Size() ) && "out of ranged index" );
-			return m_streamSource[index];
-		}
-
-		size_t Size() const
-		{
-			return m_streamSource.size();
-		}
-
-		void Reserve( size_t capacity )
-		{
-			m_streamSource.reserve( capacity );
-		}
-
-		void Clear()
-		{
-			m_streamSource.clear();
-		}
-
-	private:
-		std::vector<Data> m_streamSource;
-	};
 	
 
 	/* class RenderingContext
@@ -221,7 +59,7 @@ namespace kih
 	{
 		NONCOPYABLE_CLASS( RenderingContext );
 		
-		using DepthTestFunc = std::function< bool( byte /*value*/, byte /*ref*/ ) >;
+		using DepthTestFunc = std::function< bool( byte /*src*/, byte /*dst*/ ) >;
 
 	public:
 		explicit RenderingContext( size_t numRenderTargets );
@@ -246,17 +84,16 @@ namespace kih
 		bool SetDepthStencil( std::shared_ptr<Texture> texture );
 
 		// constant buffers
-		ConstantBuffer& GetSharedConstantBuffer()
+		FORCEINLINE ConstantBuffer& GetSharedConstantBuffer()
 		{
 			return m_sharedConstantBuffer;
 		}
 
 		// depth buffering
-		bool IsDepthWritable() const 
+		FORCEINLINE bool DepthWritable() const 
 		{
 			return m_depthWritable;
 		}
-
 		void SetDepthWritable( bool writable );
 
 		void SetDepthFunc( DepthFunc func );
@@ -266,7 +103,7 @@ namespace kih
 		void DrawInternal( std::shared_ptr<IMesh> mesh, int numVerticesPerPrimitive );
 
 	private:
-		// pipe
+		// render stages
 		std::unique_ptr<InputAssembler> m_inputAssembler;
 		std::unique_ptr<VertexProcessor> m_vertexProcessor;
 		std::unique_ptr<Rasterizer> m_rasterizer;
@@ -302,27 +139,27 @@ namespace kih
 		{
 		};
 
+		// factory
 		std::shared_ptr<RenderingContext> CreateRenderingContext();
 
-		const Matrix4& GetWorldMatrix() const
+		// WVP matrices
+		FORCEINLINE const Matrix4& GetWorldMatrix() const
 		{
 			return m_worldMatrix;
 		}
-		
-		void SetWorldMatrix( const Matrix4& m );
 
-		const Matrix4& GetViewMatrix() const
+		FORCEINLINE const Matrix4& GetViewMatrix() const
 		{
 			return m_viewMatrix;
 		}
 
-		void SetViewMatrix( const Matrix4& m );
-
-		const Matrix4& GetProjectionMatrix() const
+		FORCEINLINE const Matrix4& GetProjectionMatrix() const
 		{
 			return m_projMatrix;
 		}
 
+		void SetWorldMatrix( const Matrix4& m );
+		void SetViewMatrix( const Matrix4& m );
 		void SetProjectionMatrix( const Matrix4& m );
 
 	private:

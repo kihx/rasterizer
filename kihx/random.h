@@ -4,7 +4,7 @@
 
 namespace kih
 {
-	class Random
+	class Random final
 	{
 		NONCOPYABLE_CLASS( Random );
 

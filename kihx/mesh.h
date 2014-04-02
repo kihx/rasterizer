@@ -1,47 +1,12 @@
 #pragma once
 
 #include "base.h"
-#include <vector>
-#include <memory>
 
-#define SUPPORT_MSH		// .msh file format
+#include <vector>
 
 
 namespace kih
 {
-	/* enum class PrimitiveType
-	*/
-	enum class PrimitiveType : unsigned int
-	{
-		Undefined = 0,
-		Points = 1,
-		Lines = 2,
-		Triangles = 3,
-		Quads = 4,
-		Pentagons = 5,
-		Octas = 6
-	};
-
-	inline PrimitiveType GetPrimitiveTypeFromNumberOfVertices( size_t num )
-	{
-		return static_cast< PrimitiveType >( num );
-	}
-
-	inline size_t GetNumberOfVerticesPerPrimitive( PrimitiveType type )
-	{	
-		return static_cast< size_t >( type );
-	}
-
-
-	/* enum class CoordinateType
-	*/
-	enum class CoordinatesType
-	{
-		Projective = 0,
-		ReciprocalHomogeneous,
-	};
-	
-
 	/* Vertex
 	*/
 	template<typename VertexType>
@@ -73,39 +38,39 @@ namespace kih
 		virtual ~VertexBuffer() = default;
 
 		template <typename... Args>
-		void Push( Args&&... args )
-		{
+		FORCEINLINE void Push( Args&&... args )
+		{ 
 			m_vertices.emplace_back( args... );
 		}
 
-		const Vertex<VertexType>* GetStreamSource() const
+		FORCEINLINE const Vertex<VertexType>* GetStreamSource() const
 		{
 			return &m_vertices[0];
 		}
 
-		const Vertex<VertexType>& GetVertexConst( size_t index ) const
+		FORCEINLINE const Vertex<VertexType>& GetVertexConst( size_t index ) const
 		{
 			assert( ( index >= 0 && index < Size() ) && "out of ranged index" );
 			return m_vertices[index];
 		}
 
-		Vertex<VertexType>& GetVertex( size_t index )
+		FORCEINLINE Vertex<VertexType>& GetVertex( size_t index )
 		{
 			assert( ( index >= 0 && index < Size() ) && "out of ranged index" );
 			return m_vertices[index];
 		}
 
-		size_t Size() const
+		FORCEINLINE size_t Size() const
 		{
 			return m_vertices.size();
 		}
 
-		void Resize( int size )
+		FORCEINLINE void Resize( int size )
 		{
 			m_vertices.resize( size );
 		}
 		
-		void Reserve( int capacity )
+		FORCEINLINE void Reserve( int capacity )
 		{
 			m_vertices.reserve( capacity ); 
 		}
@@ -125,39 +90,39 @@ namespace kih
 		virtual ~IndexBuffer() = default;
 
 		template <typename... Args>
-		void Push( Args&&... args )
+		FORCEINLINE void Push( Args&&... args )
 		{
 			m_vertices.emplace_back( args... );
 		}
 
-		const IndexType* GetStreamSource() const
+		FORCEINLINE const IndexType* GetStreamSource() const
 		{
 			return &m_indicies; 
 		}
 
-		const IndexType& GetIndexConst( size_t index ) const
+		FORCEINLINE const IndexType& GetIndexConst( size_t index ) const
 		{
 			assert( ( index >= 0 && index < Size() ) && "out of ranged index" );
 			return m_indicies[index];
 		}
 
-		IndexType& GetIndex( size_t index )
+		FORCEINLINE IndexType& GetIndex( size_t index )
 		{
 			assert( ( index >= 0 && index < Size() ) && "out of ranged index" );
 			return m_indicies[index];
 		}
 
-		size_t Size() const
+		FORCEINLINE size_t Size() const
 		{
 			return m_indicies.size();
 		}
 
-		void Resize( int size )
+		FORCEINLINE void Resize( int size )
 		{
 			m_indicies.resize( size );
 		}
 		
-		void Reserve( int capacity ) 
+		FORCEINLINE void Reserve( int capacity ) 
 		{ 
 			m_indicies.reserve( capacity ); 
 		}
@@ -204,24 +169,24 @@ namespace kih
 
 		virtual bool LoadFile( const char* filename );
 
-		size_t NumFaces() const
+		FORCEINLINE size_t NumFaces() const
 		{
 			return m_faces.size();
 		}
 
-		const unsigned char* GetFaceColor( size_t faceIndex ) const
+		FORCEINLINE const unsigned char* GetFaceColor( size_t faceIndex ) const
 		{
 			assert( ( faceIndex >= 0 && faceIndex < m_faces.size() ) && "out of ranged index" );
 			return &m_faces[faceIndex].r;
 		}
 
-		size_t NumVerticesInFace( size_t faceIndex ) const
+		FORCEINLINE size_t NumVerticesInFace( size_t faceIndex ) const
 		{
 			assert( ( faceIndex >= 0 && faceIndex < m_faces.size() ) && "out of ranged index" );
 			return m_faces[faceIndex].m_indices.size();
 		}
 
-		const float* GetVertexInFaceAt( size_t faceIndex, size_t vertexIndex ) const
+		FORCEINLINE const float* GetVertexInFaceAt( size_t faceIndex, size_t vertexIndex ) const
 		{
 			assert( ( faceIndex >= 0 && faceIndex < m_faces.size() ) && "out of ranged faceIndex" );
 			assert( ( vertexIndex >= 0 && vertexIndex < m_faces[faceIndex].m_indices.size() ) && "out of ranged vertexIndex" );			
@@ -254,27 +219,27 @@ namespace kih
 
 		virtual bool LoadFile( const char* filename );
 
-		size_t ComputeNumFaces()
+		FORCEINLINE size_t ComputeNumFaces()
 		{
 			return m_indexBuffer.Size() / 3;
 		}
 
-		const VertexBuffer<float>& GetVertexBufferConst() const
+		FORCEINLINE const VertexBuffer<float>& GetVertexBufferConst() const
 		{
 			return m_vertexBuffer;
 		}
 
-		VertexBuffer<float>& GetVertexBuffer()
+		FORCEINLINE VertexBuffer<float>& GetVertexBuffer()
 		{
 			return m_vertexBuffer;
 		}
 
-		const IndexBuffer<unsigned short>& GetIndexBufferConst() const 
+		FORCEINLINE const IndexBuffer<unsigned short>& GetIndexBufferConst() const 
 		{
 			return m_indexBuffer;
 		}
 
-		IndexBuffer<unsigned short>& GetIndexBuffer()
+		FORCEINLINE IndexBuffer<unsigned short>& GetIndexBuffer()
 		{
 			return m_indexBuffer;
 		}
