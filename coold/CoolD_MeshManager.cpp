@@ -34,7 +34,7 @@ namespace CoolD
 
 		for( auto& mesh : m_mapMesh )
 		{			
-			CustomMesh* transMesh = CreateTransformedMesh(mesh.second);
+			CustomMesh* transMesh = mesh.second->GetTransformMesh();
 			if( transMesh )
 			{
 				m_ListMesh.push_back( transMesh );
@@ -70,35 +70,7 @@ namespace CoolD
 		return pMesh;
 	}
 
-	CustomMesh* MeshManager::CreateTransformedMesh( CustomMesh* pOriginalMesh)
-	{		
-		CustomMesh* pMesh = pOriginalMesh->Clone();
-
-		if( pMesh )
-		{
-			vector<BaseVertex> listVertex;
-			if( pMesh->GetMeshType() == MeshType::PLY )
-			{				
-				for( Duint i = 1; i <= pOriginalMesh->GetVertexSize(); ++i )
-				{
-					BaseVertex transformVertex(pOriginalMesh->GetVertex(i));
-
-					FixLater(TransformHandler 이건 멀티쓰레드로 가려면 singleton이면 안될듯..)
-						listVertex.emplace_back(GETSINGLE(TransformHandler).TransformVertex(transformVertex));
-				}
-
-				pMesh->SetVectorVertex(listVertex);
-				
-			}
-			else if( pMesh->GetMeshType() == MeshType::MSH )
-			{
-				//변환 없음
-			}
-			return pMesh;
-		}
-		
-		return nullptr;				
-	}
+	
 
 	Dvoid MeshManager::Clear()
 	{

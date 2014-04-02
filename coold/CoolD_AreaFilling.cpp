@@ -205,8 +205,6 @@ namespace CoolD
 		Dint odd_even = 0;
 		for( auto& dotNode : renderLine )
 		{
-			dotNode.x_min += dotNode.reverseSlope;
-
 			if( odd_even % 2 == 0 ) //짝수
 			{
 				beginX = (int)ceilf(dotNode.x_min); //무조건 올림				
@@ -220,6 +218,8 @@ namespace CoolD
 					DrawDot(i, currentHeight, dotColor);
 				}
 			}
+
+			dotNode.x_min += dotNode.reverseSlope;
 			++odd_even;
 		}
 	}	

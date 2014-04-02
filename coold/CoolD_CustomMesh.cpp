@@ -135,9 +135,9 @@ namespace CoolD
 		return new CustomMeshMSH(*this);
 	}
 
-	MeshType CustomMeshMSH::GetMeshType()
+	CustomMesh* CustomMeshMSH::GetTransformMesh()
 	{
-		return MeshType::MSH;
+		return Clone();
 	}
 
 	Dbool CustomMeshPLY::Load(const Dchar* filename)
@@ -213,9 +213,21 @@ namespace CoolD
 		return new CustomMeshPLY(*this);
 	}
 
-	MeshType CustomMeshPLY::GetMeshType()
+	CustomMesh* CustomMeshPLY::GetTransformMesh()
 	{
-		return MeshType::PLY;
+		CustomMesh* pMesh = Clone();
+
+		vector<BaseVertex> listVertex;
+		for( Duint i = 1; i <= GetVertexSize(); ++i )
+		{
+			BaseVertex transformVertex(GetVertex(i));
+
+			FixLater(TransformHandler 이건 멀티쓰레드로 가려면 singleton이면 안될듯..)
+				listVertex.emplace_back(GETSINGLE(TransformHandler).TransformVertex(transformVertex));
+		}
+
+		pMesh->SetVectorVertex(listVertex);
+		return pMesh;
 	}
 
 }

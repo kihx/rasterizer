@@ -23,8 +23,7 @@ namespace CoolD
 		Dvoid Clear();
 
 	private:
-		CustomMesh* CreateMeshFromFile(const Dchar* filename);
-		CustomMesh* CreateTransformedMesh(CustomMesh* pMesh);
+		CustomMesh* CreateMeshFromFile(const Dchar* filename);		
 		
 	private:
 		map<string, CustomMesh*>	m_mapMesh;

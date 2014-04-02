@@ -24,8 +24,8 @@ namespace CoolD
 
 	public:
 		virtual CustomMesh* Clone() = 0;
-		virtual Dbool Load(const Dchar* filename) = 0;	
-		virtual MeshType GetMeshType() = 0;
+		virtual Dbool Load(const Dchar* filename) = 0;			
+		virtual CustomMesh* GetTransformMesh() = 0;
 
 	protected:
 		vector<BaseVertex> m_vecVertex;
@@ -35,16 +35,16 @@ namespace CoolD
 	class CustomMeshMSH : public CustomMesh
 	{
 	public:
-		virtual CustomMesh* Clone();
-		virtual MeshType GetMeshType();
+		virtual CustomMesh* Clone();		
 		virtual Dbool Load(const Dchar* filename);
+		virtual CustomMesh* GetTransformMesh();
 	};
 
 	class CustomMeshPLY : public CustomMesh
 	{
 	public:
-		virtual CustomMesh* Clone();
-		virtual MeshType GetMeshType();
+		virtual CustomMesh* Clone();		
 		virtual Dbool Load(const Dchar* filename);
+		virtual CustomMesh* GetTransformMesh();
 	};
 };
