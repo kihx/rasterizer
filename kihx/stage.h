@@ -28,6 +28,36 @@ namespace kih
 	class RenderingContext;
 
 
+	/* class DepthBuffering
+	*/
+	class DepthBuffering final
+	{
+		NONCOPYABLE_CLASS( DepthBuffering );
+
+	public:
+		explicit DepthBuffering( RenderingContext* context );
+		~DepthBuffering();
+
+		FORCEINLINE bool IsValid() const
+		{
+			return ( m_ptr != nullptr );
+		}
+
+		FORCEINLINE byte* GetAddress( unsigned short x, unsigned short y )
+		{
+			return ( m_ptr + ( ( ( m_width * y ) + x ) * m_stride ) );
+		}
+
+		bool Execute( unsigned short x, unsigned short y, float depth );
+
+	private:
+		RenderingContext* m_context;
+		std::shared_ptr<Texture> m_ds;
+		int m_width;
+		int m_stride;
+		byte* m_ptr;
+	};
+
 
 	/* class BaseGraphicsStage
 	*/
@@ -190,7 +220,7 @@ namespace kih
 
 		// scanline conversion
 		void DoScanlineConversion( std::shared_ptr<RasterizerInputStream> inputStream, std::shared_ptr<RasterizerOutputStream> outputStream, unsigned short width, unsigned short height );
-		void GatherPixelsBeingDrawnFromScanlines( std::shared_ptr<RasterizerOutputStream> outputStream, unsigned short width, unsigned short height );
+		void GatherPixelsBeingDrawnFromScanlines( std::shared_ptr<RasterizerOutputStream> outputStream, unsigned short width, unsigned short height, DepthBuffering& depthBufferingParam );
 
 		// transform
 		void TransformViewport( std::shared_ptr<RasterizerInputStream> inputStream, unsigned short width, unsigned short height );
@@ -205,34 +235,7 @@ namespace kih
 	class PixelProcessor : public BaseGraphicsStage<PixelProcInputStream, PixelProcOutputStream>
 	{
 		NONCOPYABLE_CLASS( PixelProcessor );
-
-		/* class PixelProcessor::DepthTestParamPack: A parameter pack for depth test to reduce iterative work.
-		*/
-		class DepthBufferingParamPack
-		{
-			NONCOPYABLE_CLASS( DepthBufferingParamPack );
-
-		public:
-			explicit DepthBufferingParamPack( std::shared_ptr<Texture> ds );
-			~DepthBufferingParamPack();
-
-			FORCEINLINE bool IsValid() const
-			{
-				return ( m_ptr != nullptr );
-			}
-
-			FORCEINLINE byte* GetAddress( const PixelProcData& fragment )
-			{
-				return ( m_ptr + ( ( ( m_width * fragment.PY ) + fragment.PX ) * m_stride ) );
-			}
-
-		private:
-			std::shared_ptr<Texture> m_ds;
-			int m_width;
-			int m_stride;
-			byte* m_ptr;			
-		};
-
+		
 	public:
 		explicit PixelProcessor( RenderingContext* pRenderingContext ) :
 			BaseGraphicsStage( pRenderingContext )
@@ -244,9 +247,6 @@ namespace kih
 		}
 
 		virtual std::shared_ptr<PixelProcOutputStream> Process( std::shared_ptr<PixelProcInputStream> inputStream );
-
-	private:
-		bool DoDepthBuffering( DepthBufferingParamPack& param, const PixelProcData& fragment );
 	};
 
 

@@ -10,8 +10,95 @@
 #include <list>
 
 
+ #define EARLY_Z_CULLING
+
+
 namespace kih
-{
+{	
+	/* class DepthBuffering
+	*/
+	DepthBuffering::DepthBuffering( RenderingContext* context ) :
+		m_context( context ),
+		m_ds( nullptr ),
+		m_ptr( nullptr )
+	{
+		if ( m_context == nullptr )
+		{
+			// This is NOT an error. We accept this case.
+			return;
+		}
+
+		m_ds = context->GetDepthStencil();
+		if ( m_ds == nullptr )
+		{
+			// This is NOT an error. We accept this case.
+			return;
+		}
+
+		// TODO: implementation for a floating point depth buffer
+		// Currently, we assume that the size of a depth buffer is one byte.
+		assert( ( m_ds->Format() == ColorFormat::D8S24 ) && "floating point depth buffer is not implemented yet" );
+
+		// Get raw memory from the depth stencil.
+		if ( !m_ds->Lock( reinterpret_cast< void** >( &m_ptr ) ) )
+		{
+			return;
+		}
+
+		m_width = m_ds->Width();
+		m_stride = GetBytesPerPixel( m_ds->Format() );
+	}
+
+	DepthBuffering::~DepthBuffering()
+	{
+		if ( m_ds )
+		{
+			m_ds->Unlock();
+		}
+	}
+
+	bool DepthBuffering::Execute( unsigned short x, unsigned short y, float depth )
+	{
+		if ( !IsValid() )
+		{
+			return true;	// This is correct because no depth func means that a depth test is always passed.
+		}
+
+		assert( x >= 0 && x < m_width );
+		assert( y >= 0 && y < m_ds->Height() );
+
+		byte* addr = GetAddress( x, y );
+		if ( addr == nullptr )
+		{
+			throw std::range_error( "out of ranged x or y coordinates to access the depth-stencil buffer" );
+		}
+
+		byte& dst = *addr;
+		byte src = Float_ToByte( depth );
+
+#if 0
+		// inline lamda with [=] capture block
+		using DepthTestFunc = std::function< bool() >;
+		DepthTestFunc lessEqual = [=]() { return value <= ref; };
+#endif
+
+		// Call a functional object for depth test.
+		if ( !m_context->CallDepthFunc( src, dst ) )
+		{
+			return false;
+		}
+
+		// depth write
+		// FIXME: perform this in an output merger
+		if ( m_context->DepthWritable() )
+		{
+			dst = src;
+		}
+
+		return true;
+	}
+
+
 	/* class InputAssembler
 	*/
 	std::shared_ptr<InputAssemblerOutputStream> InputAssembler::Process( std::shared_ptr<IMesh> inputStream )
@@ -170,6 +257,12 @@ namespace kih
 			LOG_WARNING( "incomplete primitive" );
 			return;
 		}
+				
+#ifdef EARLY_Z_CULLING
+		DepthBuffering depthBuffering( GetContext() );
+#else
+		DepthBuffering depthBuffering( nullptr );
+#endif
 
 		// FIXME: is this ok??
 		m_outputStream->Reserve( width * height );
@@ -235,11 +328,11 @@ namespace kih
 				++v1Index;
 			}
 
-			GatherPixelsBeingDrawnFromScanlines( outputStream, width, height );
+			GatherPixelsBeingDrawnFromScanlines( outputStream, width, height, depthBuffering );
 		}
 	}
 
-	void Rasterizer::GatherPixelsBeingDrawnFromScanlines( std::shared_ptr<RasterizerOutputStream> outputStream, unsigned short width, unsigned short height )
+	void Rasterizer::GatherPixelsBeingDrawnFromScanlines( std::shared_ptr<RasterizerOutputStream> outputStream, unsigned short width, unsigned short height, DepthBuffering& depthBuffering )
 	{
 		assert( outputStream );
 		assert( GetContext() );
@@ -339,6 +432,18 @@ namespace kih
 							// Lerp a depth value at the point.
 							float interpolatedDepth = Lerp( depthLeft, depthRight, ( x - xLeft ) * depthRatioFactor );
 #endif
+
+#ifdef EARLY_Z_CULLING
+							// depth buffering
+							if ( depthBuffering.IsValid() )
+							{
+								if ( !depthBuffering.Execute( x, y, interpolatedDepth ) )
+								{
+									continue;
+								}
+							}
+#endif
+
 							outputStream->Push( x, y, interpolatedDepth, color );
 
 							// Update the next depth value incrementally.
@@ -382,7 +487,7 @@ namespace kih
 			data.Position.X *= factorX;
 			data.Position.X += factorX;	// + x
 
-			data.Position.Y *= factorY;
+			data.Position.Y *= -factorY;
 			data.Position.Y += factorY;	// + y
 
 			// [-1, 1] to [0, 1]
@@ -394,46 +499,9 @@ namespace kih
 			//{
 			//	printf( "\n" );
 			//}
-		}
+		}	
 	}
-
-
-	/* class PixelProcessor::DepthBufferingParamPack
-	*/
-	PixelProcessor::DepthBufferingParamPack::DepthBufferingParamPack( std::shared_ptr<Texture> ds ) :
-		m_ds( ds ),
-		m_ptr( nullptr )
-	{
-		if ( ds == nullptr )
-		{
-			// This is NOT an error. We accept this case.
-			return;
-		}
-
-		m_ds = ds;
-
-		// TODO: implementation for a floating point depth buffer
-		// Currently, we assume that the size of a depth buffer is one byte.
-		assert( ( ds->Format() == ColorFormat::D8S24 ) && "floating point depth buffer is not implemented yet" );
-
-		// Get raw memory from the depth stencil.
-		if ( !m_ds->Lock( reinterpret_cast< void** >( &m_ptr ) ) )
-		{
-			return;
-		}
-
-		m_width = m_ds->Width();
-		m_stride = GetBytesPerPixel( m_ds->Format() );
-	}
-
-	PixelProcessor::DepthBufferingParamPack::~DepthBufferingParamPack()
-	{
-		if ( m_ds )
-		{
-			m_ds->Unlock();
-		}
-	}
-
+		
 
 	/* class PixelProcessor
 	*/
@@ -468,11 +536,13 @@ namespace kih
 
 		int widthRT = rt->Width();
 		int strideRT = GetBytesPerPixel( rt->Format() );
-
-
-		// Make a parameter pack for depth writing.
-		std::shared_ptr<Texture> ds = GetContext()->GetDepthStencil();
-		DepthBufferingParamPack depthBufferingParam( ds );
+				
+#ifdef EARLY_Z_CULLING
+		// do nothing
+#else
+		// FIXME: should move to the output merger
+		DepthBuffering depthBuffering( GetContext() );
+#endif
 
 		// Load pixel shader constants.
 		//const Vector4& diffuseColor = GetSharedConstantBuffer().GetVector4( ConstantBuffer::DiffuseColor );
@@ -484,14 +554,18 @@ namespace kih
 		{
 			const auto& fragment = inputStream->GetData( i );
 
+#ifdef EARLY_Z_CULLING
+			// do nothing
+#else
 			// depth buffering
-			if ( depthBufferingParam.IsValid() )
+			if ( depthBuffering.IsValid() )
 			{
-				if ( !DoDepthBuffering( depthBufferingParam, fragment ) )
+				if ( !depthBuffering.Execute( fragment.PX, fragment.PY, fragment.Depth ) )
 				{
 					continue;
 				}
 			}
+#endif
 
 			Color32 color = fragment.Color;
 
@@ -513,43 +587,6 @@ namespace kih
 		}
 
 		return m_outputStream;
-	}
-
-	bool PixelProcessor::DoDepthBuffering( DepthBufferingParamPack& param, const PixelProcData& fragment )
-	{
-		assert( param.IsValid() );
-		assert( GetContext() );
-
-		byte* addr = param.GetAddress( fragment );
-		if ( addr == nullptr )
-		{
-			LOG_WARNING( "invalid operation" );
-			return true;	// This is correct because no depth func means that a depth test is always passed.
-		}
-
-		byte& dst = *addr;
-		byte src = Float_ToByte( fragment.Depth );
-
-#if 0
-		// inline lamda with [=] capture block
-		using DepthTestFunc = std::function< bool() >;
-		DepthTestFunc lessEqual = [=]() { return value <= ref; };
-#endif
-
-		// Call a functional object for depth test.
-		if ( !GetContext()->CallDepthFunc( src, dst ) )
-		{
-			return false;
-		}
-
-		// depth write
-		// FIXME: perform this in an output merger
-		if ( GetContext()->DepthWritable() )
-		{
-			dst = src;
-		}
-
-		return true;
 	}
 
 
