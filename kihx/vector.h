@@ -174,13 +174,13 @@ namespace kih
 
 		float operator[]( int index ) const
 		{
-			assert( index >= 0 && index < 3 );
+			Assert( index >= 0 && index < 3 );
 			return Value[index];
 		}
 
 		float& operator[]( int index )
 		{
-			assert( index >= 0 && index < 3 );
+			Assert( index >= 0 && index < 3 );
 			return Value[index];
 		}
 	};
@@ -287,13 +287,13 @@ namespace kih
 
 		float operator[]( int index ) const
 		{
-			assert( index >= 0 && index < 4 );
+			Assert( index >= 0 && index < 4 );
 			return Value[index];
 		}
 
 		float& operator[]( int index )
 		{
-			assert( index >= 0 && index < 4 );
+			Assert( index >= 0 && index < 4 );
 			return Value[index];
 		}
 	};

@@ -71,7 +71,7 @@ namespace kih
 		// render targets
 		std::shared_ptr<Texture> GetRenderTaget( size_t index )
 		{
-			assert( ( index >= 0 && index < m_renderTargets.size() ) && "out of ranged index" );
+			Assert( ( index >= 0 && index < m_renderTargets.size() ) && "out of ranged index" );
 			return m_renderTargets[index];
 		}
 

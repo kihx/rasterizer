@@ -71,8 +71,8 @@ namespace kih
 			return false;
 		}
 
-		assert( ( x >= 0 && x < m_width ) && "out of ranged x-coordinate" );
-		assert( ( y >= 0 && y < m_height ) && "out of ranged y-coordinate" );
+		Assert( ( x >= 0 && x < m_width ) && "out of ranged x-coordinate" );
+		Assert( ( y >= 0 && y < m_height ) && "out of ranged y-coordinate" );
 
 		int stride = GetBytesPerPixel( Format() );
 
@@ -90,7 +90,7 @@ namespace kih
 
 	void Texture::SetExternalMemory( void* pMemory )
 	{
-		assert( pMemory && "nullptr external memory" );
+		Assert( pMemory && "nullptr external memory" );
 
 		Purge();
 

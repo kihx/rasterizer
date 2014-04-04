@@ -120,7 +120,7 @@ namespace kih
 
 		const float* operator[]( int row )
 		{
-			assert( row >= 0 && row < 4 );
+			Assert( row >= 0 && row < 4 );
 			return A[row];
 		}
 	};

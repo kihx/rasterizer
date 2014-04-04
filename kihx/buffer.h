@@ -30,20 +30,20 @@ namespace kih
 
 		FORCEINLINE const Vector4& GetVector4( int index ) const
 		{
-			assert( index >= 0 && index < Capacity );
+			Assert( index >= 0 && index < Capacity );
 			return m_constantBuffer[index];
 		}
 
 		FORCEINLINE const Matrix4& GetMatrix4( int index ) const
 		{
-			assert( index >= 0 && index < Capacity );
+			Assert( index >= 0 && index < Capacity );
 			// FIXME: is safe such type casting?
 			return *( reinterpret_cast< const Matrix4* >( &m_constantBuffer[index] ) );
 		}
 
 		FORCEINLINE void SetFloat4( int index, const float* value )
 		{
-			assert( index >= 0 && index < Capacity );
+			Assert( index >= 0 && index < Capacity );
 			m_constantBuffer[index].X = value[0];
 			m_constantBuffer[index].Y = value[1];
 			m_constantBuffer[index].Z = value[2];
@@ -52,7 +52,7 @@ namespace kih
 
 		FORCEINLINE void SetVector4( int index, const Vector4& value )
 		{
-			assert( index >= 0 && index < Capacity );
+			Assert( index >= 0 && index < Capacity );
 			m_constantBuffer[index] = value;
 		}
 

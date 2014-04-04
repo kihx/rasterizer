@@ -30,7 +30,7 @@ namespace kih
 			return 4;
 
 		default:
-			assert( 0 && "invalid operation" );
+			Assert( 0 && "invalid operation" );
 			return 0;
 		}
 	}
@@ -43,7 +43,7 @@ namespace kih
 			return ColorFormat::R8G8B8;
 
 		default:
-			assert( 0 && "invalid operation" );
+			Assert( 0 && "invalid operation" );
 			return ColorFormat::Unknown;
 		}
 	}
@@ -56,7 +56,7 @@ namespace kih
 			return ColorFormat::D8S24;
 
 		default:
-			assert( 0 && "invalid operation" );
+			Assert( 0 && "invalid operation" );
 			return ColorFormat::Unknown;
 		}
 	}

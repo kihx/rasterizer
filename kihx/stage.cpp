@@ -5,6 +5,7 @@
 #include "vector.h"
 #include "matrix.h"
 #include "render.h"
+#include "threading.h"
 #include "random.h"
 
 #include <list>
@@ -37,7 +38,7 @@ namespace kih
 
 		// TODO: implementation for a floating point depth buffer
 		// Currently, we assume that the size of a depth buffer is one byte.
-		assert( ( m_ds->Format() == ColorFormat::D8S24 ) && "floating point depth buffer is not implemented yet" );
+		Assert( ( m_ds->Format() == ColorFormat::D8S24 ) && "floating point depth buffer is not implemented yet" );
 
 		// Get raw memory from the depth stencil.
 		if ( !m_ds->Lock( reinterpret_cast< void** >( &m_ptr ) ) )
@@ -64,8 +65,10 @@ namespace kih
 			return true;	// This is correct because no depth func means that a depth test is always passed.
 		}
 
-		assert( x >= 0 && x < m_width );
-		assert( y >= 0 && y < m_ds->Height() );
+		VerifyReentry( 1 );
+		
+		Assert( x >= 0 && x < m_width );
+		Assert( y >= 0 && y < m_ds->Height() );
 
 		byte* addr = GetAddress( x, y );
 		if ( addr == nullptr )
@@ -103,7 +106,7 @@ namespace kih
 	*/
 	std::shared_ptr<InputAssemblerOutputStream> InputAssembler::Process( std::shared_ptr<IMesh> inputStream )
 	{
-		assert( inputStream );
+		Assert( inputStream );
 
 		m_outputStream->Clear();
 
@@ -162,7 +165,7 @@ namespace kih
 	*/
 	std::shared_ptr<VertexProcOutputStream> VertexProcessor::Process( std::shared_ptr<VertexProcInputStream> inputStream )
 	{
-		assert( inputStream );
+		Assert( inputStream );
 
 		m_outputStream->Clear();
 
@@ -216,7 +219,7 @@ namespace kih
 	*/
 	std::shared_ptr<RasterizerOutputStream> Rasterizer::Process( std::shared_ptr<RasterizerInputStream> inputStream )
 	{
-		assert( inputStream );
+		Assert( inputStream );
 
 		m_outputStream->Clear();
 
@@ -228,7 +231,7 @@ namespace kih
 
 		unsigned short width = static_cast< unsigned short >( rt->Width() );
 		unsigned short height = static_cast< unsigned short >( rt->Height() );
-		assert( ( width > 0 && height > 0 ) && "invalid operation" );
+		Assert( ( width > 0 && height > 0 ) && "invalid operation" );
 
 		// NDC -> Window space
 		TransformViewport( inputStream, width, height );
@@ -241,7 +244,7 @@ namespace kih
 
 	void Rasterizer::DoScanlineConversion( std::shared_ptr<RasterizerInputStream> inputStream, std::shared_ptr<RasterizerOutputStream> outputStream, unsigned short width, unsigned short height )
 	{
-		assert( inputStream );
+		Assert( inputStream );
 		
 		PrimitiveType primitiveType = inputStream->GetPrimitiveType();
 		size_t numVerticesPerPrimitive = GetNumberOfVerticesPerPrimitive( primitiveType );
@@ -334,12 +337,11 @@ namespace kih
 
 	void Rasterizer::GatherPixelsBeingDrawnFromScanlines( std::shared_ptr<RasterizerOutputStream> outputStream, unsigned short width, unsigned short height, DepthBuffering& depthBuffering )
 	{
-		assert( outputStream );
-		assert( GetContext() );
-		assert( height == m_edgeTable.size() && "target height and scanline are mismatched" );
+		Assert( outputStream );
+		Assert( GetContext() );
+		Assert( height == m_edgeTable.size() && "target height and scanline are mismatched" );
 
 		// FIXME: test code
-		// random color for debugging
 		byte seedR = static_cast< byte >( Random::Next( 0, 255 ) );
 		byte seedG = static_cast< byte >( Random::Next( 0, 255 ) );
 		byte seedB = static_cast< byte >( Random::Next( 0, 255 ) );
@@ -507,7 +509,9 @@ namespace kih
 	*/
 	std::shared_ptr<PixelProcOutputStream> PixelProcessor::Process( std::shared_ptr<PixelProcInputStream> inputStream )
 	{
-		assert( inputStream );
+		Assert( inputStream );
+
+		VerifyReentry( 1 );
 
 		m_outputStream->Clear();
 
@@ -517,7 +521,7 @@ namespace kih
 			return m_outputStream;
 		}
 
-		//assert( ( GetContext()->GetRenderTaget( 1 ) == nullptr ) && "MRT is not implemented yet" );
+		//Assert( ( GetContext()->GetRenderTaget( 1 ) == nullptr ) && "MRT is not implemented yet" );
 
 		// UNDONE: Currently, we assume RTs is only one.
 		std::shared_ptr<Texture> rt = GetContext()->GetRenderTaget( 0 );

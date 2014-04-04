@@ -48,7 +48,7 @@ namespace kih
 				continue;
 			}
 
-			assert( ptr );
+			Assert( ptr );
 
 			int width = rt->Width();
 			int height = rt->Height();
@@ -83,7 +83,7 @@ namespace kih
 			return;
 		}
 
-		assert( ptr );
+		Assert( ptr );
 		
 		int width = ds->Width();
 		int height = ds->Height();
@@ -107,12 +107,12 @@ namespace kih
 		}
 
 		RenderingDevice* pDevice = RenderingDevice::GetInstance();
-		assert( pDevice );
-		assert( m_inputAssembler );
-		assert( m_vertexProcessor );
-		assert( m_rasterizer );
-		assert( m_pixelProcessor );
-		assert( m_outputMerger );
+		Assert( pDevice );
+		Assert( m_inputAssembler );
+		Assert( m_vertexProcessor );
+		Assert( m_rasterizer );
+		Assert( m_pixelProcessor );
+		Assert( m_outputMerger );
 
 		// Set a constant buffer for WVP transform.
 		Matrix4 wv = pDevice->GetWorldMatrix() * pDevice->GetViewMatrix();
@@ -159,7 +159,7 @@ namespace kih
 		{
 			if ( ColorFormat_IsDepthStencil( texture->Format() ) )
 			{
-				assert( 0 && "invalid parameter" );
+				Assert( 0 && "invalid parameter" );
 				return false;
 			}
 
@@ -176,7 +176,7 @@ namespace kih
 		{
 			if ( ColorFormat_IsColor( texture->Format() ) )
 			{
-				assert( 0 && "invalid parameter" );
+				Assert( 0 && "invalid parameter" );
 				return false;
 			}
 		}
@@ -222,11 +222,11 @@ namespace kih
 
 	void RenderingContext::DrawInternal( std::shared_ptr<IMesh> mesh, int numVerticesPerPrimitive )
 	{
-		assert( m_inputAssembler );
-		assert( m_vertexProcessor );
-		assert( m_rasterizer );
-		assert( m_pixelProcessor );
-		assert( m_outputMerger );
+		Assert( m_inputAssembler );
+		Assert( m_vertexProcessor );
+		Assert( m_rasterizer );
+		Assert( m_pixelProcessor );
+		Assert( m_outputMerger );
 
 		// input assembler
 		std::shared_ptr<VertexProcInputStream> vpInput = m_inputAssembler->Process( mesh );

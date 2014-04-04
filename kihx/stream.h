@@ -118,13 +118,13 @@ namespace kih
 
 		FORCEINLINE const Data& GetDataConst( size_t index ) const
 		{
-			assert( ( index >= 0 && index < Size() ) && "out of ranged index" );
+			Assert( ( index >= 0 && index < Size() ) && "out of ranged index" );
 			return m_streamSource[index];
 		}
 
 		FORCEINLINE Data& GetData( size_t index )
 		{
-			assert( ( index >= 0 && index < Size() ) && "out of ranged index" );
+			Assert( ( index >= 0 && index < Size() ) && "out of ranged index" );
 			return m_streamSource[index];
 		}
 

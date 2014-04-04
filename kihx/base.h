@@ -1,7 +1,8 @@
 #pragma once
 
 #include "type.h"
-#include <assert.h>
+#include "assertion.h"
+
 #include <utility>
 #include <memory>
 #include <type_traits>

@@ -68,7 +68,7 @@ namespace kih
 		explicit BaseGraphicsStage( RenderingContext* pContext ) :
 			m_pRenderingContext( pContext )
 		{
-			assert( m_pRenderingContext );
+			Assert( m_pRenderingContext );
 
 			m_outputStream = std::make_shared<OutputStream>();
 		}

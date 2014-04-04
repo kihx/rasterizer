@@ -50,13 +50,13 @@ namespace kih
 
 		FORCEINLINE const Vertex<VertexType>& GetVertexConst( size_t index ) const
 		{
-			assert( ( index >= 0 && index < Size() ) && "out of ranged index" );
+			Assert( ( index >= 0 && index < Size() ) && "out of ranged index" );
 			return m_vertices[index];
 		}
 
 		FORCEINLINE Vertex<VertexType>& GetVertex( size_t index )
 		{
-			assert( ( index >= 0 && index < Size() ) && "out of ranged index" );
+			Assert( ( index >= 0 && index < Size() ) && "out of ranged index" );
 			return m_vertices[index];
 		}
 
@@ -102,13 +102,13 @@ namespace kih
 
 		FORCEINLINE const IndexType& GetIndexConst( size_t index ) const
 		{
-			assert( ( index >= 0 && index < Size() ) && "out of ranged index" );
+			Assert( ( index >= 0 && index < Size() ) && "out of ranged index" );
 			return m_indicies[index];
 		}
 
 		FORCEINLINE IndexType& GetIndex( size_t index )
 		{
-			assert( ( index >= 0 && index < Size() ) && "out of ranged index" );
+			Assert( ( index >= 0 && index < Size() ) && "out of ranged index" );
 			return m_indicies[index];
 		}
 
@@ -176,23 +176,23 @@ namespace kih
 
 		FORCEINLINE const unsigned char* GetFaceColor( size_t faceIndex ) const
 		{
-			assert( ( faceIndex >= 0 && faceIndex < m_faces.size() ) && "out of ranged index" );
+			Assert( ( faceIndex >= 0 && faceIndex < m_faces.size() ) && "out of ranged index" );
 			return &m_faces[faceIndex].r;
 		}
 
 		FORCEINLINE size_t NumVerticesInFace( size_t faceIndex ) const
 		{
-			assert( ( faceIndex >= 0 && faceIndex < m_faces.size() ) && "out of ranged index" );
+			Assert( ( faceIndex >= 0 && faceIndex < m_faces.size() ) && "out of ranged index" );
 			return m_faces[faceIndex].m_indices.size();
 		}
 
 		FORCEINLINE const float* GetVertexInFaceAt( size_t faceIndex, size_t vertexIndex ) const
 		{
-			assert( ( faceIndex >= 0 && faceIndex < m_faces.size() ) && "out of ranged faceIndex" );
-			assert( ( vertexIndex >= 0 && vertexIndex < m_faces[faceIndex].m_indices.size() ) && "out of ranged vertexIndex" );			
+			Assert( ( faceIndex >= 0 && faceIndex < m_faces.size() ) && "out of ranged faceIndex" );
+			Assert( ( vertexIndex >= 0 && vertexIndex < m_faces[faceIndex].m_indices.size() ) && "out of ranged vertexIndex" );			
 			unsigned short index = m_faces[faceIndex].m_indices[vertexIndex] - 1;
 
-			assert( ( index >= 0 && index < m_vertices.size() ) && "out of ranged index" );
+			Assert( ( index >= 0 && index < m_vertices.size() ) && "out of ranged index" );
 			return &m_vertices[index].x;
 		}
 
