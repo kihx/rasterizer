@@ -289,7 +289,7 @@ void SetupTransform()
 	matWorld.RotateY( fAngle );
 
 	Matrix4 matScale;
-	matScale.Scaling( 10.0f, 10.0f, 10.0f );
+	matScale.Scaling( 4.0f, 4.0f, 4.0f );
 	matWorld = matWorld * matScale;
     g_ModuleContext.SetTransform( TransformType::World, matWorld.M );
 
@@ -311,7 +311,7 @@ void SetupTransform()
     // the aspect ratio, and the near and far clipping planes (which define at
     // what distances geometry should be no longer be rendered).
     Matrix4 matProj;
-    matProj.PerspectiveLH( PI / 4.0f, 1.0f, 1.0f, 100.0f );
+    matProj.PerspectiveLH( PI / 4.0f, 1.0f, 1.0f, 7.0f );
     g_ModuleContext.SetTransform( TransformType::Projection, matProj.M );
 }
 
