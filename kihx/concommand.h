@@ -9,7 +9,19 @@
 
 namespace kih
 {
+	class ConsoleCommand;
+	class ConsoleVariable;
 	class ConsoleCommandExecuter;
+
+	typedef void( *ConsoleCommandCallback )( );
+
+	
+	enum class ConsoleCommandType
+	{
+		Command,
+		Variable
+	};
+
 
 	/* class ConsoleCommand
 	*/
@@ -17,14 +29,53 @@ namespace kih
 	{
 		NONCOPYABLE_CLASS( ConsoleCommand );
 
-		typedef void( *ConsoleCommandCallback )( );
-
 	public:
-		explicit ConsoleCommand( const std::string& name, const std::string& value, ConsoleCommandCallback func = nullptr );
+		explicit ConsoleCommand( const std::string& name, ConsoleCommandCallback func = nullptr );
+
+		virtual ConsoleCommandType Type() const
+		{
+			return ConsoleCommandType::Command;
+		}
 
 		FORCEINLINE const std::string& Name() const
 		{
 			return m_name;
+		}
+
+	protected:
+		FORCEINLINE bool HasCallback() const
+		{
+			return m_func != nullptr;
+		}
+
+		FORCEINLINE void Call()
+		{
+			if ( HasCallback() )
+			{
+				m_func();
+			}
+		}
+
+	private:
+		std::string m_name;
+		ConsoleCommandCallback m_func;
+
+		friend class ConsoleCommandExecuter;
+	};
+
+
+	/* class ConsoleVariable
+	*/
+	class ConsoleVariable : public ConsoleCommand
+	{
+		NONCOPYABLE_CLASS( ConsoleVariable );
+
+	public:
+		explicit ConsoleVariable( const std::string& name, const std::string& value, ConsoleCommandCallback func = nullptr );
+
+		virtual ConsoleCommandType Type() const
+		{
+			return ConsoleCommandType::Variable;
 		}
 
 		FORCEINLINE const std::string& String() const
@@ -42,46 +93,13 @@ namespace kih
 			return std::stof( m_value );
 		}
 
-		FORCEINLINE void SetValue( const std::string& value )
-		{
-			m_value = value;
-		}
-
-		FORCEINLINE void SetValue( std::string&& value )
-		{
-			m_value = std::move( value );
-		}
-
-		FORCEINLINE void SetValue( int value )
-		{
-			m_value = std::to_string( value );
-		}
-
-		FORCEINLINE void SetValue( float value )
-		{
-			m_value = std::to_string( value );
-		}
+		void SetValue( const std::string& value );
+		void SetValue( std::string&& value );
+		void SetValue( int value );
+		void SetValue( float value );
 
 	private:
-		FORCEINLINE bool HasCallback() const
-		{
-			return m_func != nullptr;
-		}
-
-		FORCEINLINE void Call()
-		{
-			if ( HasCallback() )
-			{
-				m_func();
-			}
-		}
-
-	private:
-		std::string m_name;
 		std::string m_value;
-		ConsoleCommandCallback m_func;
-
-		friend class ConsoleCommandExecuter;
 	};
 
 
@@ -103,6 +121,8 @@ namespace kih
 
 		ConsoleCommand* FindCommand( const std::string& name );
 
+		void Help();
+
 	private:
 		void AddCommand( ConsoleCommand* command );
 
@@ -114,10 +134,11 @@ namespace kih
 };
 
 using kih::ConsoleCommand;
+using kih::ConsoleVariable;
 using kih::ConsoleCommandExecuter;
 
 
 #define DEFINE_COMMAND( name )	\
 	void __callback_##name();	\
-	static ConsoleCommand __concommand_##name( #name, "", __callback_##name );	\
+	static ConsoleCommand __concommand_##name( #name, __callback_##name );	\
 	void __callback_##name()

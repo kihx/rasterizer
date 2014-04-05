@@ -6,6 +6,11 @@
 
 namespace kih
 {
+	FORCEINLINE ConsoleVariable* ToConsoleVariable( ConsoleCommand* cmd )
+	{
+		return dynamic_cast< ConsoleVariable* >( cmd );
+	}
+
 	// String splitter: http://stackoverflow.com/questions/236129/how-to-split-a-string-in-c
 	template<typename T>
 	std::vector<T> SplitString( const T& str, const T& delimiters ) 
@@ -33,13 +38,65 @@ namespace kih
 
 	/* class ConsoleCommand
 	*/
-	ConsoleCommand::ConsoleCommand( const std::string& name, const std::string& value, ConsoleCommandCallback func ) :
+	ConsoleCommand::ConsoleCommand( const std::string& name, ConsoleCommandCallback func ) :
 		m_name( name ),
-		m_value( value ),
 		m_func( func )
 	{
 		Assert( !m_name.empty() );
 		ConsoleCommandExecuter::GetInstance()->AddCommand( this );
+	}
+
+
+	/* class ConsoleCommand
+	*/
+	ConsoleVariable::ConsoleVariable( const std::string& name, const std::string& value, ConsoleCommandCallback func ) :
+		ConsoleCommand( name, func ),
+		m_value( value )
+	{
+	}
+
+	void ConsoleVariable::SetValue( const std::string& value )
+	{
+		if ( m_value == value )
+		{
+			return;
+		}
+
+		m_value = value;
+		Call();
+	}
+
+	void ConsoleVariable::SetValue( std::string&& value )
+	{
+		if ( m_value == value )
+		{
+			return;
+		}
+
+		m_value = std::move( value );
+		Call();
+	}
+
+	void ConsoleVariable::SetValue( int value )
+	{
+		if ( Int() == value )
+		{
+			return;
+		}
+
+		m_value = std::to_string( value );
+		Call();
+	}
+
+	void ConsoleVariable::SetValue( float value )
+	{
+		if ( Float() == value )
+		{
+			return;
+		}
+
+		m_value = std::to_string( value );
+		Call();
 	}
 
 
@@ -74,18 +131,27 @@ namespace kih
 		{
 			command->Call();
 		}
-		else	// otherwise, set or display its value.
+		else	
 		{
-			// If there is a value parameter, change the value of the command.
-			if ( params.size() >= 2 )
+			// Otherwise, set or display its value if possible.
+			if ( command->Type() != ConsoleCommandType::Variable )
 			{
-				command->SetValue( params[1] );
+				return;
 			}
-			else  // otherwise, display the current value of the command.
+
+			if ( ConsoleVariable* conVar = ToConsoleVariable( command ) )
 			{
-				if ( !command->String().empty() )
+				// If there is a value parameter, change the value of the command.
+				if ( params.size() >= 2 )
 				{
-					std::cout << command->Name() << ": " << command->String() << std::endl;
+					conVar->SetValue( params[1] );
+				}
+				else  // otherwise, display the current value of the command.
+				{
+					if ( !conVar->String().empty() )
+					{
+						std::cout << conVar->Name() << ": " << conVar->String() << std::endl;
+					}
 				}
 			}
 		}
@@ -119,8 +185,45 @@ namespace kih
 		VerifyReentry( 1 );
 		m_commandMap.insert( { command->Name(), command } );
 	}
+
+	void ConsoleCommandExecuter::Help()
+	{
+		for ( const auto& elem : m_commandMap )
+		{
+			if ( elem.second == nullptr )
+			{
+				VerifyNoEntry();
+				continue;
+			}
+
+			switch ( elem.second->Type() )
+			{
+			case ConsoleCommandType::Command:
+				std::cout << elem.first << std::endl;
+				break;
+
+			case ConsoleCommandType::Variable:
+				if ( ConsoleVariable* conVar = ToConsoleVariable( elem.second ) )
+				{
+					std::cout << conVar->Name() << ": " << conVar->String() << std::endl;
+				}
+				break;
+
+			default:
+				VerifyNoEntry();
+			}
+		}
+	}
 };
 
+
+
+/* cheats
+*/
+DEFINE_COMMAND( help )
+{
+	ConsoleCommandExecuter::GetInstance()->Help();
+}
 
 DEFINE_COMMAND( exit )
 {
