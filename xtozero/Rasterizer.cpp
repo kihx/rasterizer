@@ -4,7 +4,7 @@
 
 namespace xtozero
 {
-	void CRasterizer::CreateEdgeTable( CRsElementDesc& rsInput, int faceNumber )
+	void CRasterizer::CreateEdgeTable( CRsElementDesc& rsInput, unsigned int faceNumber )
 	{
 		if ( faceNumber >= rsInput.m_faces.size( ) )
 		{
@@ -16,6 +16,8 @@ namespace xtozero
 		int maxY = 0;
 		float minX = 0.0f;
 		float maxX = 0.0f;
+		float startZ = 0.0f;
+		float endZ = 0.0f;
 		float gradient = 0.0f;
 		float dx = 0.0f;
 		float dy = 0.0f;
@@ -50,6 +52,7 @@ namespace xtozero
 				//minY, minX를 구함
 				maxY = static_cast<int>(end.Y);
 				minY = static_cast<int>(start.Y);
+
 				if ( start.Y > end.Y )
 				{
 					maxY = static_cast<int>(start.Y);
@@ -58,15 +61,22 @@ namespace xtozero
 
 				minX = start.X;
 				maxX = end.X;
+				startZ = start.Z;
+				endZ = end.Z;
 				if ( minX > maxX )
 				{
 					minX = end.X;
 					maxX = start.X;
+					startZ = end.Z;
+					endZ = start.Z;
 				}
 
 				//edgeTable에 삽입
 
-				m_edgeTable.emplace_back( minY, maxY, minX, maxX, gradient );
+				m_edgeTable.emplace_back( 
+					minY, maxY, 
+					minX, maxX, 
+					startZ, endZ, gradient );
 			}
 		}
 		//m_edgeTable을 minY로 정렬
@@ -137,13 +147,13 @@ namespace xtozero
 
 	void CRasterizer::ProcessScanline( int scanline, unsigned int facecolor )//정점 보간하면 컬러 넘겨주지 않을 예정...
 	{
-		std::vector<int> horizontalLine;
+		std::vector<std::pair<int, float>> horizontalLine;
  
 		//수평선을 그릴 구간을 지정
 
-		int intersectX = 0;
+		float intersectX = 0;
 
-		for ( std::vector<Edge>::iterator iter = m_activeEdgeTable.begin(); iter != m_activeEdgeTable.end(); ++iter )
+		for ( std::vector<Edge>::iterator& iter = m_activeEdgeTable.begin(); iter != m_activeEdgeTable.end(); ++iter )
 		{
 			if ( iter->m_maxY == iter->m_minY ) // 수평한 선분은 제외
 			{
@@ -151,37 +161,55 @@ namespace xtozero
 			}
 			else
 			{
-				intersectX = static_cast<int>(GetIntersectXpos(
+				intersectX = GetIntersectXpos(
 					iter->m_minY, iter->m_maxY, scanline, iter->m_minX, iter->m_gradient
-					));
+					);
 
 				// y축에 대한 기울기는 x축에 대한 정밀도가 떨어진다.
 				// 따라서 구한 교차점이 maxX 보다 크면 maxX로 강제한다.
 				if ( intersectX > iter->m_maxX ) 
 				{
-					intersectX = static_cast<int>(ceilf(iter->m_maxX));
+					intersectX = iter->m_maxX;
 				}
 
-				horizontalLine.emplace_back( intersectX );
+				float lerpRatio = 1.0f;
+				if ( (iter->m_maxX - iter->m_minX) == 0 )
+				{
+					//Do Nothing
+				}
+				else
+				{
+					lerpRatio = (intersectX - iter->m_minX) / (iter->m_maxX - iter->m_minX);
+				}
+
+				float z = Lerp( iter->m_startZ, iter->m_endZ, lerpRatio );
+
+				horizontalLine.emplace_back( std::make_pair( static_cast<int>(ceilf( intersectX )), z ) );
 			}
 		}
 
 		int startX;
 		int endX;
-		for ( std::vector<int>::iterator iter = horizontalLine.begin(); iter != horizontalLine.end(); iter += 2 )
+		float startZ;
+		float endZ;
+		for ( std::vector<std::pair<int, float>>::iterator& iter = horizontalLine.begin(); iter != horizontalLine.end(); iter += 2 )
 		{
 			if ( (iter + 1) == horizontalLine.end() )
 			{
-				m_outputRS.emplace_back( *iter, scanline, facecolor );
+				m_outputRS.emplace_back( iter->first, scanline, iter->second, facecolor );
 				break;
 			}
 
-			startX = *iter;
-			endX = *(iter + 1);
-			if ( *iter > *(iter + 1) )
+			startX = iter->first;
+			endX = (iter + 1)->first;
+			startZ = iter->second;
+			endZ = (iter + 1)->second;
+			if ( startX > endX )
 			{
-				startX = *(iter + 1);
-				endX = *iter;
+				startX = (iter + 1)->first;
+				endX = iter->first;
+				startZ = (iter + 1)->second;
+				endZ = iter->second;
 			}
 
 			if ( startX < m_viewport.m_left )
@@ -196,12 +224,22 @@ namespace xtozero
 
 			for ( int i = startX; i <= endX; ++i )
 			{
-				m_outputRS.emplace_back( i, scanline, facecolor );
+				float lerpRatio = 1.0f;
+				if ( endX == startX )
+				{
+					//Do Nothing
+				}
+				else
+				{
+					lerpRatio = static_cast<float>( i - startX ) / (endX - startX);
+				}
+				float z = Lerp( startZ, endZ, lerpRatio );
+				m_outputRS.emplace_back( i, scanline, z, facecolor );
 			}
 		}
 	}
 
-	std::vector<CPsElementDesc>& CRasterizer::Process( CRsElementDesc& rsInput )
+	std::vector<CPsElementDesc> CRasterizer::Process( CRsElementDesc& rsInput )
 	{
 		//여기에서 메시내부의 픽셀을 계산
 		m_outputRS.clear();
@@ -220,7 +258,7 @@ namespace xtozero
 			}
 		}
 
-		for ( int i = 0; i < rsInput.m_faces.size(); ++i )
+		for ( unsigned int i = 0; i < rsInput.m_faces.size(); ++i )
 		{
 			CreateEdgeTable( rsInput, i );
 

@@ -9,7 +9,7 @@ namespace xtozero
 	{
 	private:
 		unsigned char* m_pDepthBuffer;
-		BYTE* m_pFrameBuffer;
+		unsigned char* m_pFrameBuffer;
 		int m_dpp;
 
 		int m_height;
@@ -20,10 +20,10 @@ namespace xtozero
 
 		void CreateDepthBuffer( int width, int height );
 		void DestroyDepthBuffer();
-		void SetFrameBuffer( void* pbuffer, int dpp );
+		void SetFrameBuffer( void* pbuffer, int dpp, int width, int height );
 
 		bool ProcessDepthTest( int x, int y, float depth );
-		void Process( std::vector<COmElementDesc>& OmInput );
+		void Process( std::vector<COmElementDesc>& omInput );
 	};
 }
 

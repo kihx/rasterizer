@@ -9,40 +9,19 @@ using namespace xtozero;
 std::unique_ptr<xtozero::CMeshManager> gMeshManager( new xtozero::CMeshManager( ) );
 std::unique_ptr<xtozero::CVertexShader> gVertexShader( new xtozero::CVertexShader( ) );
 std::unique_ptr<xtozero::CRasterizer> gRasterizer( new xtozero::CRasterizer( ) );
+std::unique_ptr<xtozero::CPixelShader> gPixelShader( new xtozero::CPixelShader() );
+std::unique_ptr<xtozero::COutputMerger> gOutputMerger( new xtozero::COutputMerger() );
 
 XTZ_API void XtzRenderToBuffer( void* buffer, int width, int height, int dpp )
 {
 	if ( buffer )
 	{
 		gRasterizer->SetViewPort( 0, 0, width, height );
-		gRasterizer->Process( gVertexShader->Process( gMeshManager->LoadRecentMesh( ) ) );
-
-		size_t size = dpp / 8;
-
-		BYTE* buf = static_cast<BYTE*>(buffer);
-		unsigned int color = PIXEL_COLOR( 0, 0, 0 );
-
-		//Output Merger 구현후 수정
-		auto output = gRasterizer->Getoutput( );
-
-		for ( int i = 0; i < height; ++i )
-		{
-			for ( int j = 0; j < width; ++j )
-			{
-				memcpy_s( buf + ((width * i) + j) * size,
-					size,
-					&color,
-					size );
-			}
-		}
-
-		for ( auto iter = output.begin(); iter != output.end(); ++iter )
-		{
-			memcpy_s( buf + ((width * iter->m_y) + iter->m_x) * size,
-				size,
-				&iter->m_color,
-				size );
-		}
+		gOutputMerger->SetFrameBuffer( buffer, dpp, width, height );
+		CRsElementDesc& vsOut = gVertexShader->Process( gMeshManager->LoadRecentMesh() );
+		std::vector<CPsElementDesc>& rsOut = gRasterizer->Process( vsOut );
+		std::vector<COmElementDesc>& psOut = gPixelShader->Process( rsOut );
+		gOutputMerger->Process( psOut );
 	}
 }
 

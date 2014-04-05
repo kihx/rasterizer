@@ -1,12 +1,18 @@
 #ifndef _PIXELSHADER_H_
 #define _PIXELSHADER_H_
 
-class CPixelShader
+#include "pipelineElements.h"
+
+namespace xtozero
 {
-public:
-	CPixelShader();
-	~CPixelShader();
-};
+	class CPixelShader
+	{
+	public:
+		CPixelShader( );
+		~CPixelShader( );
+		std::vector<COmElementDesc> Process( std::vector<CPsElementDesc>& psInput );
+	};
+}
 
 #endif
 

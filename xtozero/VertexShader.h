@@ -19,7 +19,7 @@ namespace xtozero
 		CVertexShader() {}
 		~CVertexShader() {}
 
-		CRsElementDesc Process( const std::shared_ptr<CMesh>& pMesh );
+		CRsElementDesc Process( const std::shared_ptr<CMesh> pMesh );
 
 		void SetWorldMatrix( const float* mmatrix4x4 )
 		{

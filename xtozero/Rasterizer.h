@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _RASTERIZER_H_
+#define _RASTERIZER_H_
 
 #include "pipelineElements.h"
 #include "Mesh.h"
@@ -10,7 +11,6 @@
 #include <vector>
 #include <set>
 #include <algorithm>
-#include "..//utility/math3d.h"
 
 namespace xtozero
 {
@@ -36,10 +36,13 @@ namespace xtozero
 		int m_maxY;
 		float m_minX;
 		float m_maxX;
+		float m_startZ;
+		float m_endZ;
 		float m_gradient;
 
-		Edge( int minY, int maxY, float minX, float maxX, float gradient )
-			: m_minY( minY ), m_maxY( maxY ), m_minX( minX ), m_maxX( maxX ), m_gradient( gradient ) {}
+		Edge( int minY, int maxY, float minX, float maxX, float startZ, float endZ, float gradient )
+			: m_minY( minY ), m_maxY( maxY ), m_minX( minX ), m_maxX( maxX ), 
+			m_startZ(startZ), m_endZ(endZ), m_gradient( gradient ) {}
 		~Edge() {}
 	};
 
@@ -51,14 +54,14 @@ namespace xtozero
 		std::vector<CPsElementDesc> m_outputRS;
 		Rect m_viewport;
 
-		void CreateEdgeTable( CRsElementDesc& rsInput, int faceNumber );
+		void CreateEdgeTable( CRsElementDesc& rsInput, unsigned int faceNumber );
 		void UpdateActiveEdgeTable( int scanline );
 		float GetIntersectXpos( int minY, int maxY, int scanlineY, float minX, float gradient ) const;
 		void ProcessScanline( int scanline, unsigned int facecolor );
 	public:
 		CRasterizer( void ) {}
 		~CRasterizer( void ) {}
-		std::vector<CPsElementDesc>& Process( CRsElementDesc& rsInput );
+		std::vector<CPsElementDesc> Process( CRsElementDesc& rsInput );
 		void SetViewPort( int left, int top, int right, int bottom );
 
 		//Å×½ºÆ®
@@ -69,3 +72,4 @@ namespace xtozero
 	};
 }
 
+#endif

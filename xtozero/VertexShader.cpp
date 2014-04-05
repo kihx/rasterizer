@@ -3,7 +3,7 @@
 
 namespace xtozero
 {
-	CRsElementDesc CVertexShader::Process( const std::shared_ptr<CMesh>& pMesh )
+	CRsElementDesc CVertexShader::Process( const std::shared_ptr<CMesh> pMesh )
 	{
 		CRsElementDesc vsOutput;
 
@@ -23,15 +23,15 @@ namespace xtozero
 		}
 		
 		int key = 0;
-		for ( std::vector<Face>::iterator faceiter = pMesh->m_faces.begin( ); faceiter != pMesh->m_faces.end( ); ++faceiter )
+		for ( std::vector<Face>::iterator& faceiter = pMesh->m_faces.begin( ); faceiter != pMesh->m_faces.end( ); ++faceiter )
 		{
 			key = faceiter - pMesh->m_faces.begin( );
 			if ( vsOutput.m_faces.find( key ) == vsOutput.m_faces.end( ) )
 			{
-				vsOutput.m_faces[key] = std::vector<int>();
+				vsOutput.m_faces[key] = std::vector<int>( );
 				vsOutput.m_faces[key].reserve( pMesh->m_nfaces );
 			}
-			for ( std::vector<int>::iterator indexiter = faceiter->m_indices.begin( ); indexiter != faceiter->m_indices.end( ); ++indexiter )
+			for ( std::vector<int>::iterator& indexiter = faceiter->m_indices.begin( ); indexiter != faceiter->m_indices.end( ); ++indexiter )
 			{
 				vsOutput.m_faces[key].emplace_back( *indexiter );
 			}

@@ -24,8 +24,9 @@ namespace xtozero
 	class CPsElementDesc
 	{
 	public:
-		CPsElementDesc( int x, int y, unsigned int color )
-			: m_x( x ), m_y( y ), m_color( color ) {}
+		CPsElementDesc() {}
+		CPsElementDesc( int x, int y, float z, unsigned int color )
+			: m_x( x ), m_y( y ), m_z( z ), m_color( color ) {}
 		~CPsElementDesc( ) {}
 
 		int m_x;
@@ -37,8 +38,9 @@ namespace xtozero
 	class COmElementDesc
 	{
 	public:
-		COmElementDesc( int x, int y, unsigned int color )
-			: m_x( x ), m_y( y ), m_color( color ) {}
+		COmElementDesc() {}
+		COmElementDesc( int x, int y, float z, unsigned int color )
+			: m_x( x ), m_y( y ), m_z( z ), m_color( color ) {}
 		~COmElementDesc( ) {}
 
 		int m_x;

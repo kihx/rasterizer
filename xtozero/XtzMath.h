@@ -1,11 +1,11 @@
 #ifndef _XTZMATH_H_
 #define _XTZMATH_H_
 
-#include <vector>
-#include <math.h>
-
 #define DEG2RAD(a)		a * 0.01745329252f
 #define RAD2DEG(a)		a * 57.29577951f
+
+#include <vector>
+#include <math.h>
 
 namespace xtozero
 {
@@ -692,6 +692,8 @@ namespace xtozero
 	{
 		return CrossProduct(v3);
 	}
+
+	extern float Lerp( float start, float end, float ratio );
 }
 
 #endif

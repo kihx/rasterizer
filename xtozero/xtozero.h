@@ -10,6 +10,8 @@
 #include "Mesh.h"
 #include "Rasterizer.h"
 #include "VertexShader.h"
+#include "PixelShader.h"
+#include "OutputMerger.h"
 
 XTZ_API void XtzRenderToBuffer( void* buffer, int width, int height, int dpp );
 

@@ -2,13 +2,13 @@
 #define _MESH_H_
 
 #include "FileHandler.h"
+#include "XtzMath.h"
 
 #include <vector>
 #include <map>
 #include <string>
 #include <memory>
 #include <iostream>
-#include "XtzMath.h"
 
 const int VERTEX_ELEMENT_COUNT = 3;
 const int COLOR_ELEMENT_COUNT = 3;

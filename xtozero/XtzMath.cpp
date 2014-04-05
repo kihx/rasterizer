@@ -396,4 +396,9 @@ namespace xtozero
 
 		return *this;
 	}
+
+	float Lerp( float start, float end, float ratio )
+	{
+		return start + (end - start) * ratio;
+	}
 }
