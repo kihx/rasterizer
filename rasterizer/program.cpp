@@ -11,6 +11,7 @@
 #include <memory.h>
 #include <type_traits>
 #include <string>
+#include <thread>
 
 #include "glut.h"
 
@@ -46,7 +47,8 @@ namespace
 	};
 	
 
-	typedef void( *FnLoadMeshFromFile)( const char* filename );
+	typedef void( *FnExecuteCommand )( const char* cmd );
+	typedef void( *FnLoadMeshFromFile )( const char* filename );
 	typedef void( *FnRenderToBuffer)( void* buffer, int width, int height, int bpp );
 	typedef void( *FnSetTransform)( int transformType, const float* matrix4x4 );
 
@@ -138,6 +140,14 @@ namespace
 			}
 		}
 
+		void ExecuteCommand( const char* cmd )
+		{
+			if ( m_fnExecuteCommand )
+			{
+				m_fnExecuteCommand( cmd );
+			}
+		}
+
 		// install module function
 #define SETUP_FUNC( func_name )	\
 		void InstallFunction##func_name( const char* functionName )	\
@@ -146,6 +156,7 @@ namespace
 			glutPostRedisplay();	\
 		}
 
+		SETUP_FUNC( ExecuteCommand );
 		SETUP_FUNC( LoadMeshFromFile );
 		SETUP_FUNC( RenderToBuffer );
 		SETUP_FUNC( SetTransform );
@@ -175,6 +186,7 @@ namespace
 
 	private:
 		HMODULE m_hModule;
+		FnExecuteCommand m_fnExecuteCommand;
 		FnLoadMeshFromFile m_fnLoadMeshFromFile;
 		FnRenderToBuffer m_fnRenderToBuffer;
 		FnSetTransform m_fnSetTransform;
@@ -201,6 +213,7 @@ static void LoadModuleKihx()
 	g_ModuleContext.InstallFunctionLoadMeshFromFile( "kiLoadMeshFromFile" );
 	g_ModuleContext.InstallFunctionRenderToBuffer( "kiRenderToBuffer" );
 	g_ModuleContext.InstallFunctionSetTransform( "kiSetTransform" );
+	g_ModuleContext.InstallFunctionExecuteCommand( "kiExecuteCommand" );
 
 	printf( "\n<kihx>\n\n" );
 }
@@ -317,8 +330,6 @@ void SetupTransform()
 
 void makeCheckImage( void)
 {
-	SetupTransform();
-
 	g_ModuleContext.RenderToBuffer( (byte*) g_pppScreenImage );
 }
 
@@ -454,6 +465,13 @@ void keyboard( unsigned char key, int x, int y)
 	}
 }
 
+void update( void )
+{
+	SetupTransform();
+	
+	glutPostRedisplay();
+}
+
 int main( int argc, char** argv)
 {
 	glutInit( &argc, argv );
@@ -466,6 +484,23 @@ int main( int argc, char** argv)
 	glutReshapeFunc( reshape );
 	glutKeyboardFunc( keyboard );
 	glutMotionFunc( motion );
+	glutIdleFunc( update );
+
+	// console input text
+	std::thread t
+	{
+		[]()
+		{
+			std::cin.sync_with_stdio();
+			while ( true )
+			{
+				std::string str;
+				std::cin >> str;
+				g_ModuleContext.ExecuteCommand( str.c_str() );
+			}
+		}
+	};
+
 	glutMainLoop();
 	return 0; 
 }
