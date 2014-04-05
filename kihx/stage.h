@@ -221,6 +221,7 @@ namespace kih
 		// scanline conversion
 		void DoScanlineConversion( std::shared_ptr<RasterizerInputStream> inputStream, std::shared_ptr<RasterizerOutputStream> outputStream, unsigned short width, unsigned short height );
 		void GatherPixelsBeingDrawnFromScanlines( std::shared_ptr<RasterizerOutputStream> outputStream, unsigned short width, unsigned short height, DepthBuffering& depthBufferingParam );
+		bool UpdateActiveEdgeTable( std::list<ActiveEdgeTableElement> &aet, unsigned short scanline );
 
 		// transform
 		void TransformViewport( std::shared_ptr<RasterizerInputStream> inputStream, unsigned short width, unsigned short height );

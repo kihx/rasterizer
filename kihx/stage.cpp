@@ -11,7 +11,7 @@
 #include <list>
 
 
- #define EARLY_Z_CULLING
+#define EARLY_Z_CULLING
 
 
 namespace kih
@@ -353,39 +353,9 @@ namespace kih
 		// for each scanline
 		for ( unsigned short y = 0; y < height; ++y )
 		{
-			// Find outside elements in the AET and remove them.
-			auto iter = aet.begin();
-			while ( iter != aet.end() )
-			{
-				const ActiveEdgeTableElement& elem = *iter;
-				if ( y >= elem.ET.YMax )
-				{
-					iter = aet.erase( iter );
-				}
-				else
-				{
-					++iter;
-				}
-			}
-
-			// Push inside ET elements on this scanline into the AET.
-			for ( const auto& elem : m_edgeTable[y] )
-			{
-				if ( y < elem.YMax )
-				{
-					aet.emplace_back( elem );
-				}
-			}
-
-			if ( aet.empty() )
+			if ( !UpdateActiveEdgeTable( aet, y ) )
 			{
 				continue;
-			}
-
-			// Sort AET elements from left to right.	
-			if ( aet.size() > 1 )
-			{
-				aet.sort();
 			}
 
 			// Gather pixels being drawn using the AET.
@@ -451,12 +421,12 @@ namespace kih
 							// Update the next depth value incrementally.
 							interpolatedDepth += ddxDepth;
 						}
-					}
+					}					
 				}
 
 				// Update the next position incrementally.
 				elemLeft.CurrentX += elemLeft.ET.Slope;
-				elemRight.CurrentX += elemRight.ET.Slope;
+				elemRight.CurrentX += elemRight.ET.Slope;				
 			}
 		}
 
@@ -464,6 +434,65 @@ namespace kih
 		{
 			m_edgeTable[y].clear();
 		}
+	}
+
+	bool Rasterizer::UpdateActiveEdgeTable( std::list<ActiveEdgeTableElement> &aet, unsigned short scanline )
+	{
+		Assert( scanline >= 0 && scanline < m_edgeTable.size() );
+
+		// Find outside elements in the AET and remove them.
+		auto iter = aet.begin();
+		while ( iter != aet.end() )
+		{
+			const ActiveEdgeTableElement& elem = *iter;
+			if ( scanline >= elem.ET.YMax )
+			{
+				iter = aet.erase( iter );
+			}
+			else
+			{
+				++iter;
+			}
+		}
+
+		// Push inside ET elements on this scanline into the AET.
+		for ( const auto& elem : m_edgeTable[scanline] )
+		{
+			if ( scanline < elem.YMax )
+			{
+				aet.emplace_back( elem );
+			}
+		}
+
+		// Pass if AET is empty.
+		if ( aet.empty() )
+		{
+			return false;
+		}
+
+		// Sort AET elements from left to right.	
+		if ( aet.size() > 1 )
+		{
+			// std::list::sort() is very very slow. :(
+			// So, if the size of AET is only two,
+			// we reverse AET where node0 > node1 instead of sort().
+			// This optimization is meaningful because a triangle mostly haves two edges on a scanline.
+			if ( aet.size() == 2 )
+			{
+				const auto& node0 = aet.front();
+				const auto& node1 = aet.back();
+				if ( node0.CurrentX > node1.CurrentX )
+				{
+					aet.reverse();
+				}
+			}
+			else
+			{
+				aet.sort();
+			}
+		}
+
+		return true;
 	}
 
 	void Rasterizer::TransformViewport( std::shared_ptr<RasterizerInputStream> inputStream, unsigned short width, unsigned short height )
