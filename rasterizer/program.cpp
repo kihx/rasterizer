@@ -31,7 +31,7 @@ byte g_pppScreenImage[SCREEN_HEIGHT][SCREEN_WIDTH][COLOR_DEPTH];
 
 // Static variables
 //
-static GLdouble g_dZoomFactor = 1.0;
+static GLdouble g_dZoomFactor = 4.0;
 static GLint g_iHeight;
 std::string g_meshFileName = "cube.ply";
 
@@ -178,10 +178,11 @@ namespace
 
 		void Release() 
 		{
-			FreeLibrary( m_hModule );
+			m_fnExecuteCommand = nullptr;
 			m_fnLoadMeshFromFile = nullptr;
-			m_fnRenderToBuffer = nullptr;	
+			m_fnRenderToBuffer = nullptr;
 			m_fnSetTransform = nullptr;
+			FreeLibrary( m_hModule );
 		}
 
 	private:
@@ -302,7 +303,7 @@ void SetupTransform()
 	matWorld.RotateY( fAngle );
 
 	Matrix4 matScale;
-	matScale.Scaling( 4.0f, 4.0f, 4.0f );
+	matScale.Scaling( g_dZoomFactor, g_dZoomFactor, g_dZoomFactor );
 	matWorld = matWorld * matScale;
     g_ModuleContext.SetTransform( TransformType::World, matWorld.M );
 
@@ -433,16 +434,14 @@ void keyboard( unsigned char key, int x, int y)
 
 	case 'r':
 	case 'R':
-		g_dZoomFactor = 1.0;
 		glutPostRedisplay();
-		printf( "g_dZoomFactor reset to 1.0\n" );
 		break;
 
 	case 'z':
 		g_dZoomFactor += 0.5;
-		if ( g_dZoomFactor >= 5.0) 
+		if ( g_dZoomFactor >= 8.0) 
 		{
-			g_dZoomFactor = 5.0;
+			g_dZoomFactor = 8.0;
 		}
 		printf( "g_dZoomFactor is now %4.1f\n", g_dZoomFactor );
 		break;
@@ -477,7 +476,7 @@ int main( int argc, char** argv)
 	glutInit( &argc, argv );
 	glutInitDisplayMode( GLUT_SINGLE | GLUT_RGBA );
 	glutInitWindowSize( SCREEN_WIDTH, SCREEN_HEIGHT );
-	glutInitWindowPosition( 100, 100 );
+	glutInitWindowPosition( 300, 300 );
 	glutCreateWindow( argv[0] );
 	init();
 	glutDisplayFunc( display );
@@ -491,17 +490,17 @@ int main( int argc, char** argv)
 	{
 		[]()
 		{
-			std::cin.sync_with_stdio();
+			char buff[1024];
 			while ( true )
-			{
-				std::string str;
-				std::cin >> str;
-				g_ModuleContext.ExecuteCommand( str.c_str() );
+			{			
+				gets_s( buff, sizeof( buff ) );
+				g_ModuleContext.ExecuteCommand( buff );
 			}
 		}
 	};
 
 	glutMainLoop();
+
 	return 0; 
 }
 
