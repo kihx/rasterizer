@@ -234,7 +234,22 @@ namespace xtozero
 					lerpRatio = static_cast<float>( i - startX ) / (endX - startX);
 				}
 				float z = Lerp( startZ, endZ, lerpRatio );
-				m_outputRS.emplace_back( i, scanline, z, facecolor );
+
+				if ( z > 1.0f || z < 0.0f )
+				{
+
+				}
+				else
+				{
+					if ( i == startX || i == endX )
+					{
+						m_outputRS.emplace_back( i, scanline, z, PIXEL_COLOR( 255, 255, 255 ) );
+					}
+					else
+					{
+						m_outputRS.emplace_back( i, scanline, z, facecolor );
+					}
+				}	
 			}
 		}
 	}
@@ -248,13 +263,11 @@ namespace xtozero
 		{
 			for ( std::vector<Vector4>::iterator& iter = rsInput.m_vertices.begin( ); iter != rsInput.m_vertices.end( ); ++iter )
 			{
-				(*iter).X /= (*iter).W;
-				(*iter).Y /= (*iter).W;
-				(*iter).Z /= (*iter).W;
-				(*iter).W /= (*iter).W;
+				Vector4& vertex = *iter;
+				vertex /= vertex.W;
 
-				(*iter).X = ((*iter).X * m_viewport.m_right * 0.5f) + m_viewport.m_right * 0.5f;
-				(*iter).Y = -((*iter).Y * m_viewport.m_bottom * 0.5f) + m_viewport.m_bottom * 0.5f;
+				vertex.X = (vertex.X * m_viewport.m_right * 0.5f) + m_viewport.m_right * 0.5f;
+				vertex.Y = -(vertex.Y * m_viewport.m_bottom * 0.5f) + m_viewport.m_bottom * 0.5f;
 			}
 		}
 
@@ -269,7 +282,7 @@ namespace xtozero
 				scanline = m_viewport.m_top;
 			}
 
-			//unsigned int facecolor = PIXEL_COLOR( 0, 255, 255 );
+			//unsigned int facecolor = PIXEL_COLOR( 100, 10, 0 );
 			unsigned int facecolor = RAND_COLOR();
 
 			while ( !(m_edgeTable.empty( ) && m_activeEdgeTable.empty( )) )
@@ -292,23 +305,10 @@ namespace xtozero
 
 	void CRasterizer::SetViewPort( int left, int top, int right, int bottom )
 	{
-		if ( left > right )
-		{
-			Swap( left, right );
-		}
-		if ( top > bottom )
-		{
-			Swap( top, bottom );
-		}
-		
-		if ( left < 0 )
-		{
-			m_viewport.m_left = 0;
-		}
-		if ( top < 0 )
-		{
-			m_viewport.m_top = 0;
-		}
+		assert( left < right );
+		assert( top < bottom );
+		assert( left >= 0 );
+		assert( top >= 0 );
 
 		m_viewport.m_left = left;
 		m_viewport.m_top = top;

@@ -15,6 +15,7 @@ namespace xtozero
 	std::vector<COmElementDesc> CPixelShader::Process( std::vector<CPsElementDesc>& psInput )
 	{
 		std::vector<COmElementDesc> psOutput;
+		psOutput.reserve( psInput.size() );
 
 		for ( std::vector<CPsElementDesc>::iterator& iter = psInput.begin( ); iter != psInput.end( ); ++iter )
 		{

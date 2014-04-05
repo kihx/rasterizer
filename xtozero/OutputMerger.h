@@ -8,7 +8,7 @@ namespace xtozero
 	class COutputMerger
 	{
 	private:
-		unsigned char* m_pDepthBuffer;
+		std::vector<unsigned char> m_pDepthBuffer;
 		unsigned char* m_pFrameBuffer;
 		int m_dpp;
 
@@ -19,7 +19,7 @@ namespace xtozero
 		~COutputMerger();
 
 		void CreateDepthBuffer( int width, int height );
-		void DestroyDepthBuffer();
+		void ClearDepthBuffer( );
 		void SetFrameBuffer( void* pbuffer, int dpp, int width, int height );
 
 		bool ProcessDepthTest( int x, int y, float depth );

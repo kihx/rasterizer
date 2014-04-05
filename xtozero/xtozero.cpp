@@ -17,6 +17,8 @@ XTZ_API void XtzRenderToBuffer( void* buffer, int width, int height, int dpp )
 	if ( buffer )
 	{
 		gRasterizer->SetViewPort( 0, 0, width, height );
+		gOutputMerger->CreateDepthBuffer( width, height );
+		gOutputMerger->ClearDepthBuffer();
 		gOutputMerger->SetFrameBuffer( buffer, dpp, width, height );
 		CRsElementDesc& vsOut = gVertexShader->Process( gMeshManager->LoadRecentMesh() );
 		std::vector<CPsElementDesc>& rsOut = gRasterizer->Process( vsOut );

@@ -14,7 +14,7 @@
 
 
 // TODO: reference additional headers your program requires here
-
+#include <cassert>
 
 #define PIXEL_COLOR(r, g, b)  ( ( b << 16 ) + ( g << 8 ) + r )
 #define RAND_COLOR() PIXEL_COLOR( ( rand()%255 + 1 ), ( rand()%255 + 1 ), ( rand()%255 + 1 ) )
