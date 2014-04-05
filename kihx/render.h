@@ -27,7 +27,8 @@ namespace kih
 
 	class OutputMergerInputStream;
 	typedef OutputMergerInputStream PixelProcOutputStream;
-	typedef OutputMergerInputStream OutputMergerOutputStream;
+	
+	class OutputMergerOutputStream;
 
 	class InputAssembler;
 	class VertexProcessor;
@@ -69,6 +70,11 @@ namespace kih
 		void Draw( std::shared_ptr<IMesh> mesh );
 
 		// render targets
+		size_t NumberOfRenderTargets() const
+		{
+			return m_renderTargets.size();
+		}
+
 		std::shared_ptr<Texture> GetRenderTaget( size_t index )
 		{
 			Assert( ( index >= 0 && index < m_renderTargets.size() ) && "out of ranged index" );
@@ -141,6 +147,17 @@ namespace kih
 
 		// factory
 		std::shared_ptr<RenderingContext> CreateRenderingContext();
+
+		FORCEINLINE size_t NumberOfRenderingContexts()
+		{
+			return m_renderingContexts.size();
+		}
+
+		std::shared_ptr<RenderingContext> GetRenderingContext( size_t index )
+		{
+			Assert( index >= 0 && index < m_renderingContexts.size() );
+			return m_renderingContexts[index];
+		}
 
 		// WVP matrices
 		FORCEINLINE const Matrix4& GetWorldMatrix() const

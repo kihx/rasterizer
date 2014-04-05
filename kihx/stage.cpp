@@ -7,11 +7,17 @@
 #include "render.h"
 #include "threading.h"
 #include "random.h"
+#include "concommand.h"
 
 #include <list>
 
 
 #define EARLY_Z_CULLING
+
+//#define BYPASS_PIXEL_SHADING
+
+
+static ConsoleVariable thread_num_stage( "thread_num_stage", "4" );
 
 
 namespace kih
@@ -207,7 +213,7 @@ namespace kih
 		return m_outputStream;
 	}
 
-	void VertexProcessor::TransformWVP( const Vector3& position, const Matrix4& wvp, Vector4& outPosition )
+	void VertexProcessor::TransformWVP( const Vector3& position, const Matrix4& wvp, Vector4& outPosition ) const
 	{
 		Vector3_Transform( position, wvp, outPosition );
 
@@ -436,7 +442,7 @@ namespace kih
 		}
 	}
 
-	bool Rasterizer::UpdateActiveEdgeTable( std::list<ActiveEdgeTableElement> &aet, unsigned short scanline )
+	bool Rasterizer::UpdateActiveEdgeTable( std::list<ActiveEdgeTableElement> &aet, unsigned short scanline ) const
 	{
 		Assert( scanline >= 0 && scanline < m_edgeTable.size() );
 
@@ -495,7 +501,7 @@ namespace kih
 		return true;
 	}
 
-	void Rasterizer::TransformViewport( std::shared_ptr<RasterizerInputStream> inputStream, unsigned short width, unsigned short height )
+	void Rasterizer::TransformViewport( std::shared_ptr<RasterizerInputStream> inputStream, unsigned short width, unsigned short height ) const
 	{
 		// viewport transform for projective coordinates
 		if ( inputStream->GetCoordinatesType() != CoordinatesType::Projective )
@@ -539,9 +545,7 @@ namespace kih
 	std::shared_ptr<PixelProcOutputStream> PixelProcessor::Process( std::shared_ptr<PixelProcInputStream> inputStream )
 	{
 		Assert( inputStream );
-
-		VerifyReentry( 1 );
-
+		
 		m_outputStream->Clear();
 
 		size_t inputStreamSize = inputStream->Size();
@@ -550,9 +554,52 @@ namespace kih
 			return m_outputStream;
 		}
 
-		//Assert( ( GetContext()->GetRenderTaget( 1 ) == nullptr ) && "MRT is not implemented yet" );
+#ifdef BYPASS_PIXEL_SHADING
+		// do nothing
+#else
+		// Load pixel shader constants.
+		//const Vector4& diffuseColor = GetSharedConstantBuffer().GetVector4( ConstantBuffer::DiffuseColor );
+		//Color32 color = Vector4_ToColor32( color );
+
+
+		// Now, do per-pixel operations here.
+		for ( size_t i = 0; i < inputStreamSize; ++i )
+		{
+			auto& fragment = inputStream->GetData( i );
+
+			Color32 color = fragment.Color;
+
+			// TODO: pixel shading
+			//
+
+			// update
+			fragment.Color = color;
+		}
+#endif
+
+		// Move stream memory from input to output for performance.
+		m_outputStream->MoveFrom( std::move( *inputStream.get() ) );
+
+		return m_outputStream;
+	}
+
+
+	/* class OutputMerger
+	*/
+	std::shared_ptr<OutputMergerOutputStream> OutputMerger::Process( std::shared_ptr<OutputMergerInputStream> inputStream )
+	{
+		Assert( inputStream );
+
+		VerifyReentry( 1 );
+
+		size_t inputStreamSize = inputStream->Size();
+		if ( inputStreamSize <= 0 )
+		{
+			return m_outputStream;
+		}
 
 		// UNDONE: Currently, we assume RTs is only one.
+		Assert( ( GetContext()->NumberOfRenderTargets() == 1 ) && "MRT is not implemented yet" );
 		std::shared_ptr<Texture> rt = GetContext()->GetRenderTaget( 0 );
 		if ( rt == nullptr )
 		{
@@ -569,20 +616,14 @@ namespace kih
 
 		int widthRT = rt->Width();
 		int strideRT = GetBytesPerPixel( rt->Format() );
-				
+
 #ifdef EARLY_Z_CULLING
 		// do nothing
 #else
-		// FIXME: should move to the output merger
 		DepthBuffering depthBuffering( GetContext() );
 #endif
 
-		// Load pixel shader constants.
-		//const Vector4& diffuseColor = GetSharedConstantBuffer().GetVector4( ConstantBuffer::DiffuseColor );
-		//Color32 color = Vector4_ToColor32( color );
-
-
-		// Now, do per-pixel operations here.
+		// Now, write color on render targets and the depth stencil buffer here.
 		for ( size_t i = 0; i < inputStreamSize; ++i )
 		{
 			const auto& fragment = inputStream->GetData( i );
@@ -607,7 +648,7 @@ namespace kih
 			color.R = color.G = color.B = d;
 #endif
 
-			// TODO: pixel shading
+			// TODO: blending operation
 
 #if 1	// faster code
 			byte* base = bufferRT + ( ( ( widthRT * fragment.PY ) + fragment.PX ) * strideRT );
@@ -620,17 +661,5 @@ namespace kih
 		}
 
 		return m_outputStream;
-	}
-
-
-	/* class OutputMerger
-	*/
-	std::shared_ptr<OutputMergerOutputStream> OutputMerger::Process( std::shared_ptr<OutputMergerInputStream> inputStream )
-	{
-		//OutputMergerInputStream* pOut = new OutputMergerInputStream();
-
-		//inputStream.reset();
-		//return std::shared_ptr<OutputMergerInputStream>( pOut );
-		return inputStream;
 	}
 };

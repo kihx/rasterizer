@@ -6,6 +6,7 @@
 #include "matrix.h"
 #include "buffer.h"
 #include "stage.h"
+#include "concommand.h"
 
 #include <list>
 
@@ -87,15 +88,20 @@ namespace kih
 		
 		int width = ds->Width();
 		int height = ds->Height();
+		int bytePerPixel = GetBytesPerPixel( ds->Format() );
 		byte depth = Float_ToByte( z );
 
-		for ( int h = 0; h < height; ++h )
+		switch ( ds->Format() )
 		{
-			for ( int w = 0; w < width; ++w )
+		case ColorFormat::D8S24:
 			{
-				// FIXME: stencil
-				ds->WriteTexel( w, h, depth, 0, 0 );
+				int value = ( depth | 0x0 );
+				memset( ptr, value, width * height * bytePerPixel );
 			}
+			break;
+
+		default:
+			throw std::invalid_argument( "invalid depth-stencil format" );
 		}
 	}
 
@@ -228,25 +234,27 @@ namespace kih
 		Assert( m_pixelProcessor );
 		Assert( m_outputMerger );
 
-		// input assembler
+		// input assembler stage
 		std::shared_ptr<VertexProcInputStream> vpInput = m_inputAssembler->Process( mesh );
 		//printf( "\nVertexProcInputStream Size: %d\n", vpInput->Size() );
 
-		// vertex processor
+		// vertex processor stage
 		std::shared_ptr<RasterizerInputStream> raInput = m_vertexProcessor->Process( vpInput );
 		//printf( "RasterizerInputStream Size: %d\n", raInput->Size() );
 
-		// rasterizer
+		// rasterizer stage
 		raInput->SetPrimitiveType( GetPrimitiveTypeFromNumberOfVertices( numVerticesPerPrimitive ) );
 		std::shared_ptr<PixelProcInputStream> ppInput = m_rasterizer->Process( raInput );
 		//printf( "PixelProcInputStream Size: %d\n", ppInput->Size() );
 
-		// pixel processor
+		// pixel processor stage
 		std::shared_ptr<OutputMergerInputStream> omInput = m_pixelProcessor->Process( ppInput );
 		//printf( "OutputMergerInputStream Size: %d\n", 0 );
 
-		// output merger
-		omInput = m_outputMerger->Process( omInput );
+		// output merger stage
+		// Note that the output stream of the output merger is meaningless
+		// because the output merger directly write data on render targets and a depth-stencil buffer.
+		m_outputMerger->Process( omInput );
 	}
 
 
@@ -293,4 +301,24 @@ namespace kih
 		m_renderingContexts.emplace_back( context );
 		return context;
 	}
+}
+
+
+
+/* cheats
+*/
+DEFINE_COMMAND( depth_test_on )
+{
+	auto context = RenderingDevice::GetInstance()->GetRenderingContext( 0 );
+	Assert( context );
+	context->SetDepthFunc( DepthFunc::LessEqual );
+	context->SetDepthWritable( true );
+}
+
+DEFINE_COMMAND( depth_test_off )
+{
+	auto context = RenderingDevice::GetInstance()->GetRenderingContext( 0 );
+	Assert( context );
+	context->SetDepthFunc( DepthFunc::None );
+	context->SetDepthWritable( false );
 }

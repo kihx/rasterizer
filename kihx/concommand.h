@@ -88,6 +88,11 @@ namespace kih
 			return std::stoi( m_value );
 		}
 
+		FORCEINLINE bool Bool() const
+		{
+			return Int() != 0;
+		}
+
 		FORCEINLINE float Float() const
 		{
 			return std::stof( m_value );

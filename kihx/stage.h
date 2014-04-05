@@ -21,7 +21,6 @@ namespace kih
 
 	class OutputMergerInputStream;
 	typedef OutputMergerInputStream PixelProcOutputStream;
-	typedef OutputMergerInputStream OutputMergerOutputStream;
 
 	class IMesh;
 	class Texture;
@@ -144,7 +143,7 @@ namespace kih
 		virtual std::shared_ptr<VertexProcOutputStream> Process( std::shared_ptr<VertexProcInputStream> inputStream );
 
 	private:
-		void TransformWVP( const Vector3& position, const Matrix4& wvp, Vector4& outPosition );
+		void TransformWVP( const Vector3& position, const Matrix4& wvp, Vector4& outPosition ) const;
 	};
 
 
@@ -221,10 +220,10 @@ namespace kih
 		// scanline conversion
 		void DoScanlineConversion( std::shared_ptr<RasterizerInputStream> inputStream, std::shared_ptr<RasterizerOutputStream> outputStream, unsigned short width, unsigned short height );
 		void GatherPixelsBeingDrawnFromScanlines( std::shared_ptr<RasterizerOutputStream> outputStream, unsigned short width, unsigned short height, DepthBuffering& depthBufferingParam );
-		bool UpdateActiveEdgeTable( std::list<ActiveEdgeTableElement> &aet, unsigned short scanline );
+		bool UpdateActiveEdgeTable( std::list<ActiveEdgeTableElement> &aet, unsigned short scanline ) const;
 
 		// transform
-		void TransformViewport( std::shared_ptr<RasterizerInputStream> inputStream, unsigned short width, unsigned short height );
+		void TransformViewport( std::shared_ptr<RasterizerInputStream> inputStream, unsigned short width, unsigned short height ) const;
 
 	private:
 		std::vector<std::list<EdgeTableElement>> m_edgeTable;

@@ -55,9 +55,10 @@ namespace kih
 		RasterizerData( const RasterizerData& data ) = default;
 	};
 	
-	/* struct PixelProcData
+	/* struct FragmentData
+		This FragmentData is used for both a pixel processor and the output merger.
 	*/
-	struct PixelProcData
+	struct FragmentData
 	{
 		// x and y coordinates of a pixel
 		unsigned short PX;
@@ -66,16 +67,16 @@ namespace kih
 		// z of a pixel
 		float Depth;
 		
-		Color32 Color;		// interpolated color
+		Color32 Color;
 
-		PixelProcData() :
+		FragmentData() :
 			PX( 0 ),
 			PY( 0 ),
 			Depth( 1.0f ) // farthest
 		{
 		}
 
-		PixelProcData( unsigned short px, unsigned short py, float Depth, const Color32& color ) :
+		FragmentData( unsigned short px, unsigned short py, float Depth, const Color32& color ) :
 			PX( px ),
 			PY( py ),
 			Depth( Depth ),
@@ -83,7 +84,7 @@ namespace kih
 		{
 		}
 
-		PixelProcData( const PixelProcData& data ) = default;
+		FragmentData( const FragmentData& data ) = default;
 	};
 
 
@@ -141,6 +142,11 @@ namespace kih
 		FORCEINLINE void Clear()
 		{
 			m_streamSource.clear();
+		}
+
+		void MoveFrom( BaseInputOutputStream&& src )
+		{
+			m_streamSource = std::move( src.m_streamSource );
 		}
 
 	private:
@@ -209,7 +215,7 @@ namespace kih
 
 	/* class PixelProcInputStream
 	*/
-	class PixelProcInputStream : public BaseInputOutputStream<PixelProcData>
+	class PixelProcInputStream : public BaseInputOutputStream<FragmentData>
 	{
 	public:
 		PixelProcInputStream()
@@ -219,10 +225,26 @@ namespace kih
 
 	/* class OutputMergerInputStream
 	*/
-	class OutputMergerInputStream : public BaseInputOutputStream<PixelProcData>
+	class OutputMergerInputStream : public BaseInputOutputStream<FragmentData>
 	{
 	public:
 		OutputMergerInputStream()
+		{
+		}
+
+	private:
+
+	};
+
+	/* class OutputMergerOutputStream:
+		Note that OutputMergerOutputStream is meaningless
+		because the output merger directly write data on render targets and a depth-stencil buffer.
+		Don't push and handle any data if possible.
+	*/
+	class OutputMergerOutputStream : public BaseInputOutputStream<FragmentData>
+	{
+	public:
+		OutputMergerOutputStream()
 		{
 		}
 
