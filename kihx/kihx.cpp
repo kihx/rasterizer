@@ -7,7 +7,7 @@
 #include "mesh.h"
 #include "texture.h"
 #include "render.h"
-
+#include "concommand.h"
 
 
 
@@ -65,4 +65,9 @@ KIHX_API void kiSetTransform( int transformType, const float* matrix4x4 )
 	default:
 		LOG_WARNING( "invalid parameter" );
 	}
+}
+
+KIHX_API void kiExecuteCommand( const char* cmd )
+{
+	ConsoleCommandExecuter::GetInstance()->Execute( cmd );
 }

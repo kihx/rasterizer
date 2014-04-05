@@ -18,3 +18,5 @@ extern "C" KIHX_API void kiLoadMeshFromFile( const char* filename );
 extern "C" KIHX_API void kiRenderToBuffer( void* buffer, int width, int height, int bpp );
 
 extern "C" KIHX_API void kiSetTransform( int transformType, const float* matrix4x4 );
+
+extern "C" KIHX_API void kiExecuteCommand( const char* cmd );

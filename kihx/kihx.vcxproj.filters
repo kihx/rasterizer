@@ -14,7 +14,7 @@
     <Filter Include="Threading">
       <UniqueIdentifier>{7d506067-97d7-49fc-9ac0-7c34a7d67b42}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Verifier">
+    <Filter Include="Framework">
       <UniqueIdentifier>{768cbd0d-e28e-4645-b734-a8ce2dced1cc}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -71,7 +71,10 @@
       <Filter>Threading</Filter>
     </ClInclude>
     <ClInclude Include="assertion.h">
-      <Filter>Verifier</Filter>
+      <Filter>Framework</Filter>
+    </ClInclude>
+    <ClInclude Include="concommand.h">
+      <Filter>Framework</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -104,6 +107,12 @@
     </ClCompile>
     <ClCompile Include="stage.cpp">
       <Filter>Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="threading.cpp">
+      <Filter>Threading</Filter>
+    </ClCompile>
+    <ClCompile Include="concommand.cpp">
+      <Filter>Framework</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

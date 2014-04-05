@@ -230,20 +230,20 @@ namespace kih
 
 		// input assembler
 		std::shared_ptr<VertexProcInputStream> vpInput = m_inputAssembler->Process( mesh );
-		printf( "\nVertexProcInputStream Size: %d\n", vpInput->Size() );
+		//printf( "\nVertexProcInputStream Size: %d\n", vpInput->Size() );
 
 		// vertex processor
 		std::shared_ptr<RasterizerInputStream> raInput = m_vertexProcessor->Process( vpInput );
-		printf( "RasterizerInputStream Size: %d\n", raInput->Size() );
+		//printf( "RasterizerInputStream Size: %d\n", raInput->Size() );
 
 		// rasterizer
 		raInput->SetPrimitiveType( GetPrimitiveTypeFromNumberOfVertices( numVerticesPerPrimitive ) );
 		std::shared_ptr<PixelProcInputStream> ppInput = m_rasterizer->Process( raInput );
-		printf( "PixelProcInputStream Size: %d\n", ppInput->Size() );
+		//printf( "PixelProcInputStream Size: %d\n", ppInput->Size() );
 
 		// pixel processor
 		std::shared_ptr<OutputMergerInputStream> omInput = m_pixelProcessor->Process( ppInput );
-		printf( "OutputMergerInputStream Size: %d\n", 0 );
+		//printf( "OutputMergerInputStream Size: %d\n", 0 );
 
 		// output merger
 		omInput = m_outputMerger->Process( omInput );

@@ -91,6 +91,7 @@
     <ClInclude Include="assertion.h" />
     <ClInclude Include="base.h" />
     <ClInclude Include="buffer.h" />
+    <ClInclude Include="concommand.h" />
     <ClInclude Include="kihx.h" />
     <ClInclude Include="mathlib.h" />
     <ClInclude Include="matrix.h" />
@@ -108,6 +109,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="base.cpp" />
+    <ClCompile Include="concommand.cpp" />
     <ClCompile Include="dllmain.cpp">
       <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</CompileAsManaged>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -127,6 +129,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="texture.cpp" />
+    <ClCompile Include="threading.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
