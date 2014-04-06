@@ -5,7 +5,9 @@
 #include "buffer.h"
 
 #include <vector>
-#include <functional>
+
+
+//#define DEPTHFUNC_LAMDA
 
 
 namespace kih
@@ -36,22 +38,6 @@ namespace kih
 	class PixelProcessor;
 	class OutputMerger;
 	class RenderingContext;
-
-	
-	/* enum class DepthFunc
-	*/
-	enum class DepthFunc
-	{
-		None = 0,
-		Not,
-		Equal,
-		Less,
-		LessEqual,
-		Greater,
-		GreaterEqual,
-		/* the number of enum elements */
-		Size
-	};
 	
 
 	/* class RenderingContext
@@ -63,21 +49,33 @@ namespace kih
 		using DepthTestFunc = std::function< bool( byte /*src*/, byte /*dst*/ ) >;
 
 	public:
+		static const int ThreadConcurrency = 4;
+
 		explicit RenderingContext( size_t numRenderTargets );
 
 		// draw
-		void Clear( byte r, byte g, byte b, byte a, float z = 1.0f, int stencil = 0 );
-		void Draw( std::shared_ptr<IMesh> mesh );
+		void Clear( byte r, byte g, byte b, byte a, float z = 1.0f, int stencil = 0 );		
+		void Draw( const std::shared_ptr<IMesh>& mesh );
+		
+		// In FuncPreRender, the world matrix of the specified mesh should be set onto the constant buffer of the rendering context.
+		using FuncPreRender = std::function<void( std::shared_ptr<RenderingContext> context, const std::shared_ptr<IMesh>& mesh, size_t index )>;
+		static void DrawInParallel( std::vector<std::shared_ptr<RenderingContext>>& contexts, const std::vector<std::shared_ptr<IMesh>>& meshes, FuncPreRender funcPreRender );
 
 		// render targets
-		size_t NumberOfRenderTargets() const
+		FORCEINLINE size_t NumberOfRenderTargets() const
 		{
 			return m_renderTargets.size();
 		}
 
+		const std::shared_ptr<Texture>& GetRenderTagetConst( size_t index ) const
+		{
+			Assert( index >= 0 && index < m_renderTargets.size() );
+			return m_renderTargets[index];
+		}
+
 		std::shared_ptr<Texture> GetRenderTaget( size_t index )
 		{
-			Assert( ( index >= 0 && index < m_renderTargets.size() ) && "out of ranged index" );
+			Assert( index >= 0 && index < m_renderTargets.size() );
 			return m_renderTargets[index];
 		}
 
@@ -90,6 +88,7 @@ namespace kih
 		bool SetDepthStencil( std::shared_ptr<Texture> texture );
 
 		// constant buffers
+		// SharedConstantBuffer can be accessed in all rendering stages. 
 		FORCEINLINE ConstantBuffer& GetSharedConstantBuffer()
 		{
 			return m_sharedConstantBuffer;
@@ -102,11 +101,22 @@ namespace kih
 		}
 		void SetDepthWritable( bool writable );
 
+		FORCEINLINE DepthFunc DepthFunction() const
+		{
+			return m_depthFunc;
+		}
 		void SetDepthFunc( DepthFunc func );
+#ifdef DEPTHFUNC_LAMDA
 		bool CallDepthFunc( byte src, byte dst );
+#endif
 
 	private:
-		void DrawInternal( std::shared_ptr<IMesh> mesh, int numVerticesPerPrimitive );
+		void DrawInternal( const std::shared_ptr<IMesh>& mesh, PrimitiveType primitiveType = PrimitiveType::Triangles );
+
+		// Run the rendering pipeline from the input assembler stage to the pixel processor stage,
+		// and return the input stream for the output merger.
+		// To display the rendering result, we must run the output merger stage using the input stream.
+		std::shared_ptr<OutputMergerInputStream> RunRenderingPipeline( const std::shared_ptr<IMesh>& mesh, PrimitiveType primitiveType = PrimitiveType::Triangles );		
 
 	private:
 		// render stages
@@ -124,7 +134,10 @@ namespace kih
 		ConstantBuffer m_sharedConstantBuffer;
 
 		// depth buffering
+#ifdef DEPTHFUNC_LAMDA
 		DepthTestFunc m_funcDepthTest;
+#endif
+		DepthFunc m_depthFunc;
 		bool m_depthWritable;
 	};
 

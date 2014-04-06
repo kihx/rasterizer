@@ -7,8 +7,10 @@
 #include "buffer.h"
 #include "stage.h"
 #include "concommand.h"
+#include "threading.h"
 
 #include <list>
+#include <mutex>
 
 
 namespace kih
@@ -21,6 +23,7 @@ namespace kih
 		m_rasterizer( std::make_unique<Rasterizer>( this ) ),
 		m_pixelProcessor( std::make_unique<PixelProcessor>( this ) ),
 		m_outputMerger( std::make_unique<OutputMerger>( this ) ),
+		m_depthFunc( DepthFunc::None ),
 		m_depthWritable( false )
 	{
 		m_renderTargets.resize( numRenderTargets );
@@ -89,14 +92,25 @@ namespace kih
 		int width = ds->Width();
 		int height = ds->Height();
 		int bytePerPixel = GetBytesPerPixel( ds->Format() );
-		byte depth = Float_ToByte( z );
 
 		switch ( ds->Format() )
 		{
 		case ColorFormat::D8S24:
 			{
-				int value = ( depth | 0x0 );
-				memset( ptr, value, width * height * bytePerPixel );
+				// FIXME: stencil value
+				memset( ptr, Float_ToByte( z ), width * height * bytePerPixel );
+			}
+			break;
+
+		case ColorFormat::D32F:
+			{
+				float* fp = reinterpret_cast< float* >( ptr );
+				Assert( fp );
+				int size = width * height;
+				for ( int i = 0; i < size; ++i )
+				{
+					fp[i] = z;
+				}
 			}
 			break;
 
@@ -105,7 +119,7 @@ namespace kih
 		}
 	}
 
-	void RenderingContext::Draw( std::shared_ptr<IMesh> mesh )
+	void RenderingContext::Draw( const std::shared_ptr<IMesh>& mesh )
 	{
 		if ( mesh == nullptr )
 		{
@@ -121,36 +135,162 @@ namespace kih
 		Assert( m_outputMerger );
 
 		// Set a constant buffer for WVP transform.
-		Matrix4 wv = pDevice->GetWorldMatrix() * pDevice->GetViewMatrix();
+		ConstantBuffer& cbuffer = GetSharedConstantBuffer();
+		const Matrix4& w = cbuffer.GetMatrix4( ConstantBuffer::WorldMatrix );
+		Matrix4 wv = w * pDevice->GetViewMatrix();
 		Matrix4 wvp = wv * pDevice->GetProjectionMatrix();
-		GetSharedConstantBuffer().SetMatrix4( ConstantBuffer::WVPMatrix, wvp );
+		cbuffer.SetMatrix4( ConstantBuffer::WVPMatrix, wvp );
 
 		// Draw primitives here.
-		PrimitiveType primitiveType = mesh->GetPrimitiveType();
-		
-		if ( primitiveType == PrimitiveType::Undefined )
+		if ( mesh->GetPrimitiveType() == PrimitiveType::Undefined )
 		{
-			if ( IrregularMesh* pMesh = dynamic_cast< IrregularMesh* >( mesh.get() ) )
+			if ( const IrregularMesh* pMesh = dynamic_cast< const IrregularMesh* >( mesh.get() ) )
 			{
 				for ( size_t face = 0; face < pMesh->NumFaces(); ++face )
 				{
 					const unsigned char* color = pMesh->GetFaceColor( face );
-					GetSharedConstantBuffer().SetVector4( ConstantBuffer::DiffuseColor, 
-															Vector4( static_cast<byte>( color[0] / 255.0f ), 
-																	static_cast<byte>( color[1] / 255.0f ), 
-																	static_cast<byte>( color[2] / 255.0f ), 
-																	static_cast<byte>( color[3] / 255.0f ) ) );
+					cbuffer.SetVector4( ConstantBuffer::DiffuseColor, Vector4( static_cast<byte>( color[0] / 255.0f ), 
+																				static_cast<byte>( color[1] / 255.0f ), 
+																				static_cast<byte>( color[2] / 255.0f ), 
+																				static_cast<byte>( color[3] / 255.0f ) ) );
 
 					m_inputAssembler->SetFaceIndex( face );					
-					DrawInternal( mesh, pMesh->NumVerticesInFace( face ) );
+					DrawInternal( mesh, GetPrimitiveTypeFromNumberOfVertices( pMesh->NumVerticesInFace( face ) ) );
 				}
 			}
 		}
 		else
 		{
-			GetSharedConstantBuffer().SetVector4( ConstantBuffer::DiffuseColor, Vector4( 1.0f, 1.0f, 1.0f, 1.0f ) );
+			DrawInternal( mesh );
+		}
+	}
 
-			DrawInternal( mesh, GetNumberOfVerticesPerPrimitive( primitiveType ) );
+	void RenderingContext::DrawInParallel( std::vector<std::shared_ptr<RenderingContext>>& contexts, const std::vector<std::shared_ptr<IMesh>>& meshes, FuncPreRender funcPreRender )
+	{
+		if ( meshes.empty() )
+		{
+			return;
+		}
+
+		if ( contexts.empty() )
+		{
+			LOG_WARNING( "no contexts" );
+			return;
+		}
+
+		// Validate the specified rendering contexts.
+		for ( auto context : contexts )
+		{
+			if ( context == nullptr )
+			{
+				LOG_WARNING( "forbidden null context usage" );
+				return;
+			}
+		}
+
+
+		// If the number of meshes is less than 4, 
+		// draw all meshes on the first context without parallel processing.
+		if ( meshes.size() < 4 )
+		{
+			auto context = contexts[0];
+			for ( const auto& mesh : meshes )
+			{
+				context->Draw( mesh );
+			}
+			return;
+		}
+
+
+		RenderingDevice* pDevice = RenderingDevice::GetInstance();
+		Assert( pDevice );
+		
+		// Note that the world matrix would be multiplied just before drawing a mesh
+		// because the world matrix of a mesh is different each other.
+		// So premultiply view-projection matrices only.
+		Matrix4 vp = pDevice->GetViewMatrix() * pDevice->GetProjectionMatrix();
+
+		// Distribute input meshes to each context.
+		size_t numContexts = contexts.size();
+		size_t numMeshes = meshes.size();
+		size_t numMeshesPerContext = numMeshes / numContexts;
+
+		// Reserve the series of the input stream of the output merge
+		// which are the result of the work for each rendering context.
+		// We should sequentially merge them on the output merger in a single thread (the first context).
+		std::vector<std::shared_ptr<OutputMergerInputStream>> omInputStreamList;
+		omInputStreamList.reserve( numContexts );
+		
+		// FIXME: use a custom mutex
+		static std::mutex streamMergeMutex;		
+		
+		std::vector<void*> threadHandles;
+		threadHandles.reserve( numContexts );
+
+		for ( size_t c = 0; c < numContexts; ++c )
+		{
+			auto context = contexts[c];
+			Assert( context );
+
+			Thread t
+			{
+				[=, &omInputStreamList]()
+				{
+					ConstantBuffer& cbuffer = context->GetSharedConstantBuffer();
+
+					for ( size_t m = 0; m < numMeshesPerContext; ++m )
+					{
+						size_t index = c * numMeshesPerContext + m;
+						if ( index < 0 || index >= numMeshes )
+						{
+							continue;
+						}
+
+						const auto& mesh = meshes[index];
+						if ( mesh == nullptr )
+						{
+							continue;
+						}
+
+						PrimitiveType primitiveType = mesh->GetPrimitiveType();
+						if ( primitiveType == PrimitiveType::Undefined )
+						{
+							LOG_WARNING( "cannot support parallel rendering with the undefined primitive type" );
+							continue;
+						}
+
+						// Call the PreRender functor.
+						funcPreRender( context, mesh, index );
+
+						// Now compute the final WVP matrix of this mesh.
+						Matrix4 wvp = cbuffer.GetMatrix4( ConstantBuffer::WorldMatrix ) * vp;
+						cbuffer.SetMatrix4( ConstantBuffer::WVPMatrix, wvp );
+
+						// Run the rendering pipeline for the mesh.
+						std::shared_ptr<OutputMergerInputStream> omInput = context->RunRenderingPipeline( mesh, primitiveType );
+
+						// And then collect the input stream for the output merger.
+						std::shared_ptr<OutputMergerInputStream> clone = omInput->Clone();
+						std::lock_guard<std::mutex> lockGuard( streamMergeMutex );
+						omInputStreamList.emplace_back( clone );
+					}
+				}
+			};
+			// FIXME: is this ok?
+			threadHandles.push_back( t.Handle() );
+		}
+
+		// Join all rendering threads.
+		for ( auto handle : threadHandles )
+		{
+			Thread::Join( handle );
+		}
+
+		// Merge all input stream data of the output merger on the first rendering context.
+		auto context = contexts[0];
+		for ( auto stream : omInputStreamList )
+		{
+			context->m_outputMerger->Process( stream );
 		}
 	}
 
@@ -188,7 +328,7 @@ namespace kih
 		}
 
 		m_depthStencil = texture;
-		return false;
+		return true;
 	}
 
 	void RenderingContext::SetDepthWritable( bool writable )
@@ -198,6 +338,7 @@ namespace kih
 
 	void RenderingContext::SetDepthFunc( DepthFunc func )
 	{
+#ifdef DEPTHFUNC_LAMDA
 		// depth functions in lamda expression
 		static DepthTestFunc DepthFunctions[] =
 		{
@@ -213,8 +354,11 @@ namespace kih
 		static_assert( SIZEOF_ARRAY( DepthFunctions ) == static_cast< size_t >( DepthFunc::Size ), "incomplete depthfunc" );
 
 		m_funcDepthTest = DepthFunctions[static_cast< int >( func )];
+#endif
+		m_depthFunc = func;
 	}
 
+#ifdef DEPTHFUNC_LAMDA
 	bool RenderingContext::CallDepthFunc( byte src, byte dst )
 	{
 		if ( m_funcDepthTest )
@@ -225,14 +369,24 @@ namespace kih
 		// This is correct because no depth func means that a depth test is always passed.
 		return true;
 	}
+#endif
 
-	void RenderingContext::DrawInternal( std::shared_ptr<IMesh> mesh, int numVerticesPerPrimitive )
+	void RenderingContext::DrawInternal( const std::shared_ptr<IMesh>& mesh, PrimitiveType primitiveType /*= PrimitiveType::Triangles */ )
+	{
+		Assert( m_outputMerger );
+
+		// Run the rendering pipeline from the input assembler to the output merger at a time.
+		m_outputMerger->Process( RunRenderingPipeline( mesh, primitiveType ) );
+		// Note that the output stream of the output merger is meaningless
+		// because the output merger directly write data on render targets and a depth-stencil buffer.
+	}
+
+	std::shared_ptr<OutputMergerInputStream> RenderingContext::RunRenderingPipeline( const std::shared_ptr<IMesh>& mesh, PrimitiveType primitiveType )
 	{
 		Assert( m_inputAssembler );
 		Assert( m_vertexProcessor );
 		Assert( m_rasterizer );
 		Assert( m_pixelProcessor );
-		Assert( m_outputMerger );
 
 		// input assembler stage
 		std::shared_ptr<VertexProcInputStream> vpInput = m_inputAssembler->Process( mesh );
@@ -243,7 +397,7 @@ namespace kih
 		//printf( "RasterizerInputStream Size: %d\n", raInput->Size() );
 
 		// rasterizer stage
-		raInput->SetPrimitiveType( GetPrimitiveTypeFromNumberOfVertices( numVerticesPerPrimitive ) );
+		raInput->SetPrimitiveType( primitiveType );
 		std::shared_ptr<PixelProcInputStream> ppInput = m_rasterizer->Process( raInput );
 		//printf( "PixelProcInputStream Size: %d\n", ppInput->Size() );
 
@@ -251,10 +405,7 @@ namespace kih
 		std::shared_ptr<OutputMergerInputStream> omInput = m_pixelProcessor->Process( ppInput );
 		//printf( "OutputMergerInputStream Size: %d\n", 0 );
 
-		// output merger stage
-		// Note that the output stream of the output merger is meaningless
-		// because the output merger directly write data on render targets and a depth-stencil buffer.
-		m_outputMerger->Process( omInput );
+		return omInput;		
 	}
 
 

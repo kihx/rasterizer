@@ -6,6 +6,7 @@
 #include <utility>
 #include <memory>
 #include <type_traits>
+#include <functional>
 
 
 
@@ -69,6 +70,32 @@ namespace kih
 
 	// utility classes
 	//
+
+	/* struct LoopUnroll
+	*/
+	template<int N>
+	struct LoopUnroll
+	{
+		template<typename Func>
+		static void Work( Func func )
+		{			
+			func();
+			LoopUnroll< N - 1 >::Work( func );
+		}
+	};
+
+	template<>
+	struct LoopUnroll<1>
+	{
+		template<typename Func>
+		static void
+		Work( Func func )
+		{
+			func();
+		}
+	};
+
+
 	/* class Singleton
 	*/
 	template<class T>
@@ -163,6 +190,7 @@ namespace kih
 	};
 };
 
+using kih::LoopUnroll;
 using kih::Singleton;
 using kih::LockGuard;
 using kih::LockGuardPtr;

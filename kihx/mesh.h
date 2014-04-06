@@ -7,6 +7,17 @@
 
 namespace kih
 {
+	FORCEINLINE PrimitiveType GetPrimitiveTypeFromNumberOfVertices( size_t num )
+	{
+		return static_cast< PrimitiveType >( num );
+	}
+
+	FORCEINLINE size_t GetNumberOfVerticesPerPrimitive( PrimitiveType type )
+	{
+		return static_cast< size_t >( type );
+	}
+
+
 	/* Vertex
 	*/
 	template<typename VertexType>

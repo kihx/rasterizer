@@ -19,11 +19,11 @@ namespace kih
 			#define	ENUM_MATRIX(e)	( e + 4 )
 			#define	ENUM_VECTOR(e)	( e + 1 )
 
-			WorldMatrix = 0,
-			ViewMatrix = ENUM_MATRIX( WorldMatrix ),
-			ProjectionMatrix = ENUM_MATRIX( ViewMatrix ),
-			WVPMatrix = ENUM_MATRIX( ProjectionMatrix ),
-			DiffuseColor = ENUM_MATRIX( WVPMatrix ),
+			WorldMatrix				= 0,
+			ViewMatrix				= ENUM_MATRIX( WorldMatrix ),
+			ProjectionMatrix		= ENUM_MATRIX( ViewMatrix ),
+			WVPMatrix				= ENUM_MATRIX( ProjectionMatrix ),
+			DiffuseColor			= ENUM_MATRIX( WVPMatrix ),
 		};
 
 		ConstantBuffer() = default;

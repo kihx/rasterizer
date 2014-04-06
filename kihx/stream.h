@@ -134,6 +134,11 @@ namespace kih
 			return m_streamSource.size();
 		}
 
+		FORCEINLINE void Resize( size_t size )
+		{
+			m_streamSource.resize( size );
+		}
+
 		FORCEINLINE void Reserve( size_t capacity )
 		{
 			m_streamSource.reserve( capacity );
@@ -148,7 +153,7 @@ namespace kih
 		{
 			m_streamSource = std::move( src.m_streamSource );
 		}
-
+		
 	private:
 		std::vector<Data> m_streamSource;
 	};	
@@ -230,6 +235,18 @@ namespace kih
 	public:
 		OutputMergerInputStream()
 		{
+		}
+
+		std::shared_ptr<OutputMergerInputStream> Clone()
+		{
+			size_t size = Size();
+			auto clone = std::make_shared<OutputMergerInputStream>();
+			if ( size > 0 )
+			{
+				clone->Resize( size );
+				memcpy( &clone->GetData( 0 ), &GetData( 0 ), sizeof( FragmentData ) * size );
+			}
+			return clone;
 		}
 
 	private:

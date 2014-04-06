@@ -47,14 +47,30 @@ namespace kih
 			return ( m_ptr + ( ( ( m_width * y ) + x ) * m_stride ) );
 		}
 
-		bool Execute( unsigned short x, unsigned short y, float depth );
+		FORCEINLINE bool Execute( unsigned short x, unsigned short y, float depth )
+		{
+			if ( m_format == ColorFormat::D8S24 )
+			{
+				return ExecuteInternal( x, y, Float_ToByte( depth ) );
+			}
+			else
+			{
+				return ExecuteInternal( x, y, depth );
+			}
+		}
+
+	private:
+		template<typename T>
+		bool ExecuteInternal( unsigned short x, unsigned short y, T depth );
 
 	private:
 		RenderingContext* m_context;
 		std::shared_ptr<Texture> m_ds;
+		ColorFormat m_format;
 		int m_width;
 		int m_stride;
 		byte* m_ptr;
+		DepthFunc m_depthFunc;
 	};
 
 

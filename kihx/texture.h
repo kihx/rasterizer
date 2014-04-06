@@ -6,19 +6,6 @@
 
 namespace kih
 {
-	/* enum ColorFormat
-	*/
-	enum class ColorFormat : unsigned int
-	{
-		Unknown = 0,
-
-		// color
-		R8G8B8 = 10,
-
-		// depth-stencil
-		D8S24 = 1000	// depth 8 and stencil 24 bits
-	};
-
 	FORCEINLINE int GetBytesPerPixel( ColorFormat format )
 	{
 		switch ( format )
@@ -27,6 +14,7 @@ namespace kih
 			return 3;
 
 		case ColorFormat::D8S24:
+		case ColorFormat::D32F:
 			return 4;
 
 		default:
@@ -53,7 +41,9 @@ namespace kih
 		switch ( bpp )
 		{
 		case 32:
+			Assert( 0 && "ambiguous format" );
 			return ColorFormat::D8S24;
+			//return ColorFormat::D32F;
 
 		default:
 			Assert( 0 && "invalid operation" );

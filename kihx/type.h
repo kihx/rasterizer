@@ -19,6 +19,21 @@ namespace kih
 	typedef unsigned char byte;
 
 
+	/* struct IntFloat
+	*/
+	struct IntFloat
+	{
+		union
+		{
+			int I;
+			float F;
+		};
+
+		IntFloat( int i ) : I( i ) {}
+		IntFloat( float f ) : F( f ) {}
+	};
+
+
 	/* enum class PrimitiveType
 	*/
 	enum class PrimitiveType : unsigned int
@@ -32,16 +47,6 @@ namespace kih
 		Octas = 6
 	};
 
-	FORCEINLINE PrimitiveType GetPrimitiveTypeFromNumberOfVertices( size_t num )
-	{
-		return static_cast< PrimitiveType >( num );
-	}
-
-	FORCEINLINE size_t GetNumberOfVerticesPerPrimitive( PrimitiveType type )
-	{	
-		return static_cast< size_t >( type );
-	}
-
 
 	/* enum class CoordinateType
 	*/
@@ -49,6 +54,37 @@ namespace kih
 	{
 		Projective = 0,
 		ReciprocalHomogeneous,
+	};
+
+
+	/* enum ColorFormat
+	*/
+	enum class ColorFormat : unsigned int
+	{
+		Unknown = 0,
+
+		// color
+		R8G8B8 = 10,
+
+		// depth-stencil
+		D8S24 = 1000,	// depth 8 and stencil 24 bits
+		D32F,			// depth 32 bits floating point
+	};
+
+		
+	/* enum class DepthFunc
+	*/
+	enum class DepthFunc
+	{
+		None = 0,
+		Not,
+		Equal,
+		Less,
+		LessEqual,
+		Greater,
+		GreaterEqual,
+		/* the number of enum elements */
+		Size
 	};
 	
 

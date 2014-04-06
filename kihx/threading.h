@@ -2,7 +2,6 @@
 
 #include "base.h"
 
-#include <functional>
 
 namespace kih
 {
@@ -57,13 +56,29 @@ namespace kih
 			}
 		}
 
-		void Join()
+		FORCEINLINE void* Handle()
+		{
+			return m_handle;
+		}
+
+		FORCEINLINE unsigned int ID()
+		{
+			return m_id;
+		}
+
+		FORCEINLINE void Join()
 		{
 			//if ( m_id == Current.m_id )
 			//{
 			//	throw std::runtime_error( "deadlock would occur" );
 			//}
-			f_waitforsingleobject( m_handle, 0xFFFFFFFF );
+			Join( m_handle );
+		}
+
+		static FORCEINLINE void Join( void* handle )
+		{
+			Assert( handle );
+			f_waitforsingleobject( handle, 0xFFFFFFFF );
 		}
 
 		//static Thread& Current()

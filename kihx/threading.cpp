@@ -56,11 +56,8 @@ DEFINE_COMMAND( thread_test )
 			std::cout << "str: " << str << std::endl;
 			std::cout << "y : " << yCaptured << std::endl;
 		},
-			5,
-			"test"
+		5,
+		"test"
 	};
 	t.Join();
 }
-
-static ConsoleCommand thread_num( "thread_num", "0" );
-

@@ -12,12 +12,9 @@
 #include <list>
 
 
-#define EARLY_Z_CULLING
+//#define EARLY_Z_CULLING
 
 //#define BYPASS_PIXEL_SHADING
-
-
-static ConsoleVariable thread_num_stage( "thread_num_stage", "4" );
 
 
 namespace kih
@@ -27,7 +24,11 @@ namespace kih
 	DepthBuffering::DepthBuffering( RenderingContext* context ) :
 		m_context( context ),
 		m_ds( nullptr ),
-		m_ptr( nullptr )
+		m_ptr( nullptr ),
+		m_format( ColorFormat::Unknown ),
+		m_width( 0 ),
+		m_stride( 0 ),
+		m_depthFunc( DepthFunc::None )
 	{
 		if ( m_context == nullptr )
 		{
@@ -41,19 +42,17 @@ namespace kih
 			// This is NOT an error. We accept this case.
 			return;
 		}
-
-		// TODO: implementation for a floating point depth buffer
-		// Currently, we assume that the size of a depth buffer is one byte.
-		Assert( ( m_ds->Format() == ColorFormat::D8S24 ) && "floating point depth buffer is not implemented yet" );
-
+		
 		// Get raw memory from the depth stencil.
 		if ( !m_ds->Lock( reinterpret_cast< void** >( &m_ptr ) ) )
 		{
 			return;
 		}
 
+		m_format = m_ds->Format();
 		m_width = m_ds->Width();
-		m_stride = GetBytesPerPixel( m_ds->Format() );
+		m_stride = GetBytesPerPixel( m_format );
+		m_depthFunc = context->DepthFunction();
 	}
 
 	DepthBuffering::~DepthBuffering()
@@ -64,15 +63,12 @@ namespace kih
 		}
 	}
 
-	bool DepthBuffering::Execute( unsigned short x, unsigned short y, float depth )
+	template<typename T>
+	bool DepthBuffering::ExecuteInternal( unsigned short x, unsigned short y, T depth )
 	{
-		if ( !IsValid() )
-		{
-			return true;	// This is correct because no depth func means that a depth test is always passed.
-		}
-
 		VerifyReentry( 1 );
 		
+		Assert( IsValid() );
 		Assert( x >= 0 && x < m_width );
 		Assert( y >= 0 && y < m_ds->Height() );
 
@@ -82,26 +78,68 @@ namespace kih
 			throw std::range_error( "out of ranged x or y coordinates to access the depth-stencil buffer" );
 		}
 
-		byte& dst = *addr;
-		byte src = Float_ToByte( depth );
+		T& dst = *( reinterpret_cast<T*>( addr ) );
 
-#if 0
-		// inline lamda with [=] capture block
-		using DepthTestFunc = std::function< bool() >;
-		DepthTestFunc lessEqual = [=]() { return value <= ref; };
-#endif
-
+#ifdef DEPTHFUNC_LAMDA
 		// Call a functional object for depth test.
-		if ( !m_context->CallDepthFunc( src, dst ) )
+		if ( !m_context->CallDepthFunc( depth, dst ) )
 		{
 			return false;
 		}
+#else
+		switch ( m_depthFunc )
+		{
+		case DepthFunc::Not:
+			if ( !( depth != dst ) )
+			{
+				return false;
+			}
+			break;
+
+		case DepthFunc::Equal:
+			if ( !( depth == dst ) )
+			{
+				return false;
+			}
+			break;
+
+		case DepthFunc::Less:
+			if ( !( depth < dst ) )
+			{
+				return false;
+			}
+			break;
+
+		case DepthFunc::LessEqual:
+			if ( !( depth <= dst ) )
+			{
+				return false;
+			}
+			break;
+
+		case DepthFunc::Greater:
+			if ( !( depth > dst ) )
+			{
+				return false;
+			}
+			break;
+
+		case DepthFunc::GreaterEqual:
+			if ( !( depth >= dst ) )
+			{
+				return false;
+			}
+			break;
+
+		default:
+			break;
+		}
+#endif
 
 		// depth write
-		// FIXME: perform this in an output merger
 		if ( m_context->DepthWritable() )
 		{
-			dst = src;
+			dst = depth;
 		}
 
 		return true;
@@ -229,7 +267,7 @@ namespace kih
 
 		m_outputStream->Clear();
 
-		std::shared_ptr<Texture> rt = GetContext()->GetRenderTaget( 0 );
+		const std::shared_ptr<Texture>& rt = GetContext()->GetRenderTagetConst( 0 );
 		if ( rt == nullptr )
 		{
 			return m_outputStream;
@@ -310,15 +348,15 @@ namespace kih
 				float zEnd = v0.Position.Z;
 				if ( v0.Position.X < v1.Position.X )
 				{
-					Swap<float>( xMax, xMin );
-					Swap<float>( zStart, zEnd );
+					Swap( xMax, xMin );
+					Swap( zStart, zEnd );
 				}
 
 				float yMax = v0.Position.Y;
 				float yMin = v1.Position.Y;
 				if ( v0.Position.Y < v1.Position.Y )
 				{
-					Swap<float>( yMax, yMin );
+					Swap( yMax, yMin );
 				}
 
 				float dx = v0.Position.X - v1.Position.X;
@@ -348,10 +386,7 @@ namespace kih
 		Assert( height == m_edgeTable.size() && "target height and scanline are mismatched" );
 
 		// FIXME: test code
-		byte seedR = static_cast< byte >( Random::Next( 0, 255 ) );
-		byte seedG = static_cast< byte >( Random::Next( 0, 255 ) );
-		byte seedB = static_cast< byte >( Random::Next( 0, 255 ) );
-		Color32 color( seedR, seedG, seedB, 255 );
+		Color32 color( 255, 255, 255, 255 );
 
 		// active edge table
 		std::list<ActiveEdgeTableElement> aet;
@@ -558,8 +593,8 @@ namespace kih
 		// do nothing
 #else
 		// Load pixel shader constants.
-		//const Vector4& diffuseColor = GetSharedConstantBuffer().GetVector4( ConstantBuffer::DiffuseColor );
-		//Color32 color = Vector4_ToColor32( color );
+		const Vector4& diffuseColor = GetSharedConstantBuffer().GetVector4( ConstantBuffer::DiffuseColor );
+		Color32 color = Vector4_ToColor32( diffuseColor );
 
 
 		// Now, do per-pixel operations here.
@@ -567,7 +602,7 @@ namespace kih
 		{
 			auto& fragment = inputStream->GetData( i );
 
-			Color32 color = fragment.Color;
+			//Color32 color = fragment.Color;			
 
 			// TODO: pixel shading
 			//
