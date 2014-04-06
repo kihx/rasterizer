@@ -31,6 +31,7 @@ byte g_pppScreenImage[SCREEN_HEIGHT][SCREEN_WIDTH][COLOR_DEPTH];
 
 // Static variables
 //
+static bool g_bFrameUpdate = true;
 static GLdouble g_dZoomFactor = 4.0;
 static GLint g_iHeight;
 std::string g_meshFileName = "cube.ply";
@@ -372,7 +373,7 @@ void reshape( int w, int h)
 
 void motion( int x, int y)
 {
-	printf( "[motion] x: %d, y: %d\n", x, y );
+	//printf( "[motion] x: %d, y: %d\n", x, y );
 
 	static GLint screeny;
 
@@ -391,7 +392,7 @@ void ReloadMesh()
 
 void keyboard( unsigned char key, int x, int y)
 {
-	printf( "[keyboard] key: %c\n", key );
+	//printf( "[keyboard] key: %c\n", key );
 	
 	HMODULE hCurrentModule = nullptr;
 
@@ -434,7 +435,7 @@ void keyboard( unsigned char key, int x, int y)
 
 	case 'r':
 	case 'R':
-		glutPostRedisplay();
+		g_bFrameUpdate = !g_bFrameUpdate;
 		break;
 
 	case 'z':
@@ -443,7 +444,6 @@ void keyboard( unsigned char key, int x, int y)
 		{
 			g_dZoomFactor = 8.0;
 		}
-		printf( "g_dZoomFactor is now %4.1f\n", g_dZoomFactor );
 		break;
 
 	case 'Z':
@@ -452,7 +452,6 @@ void keyboard( unsigned char key, int x, int y)
 		{
 			g_dZoomFactor = 0.5;
 		}
-		printf( "g_dZoomFactor is now %4.1f\n", g_dZoomFactor );
 		break;
 
 	case 27:
@@ -466,6 +465,11 @@ void keyboard( unsigned char key, int x, int y)
 
 void update( void )
 {
+	if ( !g_bFrameUpdate )
+	{
+		return;
+	}
+
 	SetupTransform();
 	
 	glutPostRedisplay();
