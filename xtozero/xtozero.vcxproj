@@ -97,6 +97,7 @@
     <ClInclude Include="xtozero.h" />
     <ClInclude Include="pipelineElements.h" />
     <ClInclude Include="XtzMath.h" />
+    <ClInclude Include="XtzThreadPool.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
@@ -119,6 +120,7 @@
     </ClCompile>
     <ClCompile Include="VertexShader.cpp" />
     <ClCompile Include="xtozero.cpp" />
+    <ClCompile Include="XtzThreadPool.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

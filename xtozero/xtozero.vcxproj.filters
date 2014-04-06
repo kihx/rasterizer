@@ -13,6 +13,15 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Dll">
+      <UniqueIdentifier>{426962ae-a87c-4b80-8dd8-3859d8520652}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Pipeline">
+      <UniqueIdentifier>{a4bc344b-c171-4b51-8e50-1f50df8b1b3f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Thread">
+      <UniqueIdentifier>{f9765337-4936-4192-a6a1-128328fb0c5a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -21,19 +30,7 @@
     <ClInclude Include="targetver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="xtozero.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="FileHandler.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Rasterizer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="pipelineElements.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="VertexShader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Comman.h">
@@ -45,21 +42,30 @@
     <ClInclude Include="XtzMath.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="OutputMerger.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="PixelShader.h">
-      <Filter>Header Files</Filter>
+      <Filter>Pipeline</Filter>
+    </ClInclude>
+    <ClInclude Include="Rasterizer.h">
+      <Filter>Pipeline</Filter>
+    </ClInclude>
+    <ClInclude Include="VertexShader.h">
+      <Filter>Pipeline</Filter>
+    </ClInclude>
+    <ClInclude Include="pipelineElements.h">
+      <Filter>Pipeline</Filter>
+    </ClInclude>
+    <ClInclude Include="OutputMerger.h">
+      <Filter>Pipeline</Filter>
+    </ClInclude>
+    <ClInclude Include="xtozero.h">
+      <Filter>Dll</Filter>
+    </ClInclude>
+    <ClInclude Include="XtzThreadPool.h">
+      <Filter>Thread</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="xtozero.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="dllmain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Mesh.cpp">
@@ -68,20 +74,29 @@
     <ClCompile Include="FileHandler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Rasterizer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="VertexShader.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="XtzMath.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="dllmain.cpp">
+      <Filter>Dll</Filter>
+    </ClCompile>
+    <ClCompile Include="xtozero.cpp">
+      <Filter>Dll</Filter>
+    </ClCompile>
     <ClCompile Include="OutputMerger.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Pipeline</Filter>
     </ClCompile>
     <ClCompile Include="PixelShader.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Pipeline</Filter>
+    </ClCompile>
+    <ClCompile Include="Rasterizer.cpp">
+      <Filter>Pipeline</Filter>
+    </ClCompile>
+    <ClCompile Include="VertexShader.cpp">
+      <Filter>Pipeline</Filter>
+    </ClCompile>
+    <ClCompile Include="XtzThreadPool.cpp">
+      <Filter>Thread</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
