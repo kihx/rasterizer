@@ -7,6 +7,7 @@
 #include "WPolygon.h"
 #include "Utility.h"
 
+#include <assert.h>
 #include <memory>
 
 #include <Windows.h>
@@ -97,7 +98,7 @@ bool WModule::DepthTest(int x, int y, float z)
 {
 	// depth test
 	int depthIndex = m_screenWidth * y + x;
-	if (m_depthBuffer[depthIndex] < z)
+	if (m_depthBuffer[depthIndex] <= z)
 	{
 		return false;
 	}
@@ -120,6 +121,8 @@ void WModule::ResetFillInfo()
 
 void WModule::InsertLineInfo(int lineIndex, int posX, const unsigned char* rgb)
 {
+	assert((lineIndex >= 0 && lineIndex < m_screenHeight) && "fillInfo Index out of range");
+
 	m_fillInfo[lineIndex].Insert(posX, rgb);
 
 	m_isSorted = false;
@@ -127,6 +130,8 @@ void WModule::InsertLineInfo(int lineIndex, int posX, const unsigned char* rgb)
 
 void WModule::InsertLineDepthInfo(int lineIndex, int posX, float depth, const unsigned char* rgb)
 {
+	assert((lineIndex >= 0 && lineIndex < m_screenHeight) && "fillInfo Index out of range");
+
 	m_fillInfo[lineIndex].Insert(posX, depth, rgb);
 	m_isSorted = false;
 }
@@ -154,7 +159,11 @@ void WModule::DrawFillInfo()
 void WModule::DrawScanline(int lineIndex, const EdgeInfo& info)
 {
 	size_t edgeInfoCount = info.m_edgeData.size();
-	for (size_t i = 0; i < edgeInfoCount; i += 2)
+
+	// 엣지 정보가 홀수이면 assert 경고
+	assert(!(edgeInfoCount & 1) && "Invalid edgeInfoCount.");
+
+	for (size_t i = 0; i + 1 < edgeInfoCount; i += 2)
 	{
 		const PixelInfo& first = info.m_edgeData[i];
 		const PixelInfo& second = info.m_edgeData[i + 1];
@@ -165,8 +174,8 @@ void WModule::DrawScanline(int lineIndex, const EdgeInfo& info)
 			return;
 		}
 
-		float dx = second.m_x - first.m_x;
-		float dz = second.m_z - first.m_z;
+		float dx = (float)(second.m_x - first.m_x);
+		float dz = (float)(second.m_z - first.m_z);
 		for (int offsetX = first.m_x; offsetX <= second.m_x; ++offsetX)
 		{
 			float z = first.m_z + dz * ((offsetX - first.m_x) / dx);
@@ -183,7 +192,7 @@ void WModule::VertexProcess( Matrix4& mat, Vector3& vertex)
 	float fHalfHeight = m_screenHeight * 0.5f;
 	
 	vertex.X = vertex.X * fHalfWidth + fHalfWidth;
-	vertex.Y = vertex.Y * fHalfHeight + fHalfHeight;
+	vertex.Y = -vertex.Y * fHalfHeight + fHalfHeight;
 }
 
 void WModule::SetTransform(int type, const Matrix4& transform)
@@ -200,6 +209,7 @@ void WModule::SetTransform(int type, const Matrix4& transform)
 		m_proj = transform;
 		break;
 	default:
+		assert(!"Invalid transform type");
 		break;
 	}
 }

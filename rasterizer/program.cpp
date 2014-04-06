@@ -246,7 +246,7 @@ static void LoadModuleWoocom()
 #ifdef _DEBUG
 	const char* ModuleName = "woocomD.dll";
 #else
-	const char* ModuleName = "woocomD.dll";
+	const char* ModuleName = "woocom.dll";
 #endif	
 
 	if ( !g_ModuleContext.Load( ModuleName ) )
