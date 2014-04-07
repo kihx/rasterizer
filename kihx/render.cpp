@@ -260,7 +260,7 @@ namespace kih
 						}
 
 						// Call the PreRender functor.
-						funcPreRender( context, mesh, index );
+						funcPreRender( context, index );
 
 						// Now compute the final WVP matrix of this mesh.
 						Matrix4 wvp = cbuffer.GetMatrix4( ConstantBuffer::WorldMatrix ) * vp;

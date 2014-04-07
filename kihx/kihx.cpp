@@ -26,9 +26,20 @@ static std::vector<std::shared_ptr<IMesh>> g_meshes;
 KIHX_API void kiLoadMeshFromFile( const char* filename )
 {
 	g_meshes.clear();
-	for ( int i = 0; i < 4 * 4; ++i )
+
+	g_meshes.emplace_back( kih::CreateMeshFromFile( filename ) );
+
+	for ( int i = 0; i < 4 * 4 - 1; ++i )
 	{
-		g_meshes.emplace_back( kih::CreateMeshFromFile( filename ) );
+		auto mesh = g_meshes[0]->Clone();
+		if ( mesh )
+		{
+			g_meshes.push_back( mesh );
+		}
+		else
+		{
+			g_meshes.emplace_back( kih::CreateMeshFromFile( filename ) );
+		}
 	}
 }
 
@@ -76,7 +87,7 @@ void DrawGridSceneInParallel( std::vector<std::shared_ptr<RenderingContext>> con
 
 	//using FuncPreRender = std::function<void( std::shared_ptr<RenderingContext> context, const std::shared_ptr<IMesh>& mesh, size_t index )>;
 	RenderingContext::FuncPreRender funcPreRender(
-		[=]( std::shared_ptr<RenderingContext> context, const std::shared_ptr<IMesh>& mesh, size_t index )
+		[=]( std::shared_ptr<RenderingContext> context, size_t index )
 		{
 			ConstantBuffer& cbuffer = context->GetSharedConstantBuffer();
 

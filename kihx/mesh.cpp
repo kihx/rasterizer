@@ -6,17 +6,17 @@
 
 namespace kih
 {
-	/* class FileReader
+	/* class StreamReader
 	*/
-	class FileReader
+	class StreamReader
 	{
 	public:
-		explicit FileReader( const char* filename )
+		explicit StreamReader( const char* filename )
 		{
 			m_reader.open( filename );
 		}
 
-		~FileReader()
+		~StreamReader()
 		{
 			m_reader.close();
 		}
@@ -131,7 +131,7 @@ namespace kih
 			return false;
 		}
 
-		FileReader reader( filename );
+		StreamReader reader( filename );
 		if ( !reader.IsOpened())
 		{
 			LOG_WARNING( "File open failure" );
@@ -197,6 +197,11 @@ namespace kih
 		return true;
 	}
 
+	std::shared_ptr<IMesh> IrregularMesh::Clone() const
+	{
+		return nullptr;
+	}
+
 
 	/* class OptimizedMesh
 	*/
@@ -228,7 +233,7 @@ namespace kih
 			return false;
 		}
 
-		FileReader reader( filename );
+		StreamReader reader( filename );
 		if ( !reader.IsOpened() )
 		{
 			LOG_WARNING( "File open failure" );
@@ -290,4 +295,27 @@ namespace kih
 
 		return true;
 	}	
+
+	std::shared_ptr<IMesh> OptimizedMesh::Clone() const
+	{
+		auto mesh = std::shared_ptr<OptimizedMesh>( new OptimizedMesh() );
+
+		size_t size = GetVertexBufferConst().Size();
+		if ( size > 0 )
+		{
+			auto& vb = mesh->GetVertexBuffer();
+			vb.Resize( size );
+			memcpy( &vb.GetVertex( 0 ), &GetVertexBufferConst().GetVertexConst( 0 ), sizeof( Vertex<float> ) * size );
+		}
+
+		size = GetIndexBufferConst().Size();
+		if ( size > 0 )
+		{
+			auto& vb = mesh->GetIndexBuffer();
+			vb.Resize( size );
+			memcpy( &vb.GetIndex( 0 ), &GetIndexBufferConst().GetIndexConst( 0 ), sizeof( unsigned short ) * size );
+		}
+
+		return mesh;
+	}
 };

@@ -58,7 +58,7 @@ namespace kih
 		void Draw( const std::shared_ptr<IMesh>& mesh );
 		
 		// In FuncPreRender, the world matrix of the specified mesh should be set onto the constant buffer of the rendering context.
-		using FuncPreRender = std::function<void( std::shared_ptr<RenderingContext> context, const std::shared_ptr<IMesh>& mesh, size_t index )>;
+		using FuncPreRender = std::function<void( std::shared_ptr<RenderingContext> context, size_t index )>;
 		static void DrawInParallel( std::vector<std::shared_ptr<RenderingContext>>& contexts, const std::vector<std::shared_ptr<IMesh>>& meshes, FuncPreRender funcPreRender );
 
 		// render targets

@@ -157,6 +157,7 @@ namespace kih
 		virtual CoordinatesType GetCoordinatesType() const = 0;
 
 		virtual bool LoadFile( const char* filename ) = 0;
+		virtual std::shared_ptr<IMesh> Clone() const = 0;
 	};
 
 	// IMesh factory
@@ -179,6 +180,8 @@ namespace kih
 		virtual CoordinatesType GetCoordinatesType() const;
 
 		virtual bool LoadFile( const char* filename );
+
+		virtual std::shared_ptr<IMesh> Clone() const;
 
 		FORCEINLINE size_t NumFaces() const
 		{
@@ -229,6 +232,8 @@ namespace kih
 		virtual CoordinatesType GetCoordinatesType() const;
 
 		virtual bool LoadFile( const char* filename );
+
+		virtual std::shared_ptr<IMesh> Clone() const;
 
 		FORCEINLINE size_t ComputeNumFaces()
 		{
