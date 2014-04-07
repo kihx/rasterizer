@@ -17,7 +17,7 @@ namespace xtozero
 
 		std::vector<Vector4> m_vertices;
 		std::vector<Vector3> m_Color;
-		std::map<int, std::vector<int>> m_faces;
+		std::vector<std::vector<int>> m_faces;
 		COORDINATE m_coodinate;
 	};
 

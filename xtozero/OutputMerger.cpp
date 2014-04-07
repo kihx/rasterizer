@@ -43,7 +43,7 @@ namespace xtozero
 	{
 		assert( m_pDepthBuffer.size() >= m_width * m_height );
 
-		if ( m_pDepthBuffer[y * m_width + x] > depth * depthPrecision )
+		if ( m_pDepthBuffer[y * m_width + x] >= depth * depthPrecision )
 		{
 			m_pDepthBuffer[y * m_width + x] = static_cast<unsigned char>(depth * depthPrecision);
 			return true;

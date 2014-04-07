@@ -26,9 +26,9 @@ namespace xtozero
 		for ( std::vector<Face>::iterator& faceiter = pMesh->m_faces.begin( ); faceiter != pMesh->m_faces.end( ); ++faceiter )
 		{
 			key = faceiter - pMesh->m_faces.begin( );
-			if ( vsOutput.m_faces.find( key ) == vsOutput.m_faces.end( ) )
+			if ( vsOutput.m_faces.size( ) <= key )
 			{
-				vsOutput.m_faces[key] = std::vector<int>( );
+				vsOutput.m_faces.emplace_back();
 				vsOutput.m_faces[key].reserve( pMesh->m_nfaces );
 			}
 			for ( std::vector<int>::iterator& indexiter = faceiter->m_indices.begin( ); indexiter != faceiter->m_indices.end( ); ++indexiter )

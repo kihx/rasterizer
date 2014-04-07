@@ -92,7 +92,8 @@ namespace xtozero
 		//AET 에서 사용하지 않는 Edge제거
 		for ( std::vector<Edge>::iterator& iter = m_activeEdgeTable.begin(); iter != m_activeEdgeTable.end(); )
 		{
-			if ( iter->m_maxY < scanline )
+			Edge& edge = *iter;
+			if ( edge.m_maxY < scanline )
 			{
 				iter = m_activeEdgeTable.erase( iter );
 			}
@@ -106,7 +107,7 @@ namespace xtozero
 		{
 			if ( m_edgeTable.empty() )
 			{
-				break;
+				return;
 			}
 			else
 			{
@@ -117,7 +118,7 @@ namespace xtozero
 				}
 				else
 				{
-					break;
+					return;
 				}
 			}
 		}
@@ -148,6 +149,7 @@ namespace xtozero
 	void CRasterizer::ProcessScanline( int scanline, unsigned int facecolor )//정점 보간하면 컬러 넘겨주지 않을 예정...
 	{
 		std::vector<std::pair<int, float>> horizontalLine;
+		horizontalLine.reserve( m_activeEdgeTable.size() * 2 );
  
 		//수평선을 그릴 구간을 지정
 
@@ -155,36 +157,37 @@ namespace xtozero
 
 		for ( std::vector<Edge>::iterator& iter = m_activeEdgeTable.begin(); iter != m_activeEdgeTable.end(); ++iter )
 		{
-			if ( iter->m_maxY == iter->m_minY ) // 수평한 선분은 제외
+			Edge& edge = *iter;
+			if ( edge.m_maxY == edge.m_minY ) // 수평한 선분은 제외
 			{
 
 			}
 			else
 			{
 				intersectX = GetIntersectXpos(
-					iter->m_minY, iter->m_maxY, scanline, iter->m_minX, iter->m_gradient
+					edge.m_minY, edge.m_maxY, scanline, edge.m_minX, edge.m_gradient
 					);
 
 				// y축에 대한 기울기는 x축에 대한 정밀도가 떨어진다.
 				// 따라서 구한 교차점이 maxX 보다 크면 maxX로 강제한다.
-				if ( intersectX > iter->m_maxX ) 
+				if ( intersectX > edge.m_maxX )
 				{
-					intersectX = iter->m_maxX;
+					intersectX = edge.m_maxX;
 				}
 
 				float lerpRatio = 1.0f;
-				if ( (iter->m_maxX - iter->m_minX) == 0 )
+				if ( (edge.m_maxX - edge.m_minX) == 0 )
 				{
 					//Do Nothing
 				}
 				else
 				{
-					lerpRatio = (intersectX - iter->m_minX) / (iter->m_maxX - iter->m_minX);
+					lerpRatio = (intersectX - edge.m_minX) / (edge.m_maxX - edge.m_minX);
 				}
 
-				float z = Lerp( iter->m_startZ, iter->m_endZ, lerpRatio );
+				float z = Lerp( edge.m_startZ, edge.m_endZ, lerpRatio );
 
-				horizontalLine.emplace_back( std::make_pair( static_cast<int>(ceilf( intersectX )), z ) );
+				horizontalLine.emplace_back( ceilf( intersectX ), z );
 			}
 		}
 
@@ -194,22 +197,26 @@ namespace xtozero
 		float endZ;
 		for ( std::vector<std::pair<int, float>>::iterator& iter = horizontalLine.begin(); iter != horizontalLine.end(); iter += 2 )
 		{
+			std::pair<int, float>& posXZ = *iter;
+
 			if ( (iter + 1) == horizontalLine.end() )
 			{
-				m_outputRS.emplace_back( iter->first, scanline, iter->second, facecolor );
+				m_outputRS.emplace_back( posXZ.first, scanline, posXZ.second, facecolor );
 				break;
 			}
 
-			startX = iter->first;
-			endX = (iter + 1)->first;
-			startZ = iter->second;
-			endZ = (iter + 1)->second;
+			std::pair<int, float>& posNextXZ = *(iter + 1);
+
+			startX = posXZ.first;
+			endX = posNextXZ.first;
+			startZ = posXZ.second;
+			endZ = posNextXZ.second;
 			if ( startX > endX )
 			{
-				startX = (iter + 1)->first;
-				endX = iter->first;
-				startZ = (iter + 1)->second;
-				endZ = iter->second;
+				startX = posNextXZ.first;
+				endX = posXZ.first;
+				startZ = posNextXZ.second;
+				endZ = posXZ.second;
 			}
 
 			if ( startX < m_viewport.m_left )
@@ -282,7 +289,7 @@ namespace xtozero
 				scanline = m_viewport.m_top;
 			}
 
-			//unsigned int facecolor = PIXEL_COLOR( 100, 10, 0 );
+			//unsigned int facecolor = PIXEL_COLOR( 50, 204, 153 );
 			unsigned int facecolor = RAND_COLOR();
 
 			while ( !(m_edgeTable.empty( ) && m_activeEdgeTable.empty( )) )
