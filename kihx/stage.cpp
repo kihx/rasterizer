@@ -66,7 +66,7 @@ namespace kih
 	template<typename T>
 	bool DepthBuffering::ExecuteInternal( unsigned short x, unsigned short y, T depth )
 	{
-		VerifyReentry( 1 );
+		VerifyReentry();
 		
 		Assert( IsValid() );
 		Assert( x >= 0 && x < m_width );
@@ -148,16 +148,16 @@ namespace kih
 
 	/* class InputAssembler
 	*/
-	std::shared_ptr<InputAssemblerOutputStream> InputAssembler::Process( std::shared_ptr<IMesh> inputStream )
+	std::shared_ptr<InputAssemblerOutputStream> InputAssembler::Process( const std::shared_ptr<IMesh>& inputStream )
 	{
 		Assert( inputStream );
-
+		
 		m_outputStream->Clear();
-
+		
 		// Fill the output stream from the specified mesh.
 		if ( inputStream->GetPrimitiveType() == PrimitiveType::Undefined )
 		{
-			const IrregularMesh* mesh = dynamic_cast< IrregularMesh* >( inputStream.get() );
+			const IrregularMesh* mesh = dynamic_cast< const IrregularMesh* >( inputStream.get() );
 			if ( mesh == nullptr )
 			{
 				return m_outputStream;
@@ -177,7 +177,7 @@ namespace kih
 		}
 		else
 		{
-			const OptimizedMesh* mesh = dynamic_cast< OptimizedMesh* >( inputStream.get() );
+			const OptimizedMesh* mesh = dynamic_cast< const OptimizedMesh* >( inputStream.get() );
 			if ( mesh == nullptr )
 			{
 				return m_outputStream;
@@ -207,7 +207,7 @@ namespace kih
 
 	/* class VertexProcessor
 	*/
-	std::shared_ptr<VertexProcOutputStream> VertexProcessor::Process( std::shared_ptr<VertexProcInputStream> inputStream )
+	std::shared_ptr<VertexProcOutputStream> VertexProcessor::Process( const std::shared_ptr<VertexProcInputStream>& inputStream )
 	{
 		Assert( inputStream );
 
@@ -261,7 +261,7 @@ namespace kih
 
 	/* class Rasterizer
 	*/
-	std::shared_ptr<RasterizerOutputStream> Rasterizer::Process( std::shared_ptr<RasterizerInputStream> inputStream )
+	std::shared_ptr<RasterizerOutputStream> Rasterizer::Process( const std::shared_ptr<RasterizerInputStream>& inputStream )
 	{
 		Assert( inputStream );
 
@@ -286,7 +286,7 @@ namespace kih
 		return m_outputStream;
 	}
 
-	void Rasterizer::DoScanlineConversion( std::shared_ptr<RasterizerInputStream> inputStream, std::shared_ptr<RasterizerOutputStream> outputStream, unsigned short width, unsigned short height )
+	void Rasterizer::DoScanlineConversion( const std::shared_ptr<RasterizerInputStream>& inputStream, std::shared_ptr<RasterizerOutputStream> outputStream, unsigned short width, unsigned short height )
 	{
 		Assert( inputStream );
 		
@@ -368,7 +368,7 @@ namespace kih
 				startY = Clamp<unsigned short>( startY, 0, height - 1 );
 
 				// Push this element at the selected scanline.
-				m_edgeTable[startY].emplace_back( yMax, xMin, xMax, slope, zStart, zEnd );
+				m_edgeTable[startY].emplace_back( yMax, Max( xMin, 0.0f ), Clamp<float>( xMax, 0.0f, width ), slope, zStart, zEnd );
 
 				// Update next indices.
 				v0Index = v1Index;
@@ -473,35 +473,46 @@ namespace kih
 
 		for ( unsigned short y = 0; y < height; ++y )
 		{
-			m_edgeTable[y].clear();
+			auto& list = m_edgeTable[y];
+			if ( !list.empty() )
+			{
+				list.clear();
+			}			
 		}
 	}
 
-	bool Rasterizer::UpdateActiveEdgeTable( std::list<ActiveEdgeTableElement> &aet, unsigned short scanline ) const
+	bool Rasterizer::UpdateActiveEdgeTable( std::list<ActiveEdgeTableElement>& aet, unsigned short scanline ) const
 	{
 		Assert( scanline >= 0 && scanline < m_edgeTable.size() );
 
 		// Find outside elements in the AET and remove them.
-		auto iter = aet.begin();
-		while ( iter != aet.end() )
+		if ( !aet.empty() )
 		{
-			const ActiveEdgeTableElement& elem = *iter;
-			if ( scanline >= elem.ET.YMax )
+			auto iter = aet.begin();
+			while ( iter != aet.end() )
 			{
-				iter = aet.erase( iter );
-			}
-			else
-			{
-				++iter;
+				const ActiveEdgeTableElement& elem = *iter;
+				if ( scanline >= elem.ET.YMax )
+				{
+					iter = aet.erase( iter );
+				}
+				else
+				{
+					++iter;
+				}
 			}
 		}
 
 		// Push inside ET elements on this scanline into the AET.
-		for ( const auto& elem : m_edgeTable[scanline] )
+		const auto& elemList = m_edgeTable[scanline];
+		if ( !elemList.empty() )
 		{
-			if ( scanline < elem.YMax )
+			for ( const auto& elem : elemList )
 			{
-				aet.emplace_back( elem );
+				if ( scanline < elem.YMax )
+				{
+					aet.emplace_back( elem );
+				}
 			}
 		}
 
@@ -536,7 +547,7 @@ namespace kih
 		return true;
 	}
 
-	void Rasterizer::TransformViewport( std::shared_ptr<RasterizerInputStream> inputStream, unsigned short width, unsigned short height ) const
+	void Rasterizer::TransformViewport( const std::shared_ptr<RasterizerInputStream>& inputStream, unsigned short width, unsigned short height ) const
 	{
 		// viewport transform for projective coordinates
 		if ( inputStream->GetCoordinatesType() != CoordinatesType::Projective )
@@ -577,7 +588,7 @@ namespace kih
 
 	/* class PixelProcessor
 	*/
-	std::shared_ptr<PixelProcOutputStream> PixelProcessor::Process( std::shared_ptr<PixelProcInputStream> inputStream )
+	std::shared_ptr<PixelProcOutputStream> PixelProcessor::Process( const std::shared_ptr<PixelProcInputStream>& inputStream )
 	{
 		Assert( inputStream );
 		
@@ -621,11 +632,11 @@ namespace kih
 
 	/* class OutputMerger
 	*/
-	std::shared_ptr<OutputMergerOutputStream> OutputMerger::Process( std::shared_ptr<OutputMergerInputStream> inputStream )
+	std::shared_ptr<OutputMergerOutputStream> OutputMerger::Process( const std::shared_ptr<OutputMergerInputStream>& inputStream )
 	{
 		Assert( inputStream );
 
-		VerifyReentry( 1 );
+		VerifyReentry();
 
 		size_t inputStreamSize = inputStream->Size();
 		if ( inputStreamSize <= 0 )

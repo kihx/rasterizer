@@ -49,7 +49,7 @@ namespace kih
 		using DepthTestFunc = std::function< bool( byte /*src*/, byte /*dst*/ ) >;
 
 	public:
-		static const int ThreadConcurrency = 4;
+		static const int ThreadConcurrency = 8;
 
 		explicit RenderingContext( size_t numRenderTargets );
 

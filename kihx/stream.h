@@ -102,7 +102,7 @@ namespace kih
 		template <typename... Args>
 		FORCEINLINE void Push( Args&&... args )
 		{
-			m_streamSource.emplace_back( args... );
+			m_streamSource.emplace_back( std::forward<Args>( args )... );
 		}
 
 		FORCEINLINE const Data* GetStreamSource() const

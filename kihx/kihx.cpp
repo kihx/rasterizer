@@ -8,6 +8,7 @@
 #include "texture.h"
 #include "render.h"
 #include "concommand.h"
+#include "profiler.h"
 
 #include <array>
 
@@ -28,6 +29,11 @@ KIHX_API void kiLoadMeshFromFile( const char* filename )
 	g_meshes.clear();
 
 	g_meshes.emplace_back( kih::CreateMeshFromFile( filename ) );
+	if ( g_meshes[0] == nullptr )
+	{
+		g_meshes.clear();
+		return;
+	}
 
 	for ( int i = 0; i < 4 * 4 - 1; ++i )
 	{
@@ -77,7 +83,7 @@ void DrawGridScene( std::shared_ptr<RenderingContext> context, const Matrix4& ma
 	}
 }
 
-void DrawGridSceneInParallel( std::vector<std::shared_ptr<RenderingContext>> contexts, const Matrix4& matWorld )
+void DrawGridSceneInParallel( std::vector<std::shared_ptr<RenderingContext>>& contexts, const Matrix4& matWorld )
 {
 	const size_t Rows = 4;
 	size_t numMeshes = g_meshes.size();
@@ -151,6 +157,8 @@ KIHX_API void kiRenderToBuffer( void* buffer, int width, int height, int bpp )
 	// Draw the world.
 	const Matrix4& matWorld = RenderingDevice::GetInstance()->GetWorldMatrix();
 
+	ScopeProfile profile;
+
 	// Grid arragement
 	if ( grid_scene.Bool() )
 	{
@@ -163,10 +171,10 @@ KIHX_API void kiRenderToBuffer( void* buffer, int width, int height, int bpp )
 		{
 			// Copy array contexts to vector one.
 			std::vector<std::shared_ptr<RenderingContext>> concurrencyContexts;
-			concurrencyContexts.reserve( contexts.size() );			
-			for ( auto context : contexts )
+			concurrencyContexts.reserve( context_concurrency.Int() );			
+			for ( int i = 0; i < context_concurrency.Int(); ++i )
 			{
-				concurrencyContexts.emplace_back( context );
+				concurrencyContexts.emplace_back( contexts[i] );
 			}
 
 			DrawGridSceneInParallel( concurrencyContexts, matWorld );

@@ -64,13 +64,13 @@ namespace kih
 		bool ExecuteInternal( unsigned short x, unsigned short y, T depth );
 
 	private:
-		RenderingContext* m_context;
-		std::shared_ptr<Texture> m_ds;
 		ColorFormat m_format;
+		DepthFunc m_depthFunc;
 		int m_width;
 		int m_stride;
 		byte* m_ptr;
-		DepthFunc m_depthFunc;
+		RenderingContext* m_context;
+		std::shared_ptr<Texture> m_ds;
 	};
 
 
@@ -90,7 +90,7 @@ namespace kih
 
 		virtual ~BaseGraphicsStage() = default;
 
-		virtual std::shared_ptr<OutputStream> Process( std::shared_ptr<InputStream> inputStream ) = 0;
+		virtual std::shared_ptr<OutputStream> Process( const std::shared_ptr<InputStream>& inputStream ) = 0;
 
 		FORCEINLINE const ConstantBuffer& GetSharedConstantBuffer()
 		{
@@ -128,7 +128,7 @@ namespace kih
 		{
 		}
 
-		virtual std::shared_ptr<InputAssemblerOutputStream> Process( std::shared_ptr<IMesh> inputStream );
+		virtual std::shared_ptr<InputAssemblerOutputStream> Process( const std::shared_ptr<IMesh>& inputStream );
 
 		FORCEINLINE void SetFaceIndex( size_t index )
 		{
@@ -156,7 +156,7 @@ namespace kih
 		{
 		}
 
-		virtual std::shared_ptr<VertexProcOutputStream> Process( std::shared_ptr<VertexProcInputStream> inputStream );
+		virtual std::shared_ptr<VertexProcOutputStream> Process( const std::shared_ptr<VertexProcInputStream>& inputStream );
 
 	private:
 		void TransformWVP( const Vector3& position, const Matrix4& wvp, Vector4& outPosition ) const;
@@ -179,7 +179,7 @@ namespace kih
 		{
 		}
 
-		virtual std::shared_ptr<RasterizerOutputStream> Process( std::shared_ptr<RasterizerInputStream> inputStream );
+		virtual std::shared_ptr<RasterizerOutputStream> Process( const std::shared_ptr<RasterizerInputStream>& inputStream );
 
 	private:
 		struct EdgeTableElement
@@ -234,12 +234,12 @@ namespace kih
 		};
 
 		// scanline conversion
-		void DoScanlineConversion( std::shared_ptr<RasterizerInputStream> inputStream, std::shared_ptr<RasterizerOutputStream> outputStream, unsigned short width, unsigned short height );
+		void DoScanlineConversion( const std::shared_ptr<RasterizerInputStream>& inputStream, std::shared_ptr<RasterizerOutputStream> outputStream, unsigned short width, unsigned short height );
 		void GatherPixelsBeingDrawnFromScanlines( std::shared_ptr<RasterizerOutputStream> outputStream, unsigned short width, unsigned short height, DepthBuffering& depthBufferingParam );
-		bool UpdateActiveEdgeTable( std::list<ActiveEdgeTableElement> &aet, unsigned short scanline ) const;
+		bool UpdateActiveEdgeTable( std::list<ActiveEdgeTableElement>& aet, unsigned short scanline ) const;
 
 		// transform
-		void TransformViewport( std::shared_ptr<RasterizerInputStream> inputStream, unsigned short width, unsigned short height ) const;
+		void TransformViewport( const std::shared_ptr<RasterizerInputStream>& inputStream, unsigned short width, unsigned short height ) const;
 
 	private:
 		std::vector<std::list<EdgeTableElement>> m_edgeTable;
@@ -262,7 +262,7 @@ namespace kih
 		{
 		}
 
-		virtual std::shared_ptr<PixelProcOutputStream> Process( std::shared_ptr<PixelProcInputStream> inputStream );
+		virtual std::shared_ptr<PixelProcOutputStream> Process( const std::shared_ptr<PixelProcInputStream>& inputStream );
 	};
 
 
@@ -282,6 +282,6 @@ namespace kih
 		{
 		}
 
-		virtual std::shared_ptr<OutputMergerOutputStream> Process( std::shared_ptr<OutputMergerInputStream> inputStream );
+		virtual std::shared_ptr<OutputMergerOutputStream> Process( const std::shared_ptr<OutputMergerInputStream>& inputStream );
 	};
 };

@@ -76,6 +76,9 @@
     <ClInclude Include="concommand.h">
       <Filter>Framework</Filter>
     </ClInclude>
+    <ClInclude Include="profiler.h">
+      <Filter>Framework</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -112,6 +115,9 @@
       <Filter>Threading</Filter>
     </ClCompile>
     <ClCompile Include="concommand.cpp">
+      <Filter>Framework</Filter>
+    </ClCompile>
+    <ClCompile Include="profiler.cpp">
       <Filter>Framework</Filter>
     </ClCompile>
   </ItemGroup>

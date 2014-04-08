@@ -8,9 +8,12 @@
 #include "stage.h"
 #include "concommand.h"
 #include "threading.h"
+#include "profiler.h"
 
 #include <list>
+#include <map>
 #include <mutex>
+#include <thread>
 
 
 namespace kih
@@ -188,7 +191,6 @@ namespace kih
 			}
 		}
 
-
 		// If the number of meshes is less than 4, 
 		// draw all meshes on the first context without parallel processing.
 		if ( meshes.size() < 4 )
@@ -208,7 +210,7 @@ namespace kih
 		// Note that the world matrix would be multiplied just before drawing a mesh
 		// because the world matrix of a mesh is different each other.
 		// So premultiply view-projection matrices only.
-		Matrix4 vp = pDevice->GetViewMatrix() * pDevice->GetProjectionMatrix();
+		Matrix4 viewProj = pDevice->GetViewMatrix() * pDevice->GetProjectionMatrix();
 
 		// Distribute input meshes to each context.
 		size_t numContexts = contexts.size();
@@ -222,68 +224,83 @@ namespace kih
 		omInputStreamList.reserve( numContexts );
 		
 		// FIXME: use a custom mutex
-		static std::mutex streamMergeMutex;		
+		static std::mutex outputMergeMutex;		
 		
-		std::vector<void*> threadHandles;
-		threadHandles.reserve( numContexts );
+#define Thread std::thread
+
+		// thread container to join after working
+		std::vector<Thread> threads;
+		threads.resize( numContexts );
 
 		for ( size_t c = 0; c < numContexts; ++c )
 		{
 			auto context = contexts[c];
 			Assert( context );
 
+			std::map<size_t, std::shared_ptr<IMesh>> inputMeshes;			
+			for ( size_t m = 0; m < numMeshesPerContext; ++m )
+			{
+				size_t index = c * numMeshesPerContext + m;
+				if ( index < 0 || index >= numMeshes )
+				{
+					continue;
+				}
+
+				const auto& mesh = meshes[index];
+				if ( mesh == nullptr )
+				{
+					continue;
+				}
+				
+				if ( mesh->GetPrimitiveType() != PrimitiveType::Triangles )
+				{
+					continue;
+				}
+
+				inputMeshes.emplace( index, mesh );
+			}
+
 			Thread t
 			{
-				[=, &omInputStreamList]()
+				[&omInputStreamList]( std::shared_ptr<RenderingContext> context, std::map<size_t, std::shared_ptr<IMesh>> inputMeshes, Matrix4 viewProj, FuncPreRender funcPreRender )
 				{
+					std::vector<std::shared_ptr<OutputMergerInputStream>> output;
+					output.reserve( inputMeshes.size() );
+
 					ConstantBuffer& cbuffer = context->GetSharedConstantBuffer();
 
-					for ( size_t m = 0; m < numMeshesPerContext; ++m )
-					{
-						size_t index = c * numMeshesPerContext + m;
-						if ( index < 0 || index >= numMeshes )
-						{
-							continue;
-						}
-
-						const auto& mesh = meshes[index];
-						if ( mesh == nullptr )
-						{
-							continue;
-						}
-
-						PrimitiveType primitiveType = mesh->GetPrimitiveType();
-						if ( primitiveType == PrimitiveType::Undefined )
-						{
-							LOG_WARNING( "cannot support parallel rendering with the undefined primitive type" );
-							continue;
-						}
-
+					for ( auto iter = inputMeshes.begin(); iter != inputMeshes.end(); ++iter )
+					{										
 						// Call the PreRender functor.
-						funcPreRender( context, index );
+						funcPreRender( context, iter->first );
 
 						// Now compute the final WVP matrix of this mesh.
-						Matrix4 wvp = cbuffer.GetMatrix4( ConstantBuffer::WorldMatrix ) * vp;
+						Matrix4 wvp = cbuffer.GetMatrix4( ConstantBuffer::WorldMatrix ) * viewProj;
 						cbuffer.SetMatrix4( ConstantBuffer::WVPMatrix, wvp );
 
 						// Run the rendering pipeline for the mesh.
-						std::shared_ptr<OutputMergerInputStream> omInput = context->RunRenderingPipeline( mesh, primitiveType );
+						std::shared_ptr<OutputMergerInputStream> omInput = context->RunRenderingPipeline( iter->second );
 
 						// And then collect the input stream for the output merger.
-						std::shared_ptr<OutputMergerInputStream> clone = omInput->Clone();
-						std::lock_guard<std::mutex> lockGuard( streamMergeMutex );
-						omInputStreamList.emplace_back( clone );
+						output.emplace_back( omInput->Clone() );
 					}
-				}
+
+					std::lock_guard<std::mutex> lockGuard( outputMergeMutex );
+					std::copy( output.begin(), output.end(), std::back_inserter( omInputStreamList ) );
+				},
+				context,
+				inputMeshes,
+				viewProj,
+				funcPreRender
 			};
-			// FIXME: is this ok?
-			threadHandles.push_back( t.Handle() );
+			
+			t.swap( threads[c] );
 		}
 
 		// Join all rendering threads.
-		for ( auto handle : threadHandles )
+		for ( size_t i = 0; i < threads.size(); ++i )
 		{
-			Thread::Join( handle );
+			threads[i].join();
 		}
 
 		// Merge all input stream data of the output merger on the first rendering context.
@@ -391,7 +408,7 @@ namespace kih
 		// input assembler stage
 		std::shared_ptr<VertexProcInputStream> vpInput = m_inputAssembler->Process( mesh );
 		//printf( "\nVertexProcInputStream Size: %d\n", vpInput->Size() );
-
+	
 		// vertex processor stage
 		std::shared_ptr<RasterizerInputStream> raInput = m_vertexProcessor->Process( vpInput );
 		//printf( "RasterizerInputStream Size: %d\n", raInput->Size() );
@@ -405,7 +422,7 @@ namespace kih
 		std::shared_ptr<OutputMergerInputStream> omInput = m_pixelProcessor->Process( ppInput );
 		//printf( "OutputMergerInputStream Size: %d\n", 0 );
 
-		return omInput;		
+		return omInput;
 	}
 
 

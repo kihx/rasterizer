@@ -19,18 +19,22 @@ namespace kih
 	{
 	public:
 		explicit ReentryGuard( unsigned int& semephore ) :
-			m_semaphore( ++semephore )
+			m_semaphore( semephore )
 		{
+			Assert( Verify() );
+			++m_semaphore;
 		}
+
+		ReentryGuard( const ReentryGuard& ) = delete;
 
 		~ReentryGuard()
 		{
 			--m_semaphore;
 		}
 
-		FORCEINLINE bool Verify( unsigned int limit ) const
+		FORCEINLINE bool Verify() const
 		{
-			return m_semaphore <= limit;
+			return m_semaphore <= 0;
 		}
 
 		ReentryGuard& operator=( const ReentryGuard& ) = delete;
@@ -49,10 +53,8 @@ namespace kih
 	__semephore__ = true; }
 
 // Verify that a code path is concurrently reached limit or not.
-#define VerifyReentry( limit )		static unsigned int __semephore__ = 0;	\
-	kih::ReentryGuard reentryGuard( __semephore__ );	\
-	Assert( reentryGuard.Verify( limit ) );
-
+#define VerifyReentry()		static unsigned int __semephore__ = 0;	\
+	kih::ReentryGuard reentryGuard( __semephore__ );
 #else
 
 #define Assert( exp )

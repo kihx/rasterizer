@@ -2,9 +2,9 @@
 #include "threading.h"
 #include "concommand.h"
 
-//#define THREAD_CPP0X
+//#define THREAD_CPP1x
 
-#ifdef THREAD_CPP0X
+#ifdef THREAD_CPP1x
 #include <thread>
 #else
 #include <windows.h>
@@ -31,6 +31,11 @@ namespace kih
 			initflag,
 			thrdaddr
 			) );
+	}
+
+	void f_endthreadex( unsigned int retval )
+	{
+		_endthreadex( retval );
 	}
 
 	unsigned int f_waitforsingleobject( void* hHandle, unsigned int dwMilliseconds )
