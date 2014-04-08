@@ -11,23 +11,10 @@ Matrix44::Matrix44( const Quat& quat )
 
 Matrix44::Matrix44(const Matrix44& other)
 {
-    mV[0] = other.mV[0];
-    mV[1] = other.mV[1];
-    mV[2] = other.mV[2];
-    mV[3] = other.mV[3];
-    mV[4] = other.mV[4];
-    mV[5] = other.mV[5];
-    mV[6] = other.mV[6];
-    mV[7] = other.mV[7];
-    mV[8] = other.mV[8];
-    mV[9] = other.mV[9];
-    mV[10] = other.mV[10];
-    mV[11] = other.mV[11];
-    mV[12] = other.mV[12];
-    mV[13] = other.mV[13];
-    mV[14] = other.mV[14];
-    mV[15] = other.mV[15];
-
+	for( int i = 0; i < 16; ++i )
+	{
+		mV[ i ] = other.mV[ i ];
+	}
 }  
 
 Matrix44::Matrix44(const Matrix33& other)
@@ -36,31 +23,26 @@ Matrix44::Matrix44(const Matrix33& other)
 
 }  
 
+Matrix44::Matrix44(const Dfloat* matrix)
+{
+	for( int i = 0; i < 16; ++i )
+	{
+		mV[ i ] = matrix[ i ];
+	}	
+}
+
 Matrix44& Matrix44::operator=(const Matrix44& other)
 {
     // if same object
     if ( this == &other )
         return *this;
         
-    mV[0] = other.mV[0];
-    mV[1] = other.mV[1];
-    mV[2] = other.mV[2];
-    mV[3] = other.mV[3];
-    mV[4] = other.mV[4];
-    mV[5] = other.mV[5];
-    mV[6] = other.mV[6];
-    mV[7] = other.mV[7];
-    mV[8] = other.mV[8];
-    mV[9] = other.mV[9];
-    mV[10] = other.mV[10];
-    mV[11] = other.mV[11];
-    mV[12] = other.mV[12];
-    mV[13] = other.mV[13];
-    mV[14] = other.mV[14];
-    mV[15] = other.mV[15];
-    
+	for( int i = 0; i < 16; ++i )
+	{
+		mV[ i ] = other.mV[ i ];
+	}
+	
     return *this;
-
 }   
 
 Dbool Matrix44::operator==( const Matrix44& other ) const
@@ -206,7 +188,7 @@ Matrix44& Matrix44::Transpose()
     mV[8] = temp;
 
     temp = mV[3];
-    mV[2] = mV[12];
+    mV[3] = mV[12];
     mV[12] = temp;
 
     temp = mV[6];
@@ -763,6 +745,9 @@ Vector4 Matrix44::operator*( const Vector4& other ) const
 
     result.x = mV[0]*other.x + mV[4]*other.y + mV[8]*other.z + mV[12]*other.w;
     result.y = mV[1]*other.x + mV[5]*other.y + mV[9]*other.z + mV[13]*other.w;
+
+	float d = mV[ 10 ] * other.z + mV[ 14 ] * other.w;
+
     result.z = mV[2]*other.x + mV[6]*other.y + mV[10]*other.z + mV[14]*other.w;
     result.w = mV[3]*other.x + mV[7]*other.y + mV[11]*other.z + mV[15]*other.w;
 

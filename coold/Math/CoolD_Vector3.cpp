@@ -13,6 +13,14 @@ Vector3::Vector3(const Vector3& other) :
 
 }   
 
+Vector3::Vector3(const Dfloat* other) :
+	x(other[ 0 ]),
+	y(other[ 1 ]),
+	z(other[ 2 ])
+{
+
+}
+
 Vector3& Vector3::operator=(const Vector3& other)
 {
     // if same object

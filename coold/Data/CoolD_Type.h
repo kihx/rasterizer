@@ -10,6 +10,7 @@
 #include <cmath>
 #include <cassert>
 #include <chrono>
+#include <tuple>
 
 typedef void	Dvoid;
 typedef bool	Dbool;
@@ -30,8 +31,13 @@ enum TransType
 	WORLD,
 	VIEW,
 	PERSPECTIVE,
-	VIEWPORT,
-	END
+	VIEWPORT,	
+	TRANSFORM_END
 };
 
-enum class MeshType{ MSH, PLY };
+enum MeshType
+{
+	MSH,
+	PLY,
+	MESHTYPE_END
+};

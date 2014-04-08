@@ -15,6 +15,7 @@ public:
 
     // copy operations
     Vector3(const Vector3& other);
+	Vector3(const Dfloat* other);
     Vector3& operator=(const Vector3& other);
 
     // accessors

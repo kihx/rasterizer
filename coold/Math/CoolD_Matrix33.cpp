@@ -19,7 +19,6 @@ Matrix33::Matrix33(const Matrix33& other)
     mV[6] = other.mV[6];
     mV[7] = other.mV[7];
     mV[8] = other.mV[8];
-
 }
 
 Matrix33& Matrix33::operator=(const Matrix33& other)

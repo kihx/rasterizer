@@ -47,6 +47,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <TargetName>$(ProjectName)R</TargetName>
+    <OutDir>$(ProjectDir)$(Configuration)\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -88,37 +89,37 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="coold.h" />
-    <ClInclude Include="CoolD_AreaFilling.h" />
-    <ClInclude Include="CoolD_Defines.h" />
-    <ClInclude Include="CoolD_Inlines.h" />
-    <ClInclude Include="CoolD_Math.h" />
-    <ClInclude Include="CoolD_Matrix33.h" />
-    <ClInclude Include="CoolD_Matrix44.h" />
-    <ClInclude Include="CoolD_Quat.h" />
-    <ClInclude Include="CoolD_Struct.h" />
-    <ClInclude Include="CoolD_SubFunction.h" />
-    <ClInclude Include="CoolD_CustomMesh.h" />
-    <ClInclude Include="CoolD_Singleton.h" />
-    <ClInclude Include="CoolD_Transform.h" />
-    <ClInclude Include="CoolD_Type.h" />
-    <ClInclude Include="CoolD_Vector2.h" />
-    <ClInclude Include="CoolD_Vector3.h" />
-    <ClInclude Include="CoolD_Vector4.h" />
-    <ClInclude Include="CoolD_MeshManager.h" />
+    <ClInclude Include="Render\CoolD_AreaFilling.h" />
+    <ClInclude Include="Data\CoolD_Defines.h" />
+    <ClInclude Include="Data\CoolD_Inlines.h" />
+    <ClInclude Include="Math\CoolD_Math.h" />
+    <ClInclude Include="Math\CoolD_Matrix33.h" />
+    <ClInclude Include="Math\CoolD_Matrix44.h" />
+    <ClInclude Include="Math\CoolD_Quat.h" />
+    <ClInclude Include="Data\CoolD_Struct.h" />
+    <ClInclude Include="Render\CoolD_SubFunction.h" />
+    <ClInclude Include="Render\CoolD_CustomMesh.h" />
+    <ClInclude Include="Data\CoolD_Singleton.h" />
+    <ClInclude Include="Render\CoolD_Transform.h" />
+    <ClInclude Include="Data\CoolD_Type.h" />
+    <ClInclude Include="Math\CoolD_Vector2.h" />
+    <ClInclude Include="Math\CoolD_Vector3.h" />
+    <ClInclude Include="Math\CoolD_Vector4.h" />
+    <ClInclude Include="Render\CoolD_MeshManager.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="coold.cpp" />
-    <ClCompile Include="CoolD_AreaFilling.cpp" />
-    <ClCompile Include="CoolD_CustomMesh.cpp" />
-    <ClCompile Include="CoolD_Math.cpp" />
-    <ClCompile Include="CoolD_Matrix33.cpp" />
-    <ClCompile Include="CoolD_Matrix44.cpp" />
-    <ClCompile Include="CoolD_Quat.cpp" />
-    <ClCompile Include="CoolD_Transform.cpp" />
-    <ClCompile Include="CoolD_Vector2.cpp" />
-    <ClCompile Include="CoolD_Vector3.cpp" />
-    <ClCompile Include="CoolD_Vector4.cpp" />
-    <ClCompile Include="CoolD_MeshManager.cpp" />
+    <ClCompile Include="Render\CoolD_AreaFilling.cpp" />
+    <ClCompile Include="Render\CoolD_CustomMesh.cpp" />
+    <ClCompile Include="Math\CoolD_Math.cpp" />
+    <ClCompile Include="Math\CoolD_Matrix33.cpp" />
+    <ClCompile Include="Math\CoolD_Matrix44.cpp" />
+    <ClCompile Include="Math\CoolD_Quat.cpp" />
+    <ClCompile Include="Render\CoolD_Transform.cpp" />
+    <ClCompile Include="Math\CoolD_Vector2.cpp" />
+    <ClCompile Include="Math\CoolD_Vector3.cpp" />
+    <ClCompile Include="Math\CoolD_Vector4.cpp" />
+    <ClCompile Include="Render\CoolD_MeshManager.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

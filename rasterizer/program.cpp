@@ -52,6 +52,9 @@ namespace
 	typedef void( *FnLoadMeshFromFile )( const char* filename );
 	typedef void( *FnRenderToBuffer)( void* buffer, int width, int height, int bpp );
 	typedef void( *FnSetTransform)( int transformType, const float* matrix4x4 );
+	typedef void( *FnSetViewFactor)(float* eye, float* lookat, float* up);
+	typedef void( *FnSetPerspectiveFactor)(float fovY, float aspect, float zn, float zf);
+	
 
 
 	// 지정된 모듈로부터 함수 주소 얻어오기
@@ -85,7 +88,9 @@ namespace
 			m_hModule( nullptr ),
 			m_fnLoadMeshFromFile( nullptr ),
 			m_fnRenderToBuffer( nullptr ),
-			m_fnSetTransform( nullptr )
+			m_fnSetTransform( nullptr ),
+			m_fnSetViewFactor( nullptr ),
+			m_fnSetPerspectiveFactor( nullptr )
 		{
 		}
 
@@ -125,6 +130,22 @@ namespace
 			}
 		}
 
+		void SetViewFactor(float* eye, float* lookat, float* up)
+		{
+			if( m_fnSetViewFactor )
+			{
+				m_fnSetViewFactor(eye, lookat, up);
+			}
+		}
+
+		void SetPerspectiveFactor(float fovY, float aspect, float zn, float zf)
+		{
+			if( m_fnSetPerspectiveFactor )
+			{
+				m_fnSetPerspectiveFactor(fovY, aspect, zn, zf);
+			}
+		}
+
 		void RenderToBuffer( byte* buffer )
 		{
 			if ( m_fnRenderToBuffer )
@@ -161,6 +182,8 @@ namespace
 		SETUP_FUNC( LoadMeshFromFile );
 		SETUP_FUNC( RenderToBuffer );
 		SETUP_FUNC( SetTransform );
+		SETUP_FUNC( SetViewFactor );
+		SETUP_FUNC( SetPerspectiveFactor);
 
 	private:
 		void AssignOrReplace( HMODULE h )
@@ -183,6 +206,8 @@ namespace
 			m_fnLoadMeshFromFile = nullptr;
 			m_fnRenderToBuffer = nullptr;
 			m_fnSetTransform = nullptr;
+            m_fnSetViewFactor = nullptr;
+			m_fnSetPerspectiveFactor = nullptr;
 			FreeLibrary( m_hModule );
 		}
 
@@ -192,6 +217,8 @@ namespace
 		FnLoadMeshFromFile m_fnLoadMeshFromFile;
 		FnRenderToBuffer m_fnRenderToBuffer;
 		FnSetTransform m_fnSetTransform;
+		FnSetViewFactor m_fnSetViewFactor;
+		FnSetPerspectiveFactor m_fnSetPerspectiveFactor;
 	};
 
 	ModuleContext g_ModuleContext;
@@ -279,6 +306,9 @@ static void LoadModuleCoolD()
 	g_ModuleContext.InstallFunctionLoadMeshFromFile( "coold_LoadMeshFromFile" );
 	g_ModuleContext.InstallFunctionRenderToBuffer( "coold_RenderToBuffer" );
 	g_ModuleContext.InstallFunctionSetTransform( "coold_SetTransform" );
+	g_ModuleContext.InstallFunctionSetViewFactor("coold_SetViewFactor");
+	g_ModuleContext.InstallFunctionSetPerspectiveFactor("coold_SetPerspectiveFactor");
+	
 
 	printf( "\n<CoolD>\n\n" );
 }
@@ -319,6 +349,13 @@ void SetupTransform()
     matView.LookAtLH( vEyePt, vLookatPt, vUpVec );
     g_ModuleContext.SetTransform( TransformType::View, matView.M );
 
+	//For CoolD-------------------------------------------------------
+	float eye[ 3 ] = { vEyePt.X, vEyePt.Y, vEyePt.Z };	
+	float lookat[ 3 ] = { vLookatPt.X, vLookatPt.Y, vLookatPt.Z };
+	float up[ 3 ] = { vUpVec.X, vUpVec.Y, vUpVec.Z };	
+	g_ModuleContext.SetViewFactor(eye, lookat, up);
+	//---------------------------------------------------------------
+
     // For the projection matrix, we set up a perspective transform (which
     // transforms geometry from 3D view space to 2D viewport space, with
     // a perspective divide making objects smaller in the distance). To build
@@ -326,8 +363,16 @@ void SetupTransform()
     // the aspect ratio, and the near and far clipping planes (which define at
     // what distances geometry should be no longer be rendered).
     Matrix4 matProj;
-    matProj.PerspectiveLH( PI / 4.0f, 1.0f, 1.0f, 7.0f );
+	float fovY = 4.0f;
+	float aspect = 1.0f;
+	float zn = 1.0f;
+	float zf = 7.0f;
+	matProj.PerspectiveLH(PI / fovY, aspect, zn, zf);
     g_ModuleContext.SetTransform( TransformType::Projection, matProj.M );
+
+	//For CoolD-------------------------------------------------------
+	g_ModuleContext.SetPerspectiveFactor(fovY, aspect, zn, zf);
+	//----------------------------------------------------------------
 }
 
 void makeCheckImage( void)

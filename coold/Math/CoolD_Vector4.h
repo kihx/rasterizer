@@ -53,7 +53,7 @@ public:
     Vector4    operator*( Dfloat scalar );
     friend Vector4    operator*( Dfloat scalar, const Vector4& vector );
     Vector4&          operator*=( Dfloat scalar );
-    Vector4    operator/( Dfloat scalar );
+    Vector4			  operator/(Dfloat scalar) const;
     Vector4&          operator/=( Dfloat scalar );
 	
     // dot product
@@ -72,7 +72,7 @@ public:
 
 public:
 	enum W_MODE { W_IGNORE, W_DIVIDE };
-	Vector3 Vec4ToVec3( W_MODE value );
+	friend Vector3 Vec4ToVec3( const Vector4& vector, W_MODE value );
 	Vector4& Ceil();
 };
 

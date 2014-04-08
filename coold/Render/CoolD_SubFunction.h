@@ -1,5 +1,5 @@
 #pragma once
-#include "CoolD_Type.h"
+#include "..\Data\CoolD_Type.h"
 
 Dvoid ClearColorBuffer( Dvoid* pImage, Duint width, Duint height, Dulong clearColor )
 {
@@ -25,5 +25,3 @@ Dvoid ClearColorBuffer( Dvoid* pImage, Duint width, Duint height, Dulong clearCo
 		}
 	}
 }
-
-

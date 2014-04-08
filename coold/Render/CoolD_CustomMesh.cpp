@@ -1,6 +1,6 @@
 #include "CoolD_CustomMesh.h"
-#include "CoolD_Inlines.h"
-#include "CoolD_Defines.h"
+#include "..\Data\CoolD_Inlines.h"
+#include "..\Data\CoolD_Defines.h"
 #include "CoolD_Transform.h"
 #include <fstream>
 #include <sstream>
@@ -14,12 +14,12 @@ namespace CoolD
 		*this = rhs;
 	}
 
-	const BaseVertex& CustomMesh::GetVertex(Duint index) const
+	Vector3& CustomMesh::GetVertex(Duint index)
 	{
 		return m_vecVertex[ index - 1 ];	//정점 정보는 1부터 시작하지만 벡터는 0부터 시작하기 때문에
 	}
 
-	const BaseFace& CustomMesh::GetFace(Duint index) const
+	BaseFace& CustomMesh::GetFace(Duint index)
 	{
 		return m_vecFace[ index - 1 ];
 	}
@@ -34,7 +34,7 @@ namespace CoolD
 		return m_vecFace.size();
 	}
 	
-	const vector<BaseVertex>& CustomMesh::GetVectorVertex() const
+	const vector<Vector3>& CustomMesh::GetVectorVertex() const
 	{
 		return m_vecVertex;
 	}
@@ -44,7 +44,7 @@ namespace CoolD
 		return m_vecFace;
 	}		
 
-	void CustomMesh::SetVectorVertex( vector<BaseVertex>& vecVertex )
+	void CustomMesh::SetVectorVertex(vector<Vector3>& vecVertex)
 	{
 		m_vecVertex.swap( vecVertex );
 	}
@@ -52,10 +52,10 @@ namespace CoolD
 	void CustomMesh::SetVectorFace( vector<BaseFace>& vecFace )
 	{
 		m_vecFace.swap( vecFace );
-	}	
+	}		
 
 	Dbool CustomMeshMSH::Load(const Dchar* filename)
-	{
+	{		
 		Dint vectexCount = 0;
 		Dint faceCount = 0;
 
@@ -74,7 +74,7 @@ namespace CoolD
 			if( strToken == "#$Vertices" )
 			{
 				sstream >> vectexCount;
-				m_vecVertex.reserve(vectexCount);
+				m_vecVertex.reserve(vectexCount);				
 			}
 			else if( strToken == "#$Faces" )
 			{
@@ -88,7 +88,7 @@ namespace CoolD
 
 				assert(0 < vertexNum && vertexNum <= vectexCount);	//지정된 형식과 다를경우 kill
 
-				BaseVertex v;
+				Vector3 v;
 				sstream >> v.x >> v.y >> v.z;
 				v.x = ROUND_Off(v.x, 0);
 				v.y = ROUND_Off(v.y, 0);
@@ -128,6 +128,11 @@ namespace CoolD
 			}
 		}
 		return true;
+	}			
+
+	MeshType CustomMeshMSH::GetType() const
+	{
+		return MSH;
 	}
 
 	CustomMesh* CustomMeshMSH::Clone()
@@ -135,13 +140,14 @@ namespace CoolD
 		return new CustomMeshMSH(*this);
 	}
 
-	CustomMesh* CustomMeshMSH::GetTransformMesh()
+	CustomMeshMSH::CustomMeshMSH(const CustomMeshMSH& rhs) :
+		CustomMesh( rhs )
 	{
-		return Clone();
+		
 	}
 
 	Dbool CustomMeshPLY::Load(const Dchar* filename)
-	{
+	{		
 		Dint vectexCount = 0;
 		Dint faceCount = 0;
 
@@ -160,7 +166,7 @@ namespace CoolD
 			if( strToken == "#$Vertices" )
 			{
 				sstream >> vectexCount;
-				m_vecVertex.reserve(vectexCount);
+				m_vecVertex.reserve(vectexCount);				
 			}
 			else if( strToken == "#$Faces" )
 			{
@@ -174,7 +180,7 @@ namespace CoolD
 
 				assert(0 < vertexNum && vertexNum <= vectexCount);	//지정된 형식과 다를경우 kill
 
-				BaseVertex v;
+				Vector3 v;
 				sstream >> v.x >> v.y >> v.z;
 
 				m_vecVertex.emplace_back(v);
@@ -186,19 +192,19 @@ namespace CoolD
 
 				assert(0 < faceNum && faceNum <= faceCount);
 
+				/*
 				FixLater(정점 구별하기 위해서 랜덤으로)
-					RandomGenerator<int> rand(0, 255);
-
+				RandomGenerator<int> rand(0, 255);
+				*/
 				BaseFace f;
-				f.color = { rand.GetRand(), rand.GetRand(), rand.GetRand(), rand.GetRand() };
-
+				f.color = { 0, 0, 0, 0 };
+				
 				for( Dint i = 0; i < 3; ++i )
 				{
 					Dint vertexNum;
 					sstream >> vertexNum;
 
 					assert(0 < vertexNum && vertexNum <= vectexCount);
-
 					f.vecIndex.push_back(vertexNum);
 				}
 
@@ -206,28 +212,21 @@ namespace CoolD
 			}
 		}
 		return true;
-	}	
+	}		
+
+	MeshType CustomMeshPLY::GetType() const
+	{
+		return PLY;
+	}
+
+	CustomMeshPLY::CustomMeshPLY(const CustomMeshPLY& rhs):
+		CustomMesh(rhs)
+	{
+
+	}
 
 	CustomMesh* CustomMeshPLY::Clone()
 	{
 		return new CustomMeshPLY(*this);
-	}
-
-	CustomMesh* CustomMeshPLY::GetTransformMesh()
-	{
-		CustomMesh* pMesh = Clone();
-
-		vector<BaseVertex> listVertex;
-		for( Duint i = 1; i <= GetVertexSize(); ++i )
-		{
-			BaseVertex transformVertex(GetVertex(i));
-
-			FixLater(TransformHandler 이건 멀티쓰레드로 가려면 singleton이면 안될듯..)
-				listVertex.emplace_back(GETSINGLE(TransformHandler).TransformVertex(transformVertex));
-		}
-
-		pMesh->SetVectorVertex(listVertex);
-		return pMesh;
-	}
-
+	}	
 }

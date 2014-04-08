@@ -1,6 +1,6 @@
 #pragma once
-#include "CoolD_Type.h"
-#include "CoolD_Singleton.h"
+#include "..\Data\CoolD_Type.h"
+#include "..\Data\CoolD_Singleton.h"
 #include "CoolD_CustomMesh.h"
 
 namespace CoolD
@@ -18,16 +18,19 @@ namespace CoolD
 	public:		
 		Dbool LoadMesh( string PathName );
 		CustomMesh* GetMesh( string PathName );
-		const list<CustomMesh*>& AdjustTransform();
+		const map<string, CustomMesh*>& GetMeshMap();
+		tuple_meshInfo AdjustTransform(CustomMesh* pMesh, const array<Matrix44, TRANSFORM_END>& arrayTransform);
 		Duint GetMeshNum() const;
 		Dvoid Clear();
+
+		
+			
 
 	private:
 		CustomMesh* CreateMeshFromFile(const Dchar* filename);		
 		
 	private:
-		map<string, CustomMesh*>	m_mapMesh;
-		list<CustomMesh*> m_ListMesh;
+		map<string, CustomMesh*>	m_mapMesh;		
 	};
 	
 	

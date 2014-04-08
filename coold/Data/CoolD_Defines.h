@@ -24,3 +24,8 @@
 #define STD_FIND_IF(type, func) find_if(type.begin(), type.end(), func)
 #define STD_REMOVE_IF(type, func) remove_if(type.begin(), type.end(), func)
 #define STD_ERASE(type, iter) type.erase(iter, type.end())
+
+//IterType
+#define ITER_CONVERT(Iter, IteratorValue) auto* Iter = IteratorValue;
+
+#define assertm(_Expression, _Msg) (void)( (!!(_Expression)) || (_wassert(_CRT_WIDE(#_Msg), _CRT_WIDE(__FILE__), __LINE__), 0) )

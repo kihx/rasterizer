@@ -1,51 +1,59 @@
 #include "CoolD_AreaFilling.h"
-#include "CoolD_Inlines.h"
+#include "..\Data\CoolD_Inlines.h"
 #include "CoolD_CustomMesh.h"
 #include "CoolD_Transform.h"
 
 namespace CoolD
 {
-	AreaFilling::AreaFilling( Dvoid* buffer, const int width, const int height )
-		: m_Buffer((Duchar*)buffer), m_Width(width), m_Height(height)
+	AreaFilling::AreaFilling()
+		: m_Buffer(nullptr), m_DepthBuffer(nullptr)
 	{
 	}
 
 	AreaFilling::~AreaFilling()
-	{			
+	{					
 		m_ListLine.clear();
 		m_ActiveTable.clear();
 		m_EdgeTable.clear();		
+		Safe_Delete_Array(m_DepthBuffer);
 	}
 
-	Dvoid AreaFilling::Render( const CustomMesh* pMesh )
+	Dvoid AreaFilling::Render( tuple_meshInfo& meshInfo)
 	{							
 		TimeForm start = chrono::system_clock::now();
 		
-		for( Duint faceNum = 1; faceNum <= pMesh->GetFaceSize(); ++faceNum )
+		for( Duint faceNum = 0; faceNum < get<1>(meshInfo).size(); ++faceNum )
 		{
-			const BaseFace& face = CreatePointsToLines(pMesh, faceNum);	//메쉬에서 어떤 면을 그릴 것 인지
-			CreateEdgeTable( );	
+			CreatePointsToLines(meshInfo, faceNum);	//메쉬에서 어떤 면을 그릴 것 인지
+			CreateEdgeTable( );			
 			CreateChainTable( );
-			DrawFace( MixDotColor(face.color) );
+
+			RandomGenerator<int> rand(0, 255);
+			BaseColor color;
+			color = { rand.GetRand(), rand.GetRand(), rand.GetRand(), rand.GetRand() };
+
+			DrawFace( MixDotColor(color) );
 		}
 
+
 		TimeForm end = chrono::system_clock::now();
-		chrono::milliseconds mill = chrono::duration_cast<chrono::milliseconds>(end - start);		//test 시간 측정				
-		
+		chrono::milliseconds mill = chrono::duration_cast<chrono::milliseconds>(end - start);		//test 시간 측정						
 	}
 
 	//-----------------------------------------------------------------------
 	//점 -> 선 만들기
 	//-----------------------------------------------------------------------
-	const BaseFace& AreaFilling::CreatePointsToLines(const CustomMesh* pMesh, Duint faceNum)
+	Dvoid AreaFilling::CreatePointsToLines(tuple_meshInfo meshInfo, Duint faceNum)
 	{		
-		const BaseFace& face = pMesh->GetFace( faceNum );
+		const BaseFace& face = get<1>(meshInfo)[faceNum];
 
 		for( Duint j = 0; j < face.vecIndex.size(); ++j )
 		{
 			LineKey lineKey;
 			lineKey.beginIndex = face.vecIndex[ j ];
-			BaseVertex beginVertex = pMesh->GetVertex(lineKey.beginIndex);
+					
+			//시작 정점 ViewPort변환
+			Vector3 beginVertex = get<0>(meshInfo)[lineKey.beginIndex - 1 ];
 			
 			if( j == face.vecIndex.size() - 1 )
 			{
@@ -55,12 +63,17 @@ namespace CoolD
 			{
 				lineKey.endIndex = face.vecIndex[ j + 1 ];
 			}
-			BaseVertex endVertex = pMesh->GetVertex(lineKey.endIndex);
+			
+			Vector3 endVertex = get<0>(meshInfo)[lineKey.endIndex - 1 ];
+						
+			//x, y 성분만 올림 ( z는 0~1 사이의 깊이 값 )
+			beginVertex.x = ceilf(beginVertex.x);
+			beginVertex.y = ceilf(beginVertex.y);
+			endVertex.x = ceilf(endVertex.x);
+			endVertex.y = ceilf(endVertex.y);
 
-			m_ListLine.emplace_back( lineKey, beginVertex, endVertex );
-		}
-
-		return face;
+			m_ListLine.emplace_back(lineKey, beginVertex, endVertex );			
+		}		
 	}
 
 	//-----------------------------------------------------------------------
@@ -68,14 +81,15 @@ namespace CoolD
 	//-----------------------------------------------------------------------
 	Dvoid AreaFilling::CreateEdgeTable( )
 	{
-		assert( !m_ListLine.empty() );	//비어 있으면 당연히 안됨
+		assertm( !m_ListLine.empty(), m_ListLine is empty!!!! );		
 
 		for(const auto& line : m_ListLine )
 		{
 			EdgeNode node;
+			
 			Dfloat dx = line.endVertex.x - line.beginVertex.x;
-			Dfloat dy = line.endVertex.y - line.beginVertex.y;
-
+			Dfloat dy = line.endVertex.y - line.beginVertex.y;			
+			
 			if( dx == 0 || dy == 0 )
 			{	//분모가 0이면 무조건 0 ZeroDivide방지
 				node.reverseSlope = 0;
@@ -84,11 +98,28 @@ namespace CoolD
 			{
 				node.reverseSlope = dx / dy; // dx/dy가 기울기이고 그 역수값을 저장해야하기 때문에
 			}
+					
+			Dfloat y_min = 0.0f;
+			if( line.beginVertex.y < line.endVertex.y )
+			{
+				node.x_min		= line.beginVertex.x;
+				node.y_min		= line.beginVertex.y;	//깊이 보간을 위해서 추가
+				node.y_max		= line.endVertex.y;
 
-			node.x_min = (line.beginVertex.y < line.endVertex.y) ? line.beginVertex.x : line.endVertex.x;
-			node.y_max = (line.beginVertex.y < line.endVertex.y) ? line.endVertex.y : line.beginVertex.y;
+				node.min_depth	= line.beginVertex.z;	//깊이 보간을 위해서 추가
+				node.max_depth  = line.endVertex.z;		//깊이 보간을 위해서 추가
+			}
+			else
+			{
+				node.x_min		= line.endVertex.x;
+				node.y_min		= line.endVertex.y;		//
+				node.y_max		= line.beginVertex.y;
 
-			m_EdgeTable.emplace_back( line.lineKey, node );
+				node.min_depth = line.endVertex.z;		//
+				node.max_depth = line.beginVertex.z;	//
+			}			
+
+			m_EdgeTable.emplace_back( line.lineKey, node );			
 		}
 	}
 
@@ -97,7 +128,7 @@ namespace CoolD
 	//-----------------------------------------------------------------------
 	Dvoid AreaFilling::CreateChainTable( )
 	{
-		assert( !m_ListLine.empty() );	//비어 있으면 당연히 안됨
+		assertm(!m_ListLine.empty(), m_ListLine is empty!!!);
 
 		int totalEdgeSize = m_ListLine.size();
 		list<int> upLineSavelist;	//한 번이라도 윗줄로 올라간 정점들 인덱스 저장
@@ -110,10 +141,11 @@ namespace CoolD
 
 			for( auto& lineIter = m_ListLine.begin(); lineIter != m_ListLine.end(); )
 			{			
-				if( y == (*lineIter).beginVertex.y || y == (*lineIter).endVertex.y ) //해당 y축에 정점이 걸치는지 검사			 	
+				ITER_CONVERT(pLine, &(*lineIter));
+				if (y == pLine->beginVertex.y || y == pLine->endVertex.y) //해당 y축에 정점이 걸치는지 검사			 	
 				{
-					currentLine.emplace_back( *lineIter );
-					lineIter = m_ListLine.erase(lineIter);
+					currentLine.emplace_back( *pLine );
+					lineIter = m_ListLine.erase( lineIter );
 				}
 				else
 				{
@@ -126,18 +158,18 @@ namespace CoolD
 				Dbool isOnceCount = true;
 				for( auto& innerIter : currentLine )
 				{
-					if( (*chainIter).lineKey == innerIter.lineKey )	//같으면 리턴
+					if( chainIter->lineKey == innerIter.lineKey )	//같으면 리턴
 					{
 						continue;
 					}
 
-					if( (*chainIter).lineKey.beginIndex % totalEdgeSize > innerIter.lineKey.beginIndex % totalEdgeSize )	 //인덱스로 그려진 순서 비교
+					if( chainIter->lineKey.beginIndex % totalEdgeSize > innerIter.lineKey.beginIndex % totalEdgeSize )	 //인덱스로 그려진 순서 비교
 					{
 						isOnceCount = false;
 						continue;
 					}
 
-					if( CheckContinueLine( (*chainIter).lineKey, innerIter.lineKey) )	 //서로 연결되어있으면 일반적인 경우
+					if( CheckContinueLine( chainIter->lineKey, innerIter.lineKey) )	 //서로 연결되어있으면 일반적인 경우
 					{
 						isOnceCount = false;
 						break;
@@ -147,10 +179,10 @@ namespace CoolD
 
 				if( isOnceCount )
 				{
-					if( find(upLineSavelist.begin(), upLineSavelist.end(), (*chainIter).lineKey.beginIndex) == upLineSavelist.end() )	//리스트에 포함되지 않았다 즉, 올라간적 없다.
+					if( find(upLineSavelist.begin(), upLineSavelist.end(), chainIter->lineKey.beginIndex) == upLineSavelist.end() )	//리스트에 포함되지 않았다 즉, 올라간적 없다.
 					{						
-						upLineSavelist.push_back( (*chainIter).lineKey.beginIndex );	//한번 올라간 내역 저장
-						++(*chainIter).GetMinY();			//y축 값 1올리기								
+						upLineSavelist.push_back( chainIter->lineKey.beginIndex );	//한번 올라간 내역 저장
+						++(chainIter->GetMinY());			//y축 값 1올리기								
 						m_ListLine.emplace_back( *chainIter );//다시 검색하기 위해서 리스트에 넣어두자						
 						chainIter = currentLine.erase( chainIter );
 					}
@@ -176,20 +208,20 @@ namespace CoolD
 	}
 	
 	//-------------------------------------------------------------------
-	//해당 위치 점 하나 찍기
+	//해당 위치 점 찍기
 	//-------------------------------------------------------------------
 	Dvoid AreaFilling::DrawDot(const Duint x, const Duint y, const Dulong DotColor)
 	{
 		Duchar red = (DotColor >> 24);
 		Duchar green = (DotColor >> 16) & 0x000000ff;
 		Duchar blue = (DotColor >> 8) & 0x000000ff;
-		Duchar currentcolor = 0;
+		Duchar currentcolor = 0;		
 
 		for( Duint k = 0; k < 3; ++k )
 		{
 			if( k == 0 ) currentcolor = red;
 			else if( k == 1 ) currentcolor = green;
-			else if( k == 2 ) currentcolor = blue;
+			else if( k == 2 ) currentcolor = blue;			
 
 			*(m_Buffer + (((m_Width * y) + x) * 3) + k) = currentcolor;
 		}
@@ -203,19 +235,40 @@ namespace CoolD
 		Dint beginX = -1;
 		Dint endX = -1;
 		Dint odd_even = 0;
+		Dfloat DepthLeft, DepthRight;
 		for( auto& dotNode : renderLine )
-		{
+		{			
 			if( odd_even % 2 == 0 ) //짝수
 			{
 				beginX = (int)ceilf(dotNode.x_min); //무조건 올림				
+				
+				//좌측 위치에서의 깊이값 보간
+				Dfloat dy = dotNode.y_max - dotNode.y_min;
+				Dfloat dz = dotNode.max_depth - dotNode.min_depth;
+				Dfloat rate = (currentHeight - dotNode.y_min )/ dy;
+				DepthLeft = dotNode.min_depth + ( dz * rate );
 			}
-			else //홀수			
+			else //홀수
 			{
 				endX = (int)ceilf(dotNode.x_min);
+				//우측 위치에서의 깊이값 보간
+				Dfloat dy = dotNode.y_max - dotNode.y_min;
+				Dfloat dz = dotNode.max_depth - dotNode.min_depth;
+				Dfloat rate = (currentHeight - dotNode.y_min) / dy;
+				DepthRight = dotNode.min_depth + (dz * rate);
 
-				for( Dint i = beginX; i <= endX; ++i )
-				{					
-					DrawDot(i, currentHeight, dotColor);
+				for( Dint i = beginX; i < endX; ++i )
+				{
+					//좌, 우 사이의 깊이값 보간
+					Dfloat dd = DepthRight - DepthLeft;
+					Dfloat dx = (Dfloat)endX - beginX;
+					Dfloat rate = (i - beginX) / dx;
+					Dfloat resultDepth = DepthLeft + (dd * rate);
+
+					if( DepthTest(i, currentHeight, resultDepth) )
+					{
+						DrawDot(i, currentHeight, dotColor);
+					}					
 				}
 			}
 
@@ -228,23 +281,23 @@ namespace CoolD
 	// 메쉬의 해당 면 그리기
 	//-------------------------------------------------------------------
 	Dvoid AreaFilling::DrawFace(const Dulong dotColor)
-	{
-		assert( !m_ActiveTable.empty() );
+	{		
+		assertm(m_Buffer != nullptr && !m_ActiveTable.empty(), m_Buffer or m_ActiveTable is Null );
 
 		list<EdgeNode> continueRenderLine;
 		auto& activeIter = m_ActiveTable.begin();
 
 		m_ActiveTable.sort([] (const ActiveLine& lhs, const ActiveLine& rhs) -> Dbool { return lhs.height < rhs.height; } );
-		for( Dint y = (*m_ActiveTable.begin()).height;; ++y )	//한줄한줄 그려나가야 하기 때문에 
+		for (Dint y = activeIter->height;; ++y)	//한줄한줄 그려나가야 하기 때문에 ActiveTable에서 시작값의 높이로 초기화
 		{
-			if( y == (*activeIter).height )	//라인 정점과 높이가 겹치는 부분
+			if( y == activeIter->height )	//라인 정점과 높이가 겹치는 부분
 			{
-				for( auto& line : (*activeIter).currentLine ) //현재 높이에 걸쳐진 라인들을 순회
+				for( auto& line : activeIter->currentLine ) //현재 높이에 걸쳐진 라인들을 순회
 				{					
 					auto& etIter = STD_FIND_IF(m_EdgeTable, [&line] (const LineEdge& le) { return le.lineKey == line.lineKey; });
 					if( etIter != m_EdgeTable.end() )
 					{
-						continueRenderLine.emplace_back((*etIter).edgeNode);
+						continueRenderLine.emplace_back(etIter->edgeNode);
 					}
 				}
 
@@ -301,4 +354,41 @@ namespace CoolD
 
 		return false;
 	}		
+
+	void AreaFilling::SetTransform(TransType type, const Matrix44 matrix)
+	{
+		m_arrayTransform[ type ] = matrix;
+	}
+
+	void AreaFilling::SetScreenInfo(Dvoid* buffer, const int width, const int height)
+	{
+		m_Buffer = (Duchar*)buffer;
+		m_Width = width;
+		m_Height = height;
+		
+		m_DepthBuffer = new Dfloat[ width * height ];
+		for( int i = 0; i < height; ++i )
+		{
+			for( int j = 0; j < width; ++j )
+			{
+				m_DepthBuffer[ i * width + j] = 1.0f;
+			}
+		}		
+	}
+
+	const array<Matrix44, TRANSFORM_END>& AreaFilling::GetArrayTransform()
+	{
+		return m_arrayTransform;
+	}
+
+	Dbool AreaFilling::DepthTest(const Duint x, const Duint y, Dfloat depth)
+	{
+		if( m_DepthBuffer[ y * m_Width + x ] > depth )
+		{
+			m_DepthBuffer[ y * m_Width + x ] = depth;
+			return true;
+		}
+
+		return false;
+	}	
 }

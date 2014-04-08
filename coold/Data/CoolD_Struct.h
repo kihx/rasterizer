@@ -1,12 +1,10 @@
 #pragma once
 #include "CoolD_Type.h"
-#include "CoolD_Vector3.h"
+#include "..\Math\CoolD_Vector3.h"
 #include <random>
 
-typedef Vector3 BaseVertex;
-
 struct BaseColor
-{
+{	
 	Duchar		r, g, b, a;
 };
 
@@ -24,16 +22,19 @@ struct BaseFace
 struct EdgeNode
 {
 	Dfloat x_min;
+	Dfloat y_min;
 	Dfloat y_max;
+	Dfloat min_depth;	//y_min에서의 깊이값
+	Dfloat max_depth;	//y_max에서의 깊이값
 	Dfloat reverseSlope;
 
-	EdgeNode() : x_min(0.0f), y_max(0.0f), reverseSlope(0.0f){}
+	EdgeNode() : x_min(0.0f), y_min(0.0f), y_max(0.0f), min_depth(0.0f), max_depth(0.0f), reverseSlope(0.0f){}
 
-	EdgeNode(Dfloat _x_min, Dfloat _y_max, Dfloat _reverseSlope)
-		:x_min(_x_min), y_max(_y_max), reverseSlope(_reverseSlope)	{}
+	EdgeNode(Dfloat _x_min, Dfloat _y_min, Dfloat _y_max, Dfloat _min_depth, Dfloat _max_depth, Dfloat _reverseSlope)
+		:x_min(_x_min), y_min(_y_min), y_max(_y_max), min_depth(_min_depth), max_depth(_max_depth), reverseSlope(_reverseSlope)	{}
 
 	EdgeNode(const EdgeNode& edgeNode)
-		:x_min(edgeNode.x_min), y_max(edgeNode.y_max), reverseSlope(edgeNode.reverseSlope)	{}
+		:x_min(edgeNode.x_min), y_min(edgeNode.y_min), y_max(edgeNode.y_max), min_depth(edgeNode.min_depth), max_depth(edgeNode.max_depth), reverseSlope(edgeNode.reverseSlope)	{}
 };
 
 struct LineKey
@@ -76,11 +77,11 @@ struct LineEdge
 
 struct Line
 {
-	LineKey		lineKey;
-	BaseVertex	beginVertex;
-	BaseVertex	endVertex;
+	LineKey	lineKey;
+	Vector3	beginVertex;
+	Vector3	endVertex;
 
-	Line(LineKey _lineKey, BaseVertex _beginVertex, BaseVertex _endVertex)
+	Line(LineKey _lineKey, Vector3 _beginVertex, Vector3 _endVertex)
 		:lineKey(_lineKey.beginIndex, _lineKey.endIndex), beginVertex(_beginVertex), endVertex(_endVertex) {}
 
 	Line(const Line& _line)
@@ -93,9 +94,9 @@ struct Line
 
 	Dbool operator==(const Line& line) const
 	{
-		//Line 타입에 인덱스를 저장해둬야하나.........나중에 써먹을지도 모르니 일단 포함하여 비교
 		if( lineKey == line.lineKey &&
-			this->beginVertex == line.endVertex && this->endVertex == line.endVertex )
+			this->beginVertex == line.endVertex && 
+			this->endVertex == line.endVertex )
 		{
 			return true;
 		}
@@ -135,3 +136,5 @@ private:
 	std::default_random_engine random_engine;
 	std::uniform_int_distribution<T> uniform_dist;
 };
+
+typedef tuple< vector<Vector3>, vector<BaseFace> > tuple_meshInfo;

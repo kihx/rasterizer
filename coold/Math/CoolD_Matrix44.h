@@ -16,6 +16,7 @@ public:
     inline ~Matrix44() {}
     explicit Matrix44( const Quat& quat );
     explicit Matrix44( const Matrix33& matrix );
+	explicit Matrix44( const Dfloat* matrix);
     
     // copy operations
     Matrix44(const Matrix44& other);

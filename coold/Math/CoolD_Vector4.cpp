@@ -166,11 +166,10 @@ Vector4& Vector4::operator*=( Dfloat scalar )
 
 }   
 
-Vector4 Vector4::operator/( Dfloat scalar )
+Vector4 Vector4::operator/(Dfloat scalar) const
 {
-    return Vector4( x/scalar, y/scalar, z/scalar, w/scalar );
-
-}   
+	return Vector4(x / scalar, y / scalar, z / scalar, w / scalar);
+}
 
 Vector4& Vector4::operator/=( Dfloat scalar )
 {
@@ -197,15 +196,16 @@ Dfloat Dot( const Vector4& vector1, const Vector4& vector2 )
 
 }
 
-Vector3 Vector4::Vec4ToVec3( W_MODE value )
+Vector3 Vec4ToVec3(const Vector4& vector, Vector4::W_MODE value)
 {
-	if( value == W_DIVIDE )
-	{
-		return Vector3( x/w, y/w, z/w );
+	if( value == Vector4::W_DIVIDE )
+	{		
+		Vector4 v4 = vector / vector.w;
+		return Vector3(v4.x, v4.y, v4.z);
 	}
 
 	//if( value == W_IGNORE )
-	return Vector3(x, y, z);	
+	return Vector3(vector.x, vector.y, vector.z);
 }
 
 Vector4& Vector4::Ceil()

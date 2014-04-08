@@ -1,7 +1,8 @@
 #include "CoolD_MeshManager.h"
-#include "CoolD_Inlines.h"
-#include "CoolD_Defines.h"
 #include "CoolD_Transform.h"
+#include "..\Data\CoolD_Inlines.h"
+#include "..\Data\CoolD_Defines.h"
+
 
 namespace CoolD
 {
@@ -27,21 +28,28 @@ namespace CoolD
 	{
 		return m_mapMesh.size();
 	}
-
-	const list<CustomMesh*>& MeshManager::AdjustTransform()
+	
+	tuple_meshInfo MeshManager::AdjustTransform(CustomMesh* mesh, const array<Matrix44, TRANSFORM_END>& arrayTransform)
 	{
-		Safe_Delete_VecList( m_ListMesh );		
-
-		for( auto& mesh : m_mapMesh )
-		{			
-			CustomMesh* transMesh = mesh.second->GetTransformMesh();
-			if( transMesh )
-			{
-				m_ListMesh.push_back( transMesh );
-			}
+		vector<Vector3> listVertex;
+		if( mesh->GetType() == MSH )
+		{
+			listVertex = mesh->GetVectorVertex();			
 		}
-		return m_ListMesh;
-	}	 
+		else if( mesh->GetType() == PLY )
+		{			
+			for( Duint i = 1; i <= mesh->GetVertexSize(); ++i )
+			{					
+				listVertex.emplace_back( TransformHelper::TransformVertex(arrayTransform, mesh->GetVertex(i) ));
+			}	
+		}
+		else
+		{	//타입지정이 안 되어있음 무조건 실패
+			assert(false);
+		}
+		
+		return make_tuple(listVertex, mesh->GetVectorFace() );
+	}	 	
 
 	MeshManager::MeshManager()
 	{
@@ -53,8 +61,7 @@ namespace CoolD
 	}
 
 	CustomMesh* MeshManager::CreateMeshFromFile(const Dchar* filename)
-	{
-		FixLater( TemplateFactory패턴으로 바꾸자 )
+	{	
 		CustomMesh* pMesh = nullptr;
 		if( strstr(filename, ".msh") != nullptr )
 		{
@@ -70,12 +77,14 @@ namespace CoolD
 		return pMesh;
 	}
 
-	
-
 	Dvoid MeshManager::Clear()
 	{
-		Safe_Delete_Map(m_mapMesh);
-		Safe_Delete_VecList(m_ListMesh);
+		Safe_Delete_Map(m_mapMesh);		
 	}
+
+	const map<string, CustomMesh*>& MeshManager::GetMeshMap()
+	{
+		return m_mapMesh;
+	}	
 };
 

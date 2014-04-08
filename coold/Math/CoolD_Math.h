@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CoolD_Type.h"
+#include "..\Data\CoolD_Type.h"
 
 #define kEpsilon    1.0e-6f
 
