@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "concommand.h"
+#include "mathlib.h"
 
 #include <vector>
 #include <iostream>
@@ -50,9 +51,9 @@ namespace kih
 	/* class ConsoleCommand
 	*/
 	ConsoleVariable::ConsoleVariable( const std::string& name, const std::string& value, ConsoleCommandCallback func ) :
-		ConsoleCommand( name, func ),
-		m_value( value )
+		ConsoleCommand( name, func )
 	{
+		SetValue( value );
 	}
 
 	void ConsoleVariable::SetValue( const std::string& value )
@@ -62,7 +63,9 @@ namespace kih
 			return;
 		}
 
-		m_value = value;
+		m_int = std::stoi( value );
+		m_float = std::stof( value );
+		m_value = value;		
 		Call();
 	}
 
@@ -73,6 +76,8 @@ namespace kih
 			return;
 		}
 
+		m_int = std::stoi( value );
+		m_float = std::stof( value );
 		m_value = std::move( value );
 		Call();
 	}
@@ -84,6 +89,8 @@ namespace kih
 			return;
 		}
 
+		m_int = value;
+		m_float = static_cast<float>( value );
 		m_value = std::to_string( value );
 		Call();
 	}
@@ -95,6 +102,8 @@ namespace kih
 			return;
 		}
 
+		m_int = Trunc( value );
+		m_float = value;
 		m_value = std::to_string( value );
 		Call();
 	}
@@ -109,7 +118,7 @@ namespace kih
 			return;
 		}
 
-		VerifyReentry( 1 );
+		VerifyReentry();
 
 		std::vector<std::string> params = SplitString<std::string>( std::string( cmdString ), std::string( " " ) );
 		if ( params.size() <= 0 )
@@ -134,7 +143,7 @@ namespace kih
 		else	
 		{
 			// Otherwise, set or display its value if possible.
-			if ( command->Type() != ConsoleCommandType::Variable )
+			if ( command->IsCommand() )
 			{
 				return;
 			}
@@ -182,7 +191,7 @@ namespace kih
 			return;
 		}
 
-		VerifyReentry( 1 );
+		VerifyReentry();
 		m_commandMap.insert( { command->Name(), command } );
 	}
 
@@ -196,21 +205,16 @@ namespace kih
 				continue;
 			}
 
-			switch ( elem.second->Type() )
+			if ( elem.second->IsCommand() )
 			{
-			case ConsoleCommandType::Command:
 				std::cout << elem.first << std::endl;
-				break;
-
-			case ConsoleCommandType::Variable:
+			}
+			else
+			{
 				if ( ConsoleVariable* conVar = ToConsoleVariable( elem.second ) )
 				{
-					std::cout << conVar->Name() << ": " << conVar->String() << std::endl;
-				}
-				break;
-
-			default:
-				VerifyNoEntry();
+					std::cout << conVar->Name() << " " << conVar->String() << std::endl;
+				}			
 			}
 		}
 	}

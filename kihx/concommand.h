@@ -13,14 +13,7 @@ namespace kih
 	class ConsoleCommandExecuter;
 
 	typedef void( *ConsoleCommandCallback )( );
-
-	
-	enum class ConsoleCommandType
-	{
-		Command,
-		Variable
-	};
-
+		
 
 	/* class ConsoleCommand
 	*/
@@ -31,9 +24,9 @@ namespace kih
 	public:
 		explicit ConsoleCommand( const std::string& name, ConsoleCommandCallback func = nullptr );
 
-		virtual ConsoleCommandType Type() const
+		virtual bool IsCommand() const
 		{
-			return ConsoleCommandType::Command;
+			return true;
 		}
 
 		FORCEINLINE const std::string& Name() const
@@ -72,9 +65,9 @@ namespace kih
 	public:
 		explicit ConsoleVariable( const std::string& name, const std::string& value, ConsoleCommandCallback func = nullptr );
 
-		virtual ConsoleCommandType Type() const
+		virtual bool IsCommand() const
 		{
-			return ConsoleCommandType::Variable;
+			return false;
 		}
 
 		FORCEINLINE const std::string& String() const
@@ -84,7 +77,7 @@ namespace kih
 
 		FORCEINLINE int Int() const
 		{			
-			return std::stoi( m_value );
+			return m_int;
 		}
 
 		FORCEINLINE bool Bool() const
@@ -94,7 +87,7 @@ namespace kih
 
 		FORCEINLINE float Float() const
 		{
-			return std::stof( m_value );
+			return m_float;
 		}
 
 		void SetValue( const std::string& value );
@@ -103,6 +96,8 @@ namespace kih
 		void SetValue( float value );
 
 	private:
+		int m_int;
+		float m_float;
 		std::string m_value;
 	};
 
