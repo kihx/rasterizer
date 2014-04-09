@@ -136,30 +136,34 @@ namespace kih
 	/* class LockGuard
 	*/
 	template<class T>
-	class LockGuard
+	class LockGuard final
 	{
+		NONCOPYABLE_CLASS( LockGuard );
+
 	public:
-		LockGuard( std::shared_ptr<T> obj ) :
+		LockGuard( T& obj ) :
 			m_obj( obj )
 		{
-			m_obj->Lock();
+			m_obj.Lock();
 		}
 
 		~LockGuard()
 		{
-			m_obj->Unlock();
+			m_obj.Unlock();
 		}
 
 	private:
-		std::shared_ptr<T> m_obj;
+		T& m_obj;
 	};
 
 
 	/* class LockGuardPtr
 	*/
 	template<class T>
-	class LockGuardPtr
+	class LockGuardPtr final
 	{
+		NONCOPYABLE_CLASS( LockGuardPtr );
+
 	public:
 		LockGuardPtr( std::shared_ptr<T> obj ) :
 			m_obj( obj ),
