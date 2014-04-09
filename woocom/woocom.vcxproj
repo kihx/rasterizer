@@ -85,12 +85,14 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="common.h" />
     <ClInclude Include="Utility.h" />
     <ClInclude Include="WFileLoader.h" />
     <ClInclude Include="WIDrawable.h" />
     <ClInclude Include="WMesh.h" />
     <ClInclude Include="WModule.h" />
     <ClInclude Include="woocom.h" />
+    <ClInclude Include="WPainter.h" />
     <ClInclude Include="WPolyData.h" />
     <ClInclude Include="WPolygon.h" />
     <ClInclude Include="WTrDatai.h" />
@@ -100,6 +102,7 @@
     <ClCompile Include="WFileLoader.cpp" />
     <ClCompile Include="WMesh.cpp" />
     <ClCompile Include="WModule.cpp" />
+    <ClCompile Include="WPainter.cpp" />
     <ClCompile Include="WPolygon.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

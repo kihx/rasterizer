@@ -32,9 +32,9 @@ void WPolygon::DrawOutline(WModule* pPainter)
 void WPolygon::DrawSolid(WModule* pPainter)
 {
 	// 미리 계산
-	Matrix4 world = pPainter->GetWorld();
-	Matrix4 view = pPainter->GetView();
-	Matrix4 proj = pPainter->GetProj();
+	const Matrix4& world = pPainter->GetWorld();
+	const Matrix4& view = pPainter->GetView();
+	const Matrix4& proj = pPainter->GetProj();
 
 	Matrix4 wvp = world * view * proj;
 
