@@ -22,15 +22,18 @@ namespace kih
 	/* class DepthBuffering
 	*/
 	DepthBuffering::DepthBuffering( RenderingContext* context ) :
+#ifdef DEPTHFUNC_LAMDA
 		m_context( context ),
+#endif
 		m_ds( nullptr ),
 		m_ptr( nullptr ),
 		m_format( ColorFormat::Unknown ),
 		m_width( 0 ),
 		m_stride( 0 ),
-		m_depthFunc( DepthFunc::None )
+		m_depthFunc( DepthFunc::None ),
+		m_depthWritable( false )
 	{
-		if ( m_context == nullptr )
+		if ( context == nullptr )
 		{
 			// This is NOT an error. We accept this case.
 			return;
@@ -53,6 +56,7 @@ namespace kih
 		m_width = m_ds->Width();
 		m_stride = GetBytesPerPixel( m_format );
 		m_depthFunc = context->DepthFunction();
+		m_depthWritable = context->DepthWritable();
 	}
 
 	DepthBuffering::~DepthBuffering()
@@ -137,7 +141,7 @@ namespace kih
 #endif
 
 		// depth write
-		if ( m_context->DepthWritable() )
+		if ( m_depthWritable )
 		{
 			dst = depth;
 		}
@@ -317,6 +321,10 @@ namespace kih
 		// Reserve ET space based on scanlines.
 		m_edgeTable.clear();
 		m_edgeTable.resize( height );
+		
+		// the list of indices of edges in ET to reduce traversing empty elements.
+		std::vector<unsigned short> validEdgeIndices;
+		validEdgeIndices.reserve( numVerticesPerPrimitive );
 
 		// Build an edge table by traversing each primitive in vertices,
 		// and draw each primitive.
@@ -334,6 +342,11 @@ namespace kih
 			// To keep in simple, we step last -> first -> second -> third ... and last - 1.
 			size_t v1Index = p * numVerticesPerPrimitive;
 			size_t v0Index = v1Index + ( numVerticesPerPrimitive - 1 );
+
+			// This enables code to skip uncovered scanelines of the primitive.
+			// We only interest scanlines from min to max.
+			unsigned short minScanline = 0;
+			unsigned short maxScanline = 0;
 
 			// for each vertex
 			for ( size_t v = 0; v < numVerticesPerPrimitive; ++v )
@@ -363,27 +376,44 @@ namespace kih
 				float dy = v0.Position.Y - v1.Position.Y;
 				float slope = ( dy == 0.0f ) ? 0.0f : ( dx / dy );
 
-				// Select a start scanline with Y-axis clipping.
+				// Select start and end scanlines with Y-axis clipping.
 				unsigned short startY = Float_ToInteger<unsigned short>( std::ceil( yMin ) );
 				startY = Clamp<unsigned short>( startY, 0, height - 1 );
+				minScanline = Min( minScanline, startY );
+
+				unsigned short endY = Float_ToInteger<unsigned short>( std::ceil( yMax ) );
+				endY = Clamp<unsigned short>( endY, startY, height - 1 );
+				maxScanline = Max( maxScanline, endY );
 
 				// Push this element at the selected scanline.
-				m_edgeTable[startY].emplace_back( yMax, Max( xMin, 0.0f ), Clamp<float>( xMax, 0.0f, width ), slope, zStart, zEnd );
+				m_edgeTable[startY].emplace_back( yMax, xMin, xMax, slope, zStart, zEnd );
+				validEdgeIndices.push_back( startY );
 
 				// Update next indices.
 				v0Index = v1Index;
 				++v1Index;
 			}
 
-			GatherPixelsBeingDrawnFromScanlines( outputStream, width, height, depthBuffering );
+			GatherPixelsBeingDrawnFromScanlines( outputStream, minScanline, maxScanline, width, depthBuffering );
+
+			// Clear the current edge table.
+			size_t size = validEdgeIndices.size();
+			for ( size_t i = 0; i < size; ++i )
+			{
+				unsigned short y = validEdgeIndices[i];
+				Assert( y >= 0 && y < m_edgeTable.size() );
+				m_edgeTable[y].clear();
+			}
+			validEdgeIndices.clear();
 		}
 	}
 
-	void Rasterizer::GatherPixelsBeingDrawnFromScanlines( std::shared_ptr<RasterizerOutputStream> outputStream, unsigned short width, unsigned short height, DepthBuffering& depthBuffering )
+	void Rasterizer::GatherPixelsBeingDrawnFromScanlines( std::shared_ptr<RasterizerOutputStream> outputStream, unsigned short minScanline, unsigned short maxScanline, unsigned short width, DepthBuffering& depthBuffering )
 	{
 		Assert( outputStream );
 		Assert( GetContext() );
-		Assert( height == m_edgeTable.size() && "target height and scanline are mismatched" );
+		Assert( minScanline >= 0 && minScanline < maxScanline );
+		Assert( maxScanline < m_edgeTable.size() );
 
 		// FIXME: test code
 		Color32 color( 255, 255, 255, 255 );
@@ -392,7 +422,7 @@ namespace kih
 		std::list<ActiveEdgeTableElement> aet;
 
 		// for each scanline
-		for ( unsigned short y = 0; y < height; ++y )
+		for ( unsigned short y = minScanline; y < maxScanline; ++y )
 		{
 			if ( !UpdateActiveEdgeTable( aet, y ) )
 			{
@@ -434,7 +464,7 @@ namespace kih
 						// TODO: other lerp vars...
 
 						// an incremetal approach to lerp depth
-						float depthRatioFactor = 1.0f / ( xRight - xLeft );
+						float depthRatioFactor = 1.0f / ( elemRight.CurrentX - elemLeft.CurrentX );
 						float ddxDepth = ( depthRight - depthLeft ) * depthRatioFactor;
 						float interpolatedDepth = depthLeft;
 
@@ -470,15 +500,6 @@ namespace kih
 				elemRight.CurrentX += elemRight.ET.Slope;				
 			}
 		}
-
-		for ( unsigned short y = 0; y < height; ++y )
-		{
-			auto& list = m_edgeTable[y];
-			if ( !list.empty() )
-			{
-				list.clear();
-			}			
-		}
 	}
 
 	bool Rasterizer::UpdateActiveEdgeTable( std::list<ActiveEdgeTableElement>& aet, unsigned short scanline ) const
@@ -486,33 +507,29 @@ namespace kih
 		Assert( scanline >= 0 && scanline < m_edgeTable.size() );
 
 		// Find outside elements in the AET and remove them.
-		if ( !aet.empty() )
+		auto iter = aet.begin();
+		while ( iter != aet.end() )
 		{
-			auto iter = aet.begin();
-			while ( iter != aet.end() )
+			const ActiveEdgeTableElement& elem = *iter;
+			if ( scanline >= elem.ET.YMax )
 			{
-				const ActiveEdgeTableElement& elem = *iter;
-				if ( scanline >= elem.ET.YMax )
-				{
-					iter = aet.erase( iter );
-				}
-				else
-				{
-					++iter;
-				}
+				iter = aet.erase( iter );
+			}
+			else
+			{
+				++iter;
 			}
 		}
 
 		// Push inside ET elements on this scanline into the AET.
-		const auto& elemList = m_edgeTable[scanline];
-		if ( !elemList.empty() )
+		const std::vector<EdgeTableElement>& elemList = m_edgeTable[scanline];
+		size_t elemSize = elemList.size();
+		for ( size_t i = 0; i < elemSize; ++i )
 		{
-			for ( const auto& elem : elemList )
+			const EdgeTableElement& elem = elemList[i];
+			if ( scanline < elem.YMax )
 			{
-				if ( scanline < elem.YMax )
-				{
-					aet.emplace_back( elem );
-				}
+				aet.emplace_back( elem );
 			}
 		}
 

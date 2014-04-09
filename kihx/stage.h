@@ -69,8 +69,11 @@ namespace kih
 		int m_width;
 		int m_stride;
 		byte* m_ptr;
-		RenderingContext* m_context;
 		std::shared_ptr<Texture> m_ds;
+#ifdef DEPTHFUNC_LAMDA
+		RenderingContext* m_context;
+#endif
+		bool m_depthWritable;
 	};
 
 
@@ -184,8 +187,6 @@ namespace kih
 	private:
 		struct EdgeTableElement
 		{
-			NONCOPYABLE_STRUCT( EdgeTableElement );
-
 			float YMax;
 			float XMin;
 			float XMax;
@@ -235,14 +236,14 @@ namespace kih
 
 		// scanline conversion
 		void DoScanlineConversion( const std::shared_ptr<RasterizerInputStream>& inputStream, std::shared_ptr<RasterizerOutputStream> outputStream, unsigned short width, unsigned short height );
-		void GatherPixelsBeingDrawnFromScanlines( std::shared_ptr<RasterizerOutputStream> outputStream, unsigned short width, unsigned short height, DepthBuffering& depthBufferingParam );
+		void GatherPixelsBeingDrawnFromScanlines( std::shared_ptr<RasterizerOutputStream> outputStream, unsigned short minScanline, unsigned short maxScanline, unsigned short width, DepthBuffering& depthBufferingParam );
 		bool UpdateActiveEdgeTable( std::list<ActiveEdgeTableElement>& aet, unsigned short scanline ) const;
 
 		// transform
 		void TransformViewport( const std::shared_ptr<RasterizerInputStream>& inputStream, unsigned short width, unsigned short height ) const;
 
 	private:
-		std::vector<std::list<EdgeTableElement>> m_edgeTable;
+		std::vector<std::vector<EdgeTableElement>> m_edgeTable;
 	};
 
 

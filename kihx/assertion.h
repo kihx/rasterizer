@@ -61,6 +61,6 @@ namespace kih
 
 #define VerifyNoEntry()
 #define VerifyEntryOnce()
-#define VerifyReentry( limit )
+#define VerifyReentry()
 
 #endif	// #ifdef CODE_VERIFIER
