@@ -111,7 +111,7 @@ namespace kih
 
 	/* class ConsoleCommandExecuter
 	*/
-	void ConsoleCommandExecuter::Execute( const char* cmdString )
+	void ConsoleCommandExecuter::Execute( const char* cmdString ) const
 	{
 		if ( cmdString == nullptr )
 		{
@@ -166,7 +166,7 @@ namespace kih
 		}
 	}
 
-	ConsoleCommand* ConsoleCommandExecuter::FindCommand( const std::string& name )
+	ConsoleCommand* ConsoleCommandExecuter::FindCommand( const std::string& name ) const
 	{
 		auto iter = m_commandMap.find( name );
 		if ( iter != m_commandMap.end() )
@@ -177,25 +177,7 @@ namespace kih
 		return nullptr;
 	}
 
-	void ConsoleCommandExecuter::AddCommand( ConsoleCommand* command )
-	{
-		if ( command == nullptr )
-		{
-			return;
-		}
-
-		ConsoleCommand* oldCommand = FindCommand( command->Name() );
-		if ( oldCommand )
-		{
-			LOG_WARNING( "cannot add an existed command" );
-			return;
-		}
-
-		VerifyReentry();
-		m_commandMap.insert( { command->Name(), command } );
-	}
-
-	void ConsoleCommandExecuter::Help()
+	void ConsoleCommandExecuter::Help() const
 	{
 		for ( const auto& elem : m_commandMap )
 		{
@@ -217,6 +199,24 @@ namespace kih
 				}			
 			}
 		}
+	}
+
+	void ConsoleCommandExecuter::AddCommand( ConsoleCommand* command )
+	{
+		if ( command == nullptr )
+		{
+			return;
+		}
+
+		ConsoleCommand* oldCommand = FindCommand( command->Name() );
+		if ( oldCommand )
+		{
+			LOG_WARNING( "cannot add an existed command" );
+			return;
+		}
+
+		VerifyReentry();
+		m_commandMap.insert( { command->Name(), command } );
 	}
 };
 

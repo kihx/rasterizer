@@ -116,11 +116,11 @@ namespace kih
 	public:
 		~ConsoleCommandExecuter() = default;
 
-		void Execute( const char* cmdString );
+		void Execute( const char* cmdString ) const;
 
-		ConsoleCommand* FindCommand( const std::string& name );
+		ConsoleCommand* FindCommand( const std::string& name ) const;
 
-		void Help();
+		void Help() const;
 
 	private:
 		void AddCommand( ConsoleCommand* command );
