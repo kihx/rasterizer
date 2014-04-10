@@ -22,7 +22,18 @@ namespace kih
 		NONCOPYABLE_CLASS( ConsoleCommand );
 
 	public:
-		explicit ConsoleCommand( const std::string& name, ConsoleCommandCallback func = nullptr );
+		enum PropertyFlags
+		{
+			FL_NONE = 0x0,
+			FL_UNITTEST = 0x2,
+		};
+
+		ConsoleCommand() = default;
+		ConsoleCommand( const std::string& name, unsigned int flags = FL_NONE, ConsoleCommandCallback func = nullptr );
+		
+		virtual ~ConsoleCommand() 
+		{
+		}
 
 		virtual bool IsCommand() const
 		{
@@ -34,13 +45,18 @@ namespace kih
 			return m_name;
 		}
 
+		FORCEINLINE bool IsUnitTest() const
+		{
+			return ( m_flags & FL_UNITTEST ) != 0;
+		}
+
 	protected:
 		FORCEINLINE bool HasCallback() const
 		{
 			return m_func != nullptr;
 		}
 
-		FORCEINLINE void Call()
+		FORCEINLINE void Call() const
 		{
 			if ( HasCallback() )
 			{
@@ -49,6 +65,7 @@ namespace kih
 		}
 
 	private:
+		unsigned int m_flags;
 		std::string m_name;
 		ConsoleCommandCallback m_func;
 
@@ -63,7 +80,7 @@ namespace kih
 		NONCOPYABLE_CLASS( ConsoleVariable );
 
 	public:
-		explicit ConsoleVariable( const std::string& name, const std::string& value, ConsoleCommandCallback func = nullptr );
+		explicit ConsoleVariable( const std::string& name, const std::string& value, unsigned int flags = FL_NONE, ConsoleCommandCallback func = nullptr );
 
 		virtual bool IsCommand() const
 		{
@@ -122,6 +139,8 @@ namespace kih
 
 		void Help() const;
 
+		void VerifyUnitTestAll() const;
+
 	private:
 		void AddCommand( ConsoleCommand* command );
 
@@ -139,5 +158,11 @@ using kih::ConsoleCommandExecuter;
 
 #define DEFINE_COMMAND( name )	\
 	void __callback_##name();	\
-	static ConsoleCommand __concommand_##name( #name, __callback_##name );	\
+	static ConsoleCommand __concommand_##name( #name, 0, __callback_##name );	\
 	void __callback_##name()
+
+#define DEFINE_UNITTEST( name )	\
+	void __callback_##name();	\
+	static ConsoleCommand __concommand_##name( #name, ConsoleCommand::FL_UNITTEST, __callback_##name );	\
+	void __callback_##name()
+

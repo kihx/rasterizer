@@ -7,11 +7,6 @@
 
 namespace kih
 {
-	FORCEINLINE ConsoleVariable* ToConsoleVariable( ConsoleCommand* cmd )
-	{
-		return dynamic_cast< ConsoleVariable* >( cmd );
-	}
-
 	// String splitter: http://stackoverflow.com/questions/236129/how-to-split-a-string-in-c
 	template<typename T>
 	std::vector<T> SplitString( const T& str, const T& delimiters ) 
@@ -39,7 +34,8 @@ namespace kih
 
 	/* class ConsoleCommand
 	*/
-	ConsoleCommand::ConsoleCommand( const std::string& name, ConsoleCommandCallback func ) :
+	ConsoleCommand::ConsoleCommand( const std::string& name, unsigned int flags, ConsoleCommandCallback func ) :
+		m_flags( flags ),
 		m_name( name ),
 		m_func( func )
 	{
@@ -50,8 +46,8 @@ namespace kih
 
 	/* class ConsoleCommand
 	*/
-	ConsoleVariable::ConsoleVariable( const std::string& name, const std::string& value, ConsoleCommandCallback func ) :
-		ConsoleCommand( name, func )
+	ConsoleVariable::ConsoleVariable( const std::string& name, const std::string& value, unsigned int flags, ConsoleCommandCallback func ) :
+		ConsoleCommand( name, flags, func )
 	{
 		SetValue( value );
 	}
@@ -148,7 +144,7 @@ namespace kih
 				return;
 			}
 
-			if ( ConsoleVariable* conVar = ToConsoleVariable( command ) )
+			if ( ConsoleVariable* conVar = dynamic_cast< ConsoleVariable* >( command ) )
 			{
 				// If there is a value parameter, change the value of the command.
 				if ( params.size() >= 2 )
@@ -181,23 +177,45 @@ namespace kih
 	{
 		for ( const auto& elem : m_commandMap )
 		{
-			if ( elem.second == nullptr )
+			ConsoleCommand* cmd = elem.second;
+			if ( cmd == nullptr )
 			{
 				VerifyNoEntry();
 				continue;
 			}
 
-			if ( elem.second->IsCommand() )
+			if ( cmd->IsCommand() )
 			{
 				std::cout << elem.first << std::endl;
 			}
 			else
 			{
-				if ( ConsoleVariable* conVar = ToConsoleVariable( elem.second ) )
+				if ( const ConsoleVariable* conVar = dynamic_cast< const ConsoleVariable* >( cmd ) )
 				{
 					std::cout << conVar->Name() << " " << conVar->String() << std::endl;
 				}			
 			}
+		}
+	}
+
+	void ConsoleCommandExecuter::VerifyUnitTestAll() const
+	{
+		for ( const auto& elem : m_commandMap )
+		{
+			const ConsoleCommand* cmd = elem.second;
+			if ( cmd == nullptr )
+			{
+				VerifyNoEntry();
+				continue;
+			}
+
+			if ( !cmd->IsUnitTest() )
+			{
+				continue;
+			}
+
+			std::cout << "\n[" << cmd->Name() << "]" << std::endl;
+			cmd->Call();
 		}
 	}
 
@@ -234,3 +252,7 @@ DEFINE_COMMAND( exit )
 	exit( 0 );
 }
 
+DEFINE_COMMAND( tdd )
+{
+	ConsoleCommandExecuter::GetInstance()->VerifyUnitTestAll();
+}

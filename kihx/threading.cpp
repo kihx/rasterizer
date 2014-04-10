@@ -304,11 +304,13 @@ namespace kih
 		// If there is no idle thread, queue the task.
 		if ( thread == nullptr )
 		{
+			LockGuard<Mutex> lockGuard( m_mutex );
 			m_taskQueue.push( funcWork );
 			return;
 		}
 
 		// Otherwise, go the task now.
+		LockGuard<Mutex> lockGuard( m_mutex );
 		thread->Go( funcWork );
 	}
 
@@ -356,8 +358,9 @@ namespace kih
 
 		Thread::Sleep( 1 );
 
+		// HACK: test once again due to concurrency
 		LockGuard<Mutex> lockGuard( parallel->m_mutex );
-		if ( !parallel->m_taskQueue.empty() )		// HACK: test once again
+		if ( !parallel->m_taskQueue.empty() && !thread->Working() )
 		{
 			thread->Go( parallel->m_taskQueue.front() );
 			parallel->m_taskQueue.pop();
@@ -370,7 +373,7 @@ namespace kih
 #include <iostream>
 
 
-DEFINE_COMMAND( atomic_test )
+DEFINE_UNITTEST( atomic_test )
 {
 	Atomic<bool> atomBool( true );
 	atomBool.Exchange( false );
@@ -379,6 +382,9 @@ DEFINE_COMMAND( atomic_test )
 		bool a = atomBool;
 		std::cout << "<OK> atomic: " << atomBool << ", " << a << std::endl;
 	}
+	
+	Atomic<short> atomShort;
+	atomShort.Exchange( 66 );
 
 	Atomic<int> atomInt;
 	atomInt.Exchange( 3 );
@@ -387,9 +393,21 @@ DEFINE_COMMAND( atomic_test )
 		int a = atomInt;
 		std::cout << "<OK> atomic: " << atomInt << ", " << a << std::endl;
 	}
+
+	Atomic<__int64> atomInt64( 32 );
+	++atomInt64;
+	atomInt64.Exchange( 0xFFFFFFFFFFFF );
+	if ( atomInt64 == 0xFFFFFFFFFFFF )
+	{
+		__int64 a = atomInt64;
+		std::cout << "<OK> atomic: " << atomInt64 << ", " << a << std::endl;
+	}
+
+	//Atomic<float> atomShort;
+	//Atomic<Event> atomClass;
 }
 
-DEFINE_COMMAND( thread_test )
+DEFINE_UNITTEST( thread_test )
 {
 	float yCaptured = 13.2f;
 
@@ -408,7 +426,7 @@ DEFINE_COMMAND( thread_test )
 	t.Join();
 }
 
-DEFINE_COMMAND( parallel_test )
+DEFINE_UNITTEST( parallel_test )
 {
 	std::cout.sync_with_stdio();
 
@@ -425,13 +443,18 @@ DEFINE_COMMAND( parallel_test )
 
 	auto f4 = std::bind( []( std::vector<int> data ) { std::cout << "f4: " << data[0] << std::endl; }, data );
 
-	parallel.Queue( f0 );
-	parallel.Queue( f1 );
-	parallel.Queue( f2 );
-	parallel.Queue( f3 );
-	parallel.Queue( f4 );
+	for ( int i = 0; i < 10; ++i )
+	{
+		parallel.Queue( f0 );
+		parallel.Queue( f1 );
+		parallel.Queue( f2 );
+		parallel.Queue( f3 );
+		parallel.Queue( f4 );
+		
+		std::cout << "(task " << i << "th\n" << std::endl;
+	}
 
-	Thread::Sleep( 1000 );
+	Thread::Sleep( 100 );
 
 	parallel.WaitForAllTasks();
 }

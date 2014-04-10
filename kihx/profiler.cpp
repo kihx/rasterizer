@@ -1,11 +1,18 @@
 #include "stdafx.h"
 #include "profiler.h"
+#include "concommand.h"
 
 #include <windows.h>
+#include <iostream>
+
+
+static ConsoleVariable perf( "perf", "0" );
 
 
 namespace kih
 {
+	/* class PlatformTime
+	*/
 	double PlatformTime::FrequencyCycle = 0;
 
 	double PlatformTime::MicroSeconds()
@@ -24,4 +31,16 @@ namespace kih
 		QueryPerformanceCounter( &counter );
 		return counter.QuadPart * FrequencyCycle * 1000000;
 	}
+
+
+	/* class ScopeProfile
+	*/
+	ScopeProfile::~ScopeProfile()
+	{
+		if ( perf.Bool() )
+		{
+			std::cout << ( PlatformTime::MicroSeconds() - m_beginTime ) / 1000.0 << std::endl;
+		}
+	}
+
 }

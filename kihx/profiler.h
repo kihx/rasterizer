@@ -2,8 +2,6 @@
 
 #include "base.h"
 
-#include <stdio.h>
-
 
 namespace kih
 {
@@ -29,10 +27,7 @@ namespace kih
 		{
 		}
 
-		~ScopeProfile()
-		{
-			printf( "%.2f\n", ( PlatformTime::MicroSeconds() - m_beginTime ) / 1000.0 );
-		}
+		~ScopeProfile();
 
 	private:
 		double m_beginTime;

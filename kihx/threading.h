@@ -14,6 +14,11 @@
 
 namespace kih
 {
+	/* using ThreadFunc
+	*/
+	using ThreadFunc = std::function<void()>;
+
+
 	// Wrapper functions for threading.
 	// Do NOT directly call them. Use threading classes.
 	char f_interlockedexchange8( volatile char* target, char value );
@@ -50,22 +55,46 @@ namespace kih
 	unsigned int f_waitforsingleobject( void* hHandle, unsigned int dwMilliseconds );
 
 
-	/* using ThreadFunc
-	*/
-	using ThreadFunc = std::function<void()>;
+
+	// interlock-function overrides using template specilization
+	template<typename T, int = sizeof( T ) * 8>
+	struct interlock_func_impl
+	{
+	};
+
+	#define DEFINE_INTERLOCK_FUNC( Size ) \
+	template<typename T>\
+	struct interlock_func_impl<T, Size>\
+	{\
+		static FORCEINLINE T f_interlockedexchange( volatile T* target, T value )\
+		{\
+			return f_interlockedexchange##Size( target, value );\
+		}\
+		static FORCEINLINE T f_interlockedincrement( volatile T* target )\
+		{\
+			return f_interlockedincrement##Size( target );\
+		}\
+		static FORCEINLINE T f_interlockeddecrement( volatile T* target )\
+		{\
+			return f_interlockeddecrement##Size( target );\
+		}\
+		static FORCEINLINE T f_interlockedadd( volatile T* target, T value )\
+		{\
+			return f_interlockedadd##Size( target, value );\
+		}\
+	};
+
+	DEFINE_INTERLOCK_FUNC( 16 );	// short
+	DEFINE_INTERLOCK_FUNC( 32 );	// int
+	DEFINE_INTERLOCK_FUNC( 64 );	// __int64
 
 
 	/* class Atomic
 	*/
-	template<typename T, typename std::enable_if< std::is_scalar<T>::value >::type* = nullptr>
+	template<typename T, bool = std::is_integral<T>::value>
 	class Atomic
 	{
-		Atomic() = delete;
-
-		//FORCEINLINE typename std::enable_if<sizeof( T ) == 2>::type
-		//	Exchange( T ) volatile
-		//{
-		//}
+		static_assert( std::is_integral<T>::value, "only integral type is allowed" );
 	};
 
 	template<>
@@ -108,90 +137,91 @@ namespace kih
 	private:
 		volatile char m_value;
 	};	
-
-	template<>
-	class Atomic<int>
+	
+	// integral specialization
+	template<typename T>
+	class Atomic<T, true>
 	{
 		NONCOPYABLE_CLASS( Atomic );
-
+		
 	public:
 		FORCEINLINE Atomic() :
 			m_value( 0 )
 		{
 		}
 
-		FORCEINLINE Atomic( int value ) :
+		FORCEINLINE Atomic( T value ) :
 			m_value( value )
 		{
 		}
-		
-		FORCEINLINE int Value() const
+
+		FORCEINLINE T Value() const
 		{
 			return m_value;
 		}
 
-		FORCEINLINE operator int() const
+		FORCEINLINE operator T() const
 		{
 			return Value();
 		}
 
-		FORCEINLINE void Exchange( int value ) volatile
+		FORCEINLINE void Exchange( T value ) volatile
 		{
-			f_interlockedexchange32( &m_value, value );
+			interlock_func_impl<T>::f_interlockedexchange( &m_value, value );
 		}
 
-		FORCEINLINE int operator++()
+		FORCEINLINE T operator++( )
 		{
-			return f_interlockedincrement32( &m_value );
+			return interlock_func_impl<T>::f_interlockedincrement( &m_value );
 		}
 
-		FORCEINLINE int operator++() volatile
+		FORCEINLINE T operator++( ) volatile
 		{
-			return f_interlockedincrement32( &m_value );
+			return interlock_func_impl<T>::f_interlockedincrement( &m_value );
 		}
 
-		FORCEINLINE int operator--( )
+		FORCEINLINE T operator--( )
 		{
-			return f_interlockeddecrement32( &m_value );
+			return interlock_func_impl<T>::f_interlockeddecrement( &m_value );
 		}
 
-		FORCEINLINE int operator--( ) volatile
+		FORCEINLINE T operator--( ) volatile
 		{
-			return f_interlockeddecrement32( &m_value );
+			return interlock_func_impl<T>::f_interlockeddecrement( &m_value );
 		}
 
-		FORCEINLINE int operator=( int value ) volatile
+		FORCEINLINE T operator=( T value ) volatile
 		{
 			Exchange( value );
 			return m_value;
 		}
 
-		FORCEINLINE int operator+=( int arg )
+		FORCEINLINE T operator+=( T arg )
 		{
-			f_interlockedadd32( &m_value, arg );
+			interlock_func_impl<T>::f_interlockedadd( &m_value, arg );
 			return m_value;
 		}
 
-		FORCEINLINE int operator+=( int arg ) volatile
+		FORCEINLINE T operator+=( T arg ) volatile
 		{
-			f_interlockedadd32( &m_value, arg );
+			interlock_func_impl<T>::f_interlockedadd( &m_value, arg );
 			return m_value;
 		}
 
-		FORCEINLINE int operator-=( int arg )
+		FORCEINLINE T operator-=( T arg )
 		{
-			f_interlockedadd32( &m_value, -arg );
+			interlock_func_impl<T>::f_interlockedadd( &m_value, -arg );
 			return m_value;
 		}
 
-		FORCEINLINE int operator-=( int arg ) volatile
+		FORCEINLINE T operator-=( T arg ) volatile
 		{
-			f_interlockedadd32( &m_value, -arg );
+			interlock_func_impl<T>::f_interlockedadd( &m_value, -arg );
 			return m_value;
 		}
 
 	private:
-		volatile int m_value;
+		volatile T m_value;
 	};
 
 	
@@ -505,5 +535,6 @@ namespace kih
 
 using kih::Atomic;
 using kih::Event;
+using kih::Mutex;
 using kih::Thread;
 using kih::ParallelWorker;
