@@ -15,14 +15,14 @@ void WPainter::ResetFillInfo()
 
 void WPainter::InsertLineInfo(int lineIndex, int posX, const unsigned char* rgb)
 {
-	assert((lineIndex >= 0 && lineIndex < m_screenHeight) && "fillInfo Index out of range");
+	assert((lineIndex >= 0 && lineIndex < m_height) && "fillInfo Index out of range");
 
 	m_fillInfo[lineIndex].Insert(posX, rgb);
 }
 
 void WPainter::InsertLineDepthInfo(int lineIndex, int posX, float depth, const unsigned char* rgb)
 {
-	assert((lineIndex >= 0 && lineIndex < m_screenHeight) && "fillInfo Index out of range");
+	assert((lineIndex >= 0 && lineIndex < m_height) && "fillInfo Index out of range");
 
 	m_fillInfo[lineIndex].Insert(posX, depth, rgb);
 }
