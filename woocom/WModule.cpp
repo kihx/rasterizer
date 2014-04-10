@@ -32,6 +32,7 @@ void WModule::Init(void* buffer, int width, int height, int bpp)
 	m_colorDepth = bpp;
 
 	m_depthBuffer.resize(width * height, 1.0f);
+	m_fillInfo.resize(height);
 }
 
 bool WModule::IsInitialized()
