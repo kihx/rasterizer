@@ -104,12 +104,14 @@ void WPolygon::InsertLineInfo(WModule* pPainter, const Vector3* v1, const Vector
 	Vector3 start = *v1;
 	float endY = roundf(v2->Y);
 	float endZ = v2->Z;
+	float endX = v2->X;
 	
 	if (v1->Y > v2->Y)
 	{
 		start = *v2;
 		endY = roundf(v1->Y);
 		endZ = v1->Z;
+		endX = v1->X;
 	}
 	
 	// Z 보간용 변수
@@ -119,7 +121,7 @@ void WPolygon::InsertLineInfo(WModule* pPainter, const Vector3* v1, const Vector
 	// 처음 시작이 부정확해서 시작점은 버텍스 좌표를 찍어준다.
 	pPainter->InsertLineDepthInfo(Float2Int(start.Y), Float2Int(start.X), lerpZ, color);
 
-	float y = roundf(start.Y) + 1.0f;
+	float y = roundf(start.Y) +1.0f;
 	while (y < endY)
 	{
 		// Z 보간

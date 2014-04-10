@@ -31,6 +31,9 @@ void WModule::Init(void* buffer, int width, int height, int bpp)
 	m_screenHeight = height;
 	m_colorDepth = bpp;
 
+	m_scanOffset = height;
+	m_scanCount = 0;
+
 	m_depthBuffer.resize(width * height, 1.0f);
 	m_fillInfo.resize(height);
 }
@@ -96,9 +99,20 @@ void WModule::ZBufferPaintPixel(int x, int y, float z, const unsigned char* rgb)
 
 bool WModule::DepthTest(int x, int y, float z)
 {
+	// 클리핑
+	if (x < 0 || x > m_screenWidth)
+	{
+		return false;
+	}
+
+	if (y < 0 || y > m_screenHeight)
+	{
+		return false;
+	}
+
 	// depth test
 	int depthIndex = m_screenWidth * y + x;
-	if (m_depthBuffer[depthIndex] <= z)
+	if (m_depthBuffer[depthIndex] < z)
 	{
 		return false;
 	}
@@ -117,6 +131,9 @@ void WModule::ResetFillInfo()
 	{
 		m_fillInfo[i].m_edgeData.clear();
 	}
+
+	m_scanOffset = m_screenHeight;
+	m_scanCount = 0;
 }
 
 void WModule::InsertLineInfo(int lineIndex, int posX, const unsigned char* rgb)
@@ -124,6 +141,17 @@ void WModule::InsertLineInfo(int lineIndex, int posX, const unsigned char* rgb)
 	assert((lineIndex >= 0 && lineIndex < m_screenHeight) && "fillInfo Index out of range");
 
 	m_fillInfo[lineIndex].Insert(posX, rgb);
+
+	// 엣지 정보가 들어있는 공간을 저장
+	// offset 부터 count 갯수만큼 그리도록
+	if (m_scanOffset > lineIndex)
+	{
+		m_scanOffset = lineIndex;
+	}
+	else if (m_scanCount < lineIndex)
+	{
+		m_scanCount = lineIndex;
+	}
 
 	m_isSorted = false;
 }
@@ -133,13 +161,25 @@ void WModule::InsertLineDepthInfo(int lineIndex, int posX, float depth, const un
 	assert((lineIndex >= 0 && lineIndex < m_screenHeight) && "fillInfo Index out of range");
 
 	m_fillInfo[lineIndex].Insert(posX, depth, rgb);
+
+	// 엣지 정보가 들어있는 공간을 저장
+	// offset 부터 count 갯수만큼 그리도록
+	if (m_scanOffset > lineIndex)
+	{
+		m_scanOffset = lineIndex;
+	}
+	else if (m_scanCount < lineIndex)
+	{
+		m_scanCount = lineIndex;
+	}
+
 	m_isSorted = false;
 }
 
 void WModule::SortFillInfo()
 {
 	size_t num = m_fillInfo.size();
-	for (size_t i = 0; i < num; ++i)
+	for (size_t i = m_scanOffset; i < m_scanCount; ++i)
 	{
 		m_fillInfo[i].Sort();
 	}
@@ -150,7 +190,7 @@ void WModule::SortFillInfo()
 void WModule::DrawFillInfo()
 {
 	size_t num = m_fillInfo.size();
-	for (size_t i = 0; i < num; ++i)
+	for (size_t i = m_scanOffset; i < m_scanCount; ++i)
 	{
 		DrawScanline(i, m_fillInfo[i]);
 	}

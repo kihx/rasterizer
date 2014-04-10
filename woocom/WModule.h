@@ -53,6 +53,8 @@ private:
 
 	bool m_isSorted;
 	std::vector< EdgeInfo >	m_fillInfo;
+	int m_scanOffset;
+	int m_scanCount;
 
 	Matrix4	m_world;
 	Matrix4 m_view;
