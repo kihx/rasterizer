@@ -81,6 +81,7 @@ struct Line
 	Vector3	beginVertex;
 	Vector3	endVertex;
 
+	Line() = default;
 	Line(LineKey _lineKey, Vector3 _beginVertex, Vector3 _endVertex)
 		:lineKey(_lineKey.beginIndex, _lineKey.endIndex), beginVertex(_beginVertex), endVertex(_endVertex) {}
 
@@ -110,6 +111,7 @@ struct ActiveLine
 	Dint height;
 	list<Line> currentLine;
 
+	ActiveLine() = default;
 	ActiveLine(const Dint& _height, const list<Line> _currentLine)
 		:height(_height), currentLine(_currentLine)	{}
 };
@@ -138,3 +140,6 @@ private:
 };
 
 typedef tuple< vector<Vector3>, vector<BaseFace> > tuple_meshInfo;
+
+//0 : MinY, 1 : MaxY
+typedef tuple< Dfloat, Dfloat > tuple_OptimizeY;

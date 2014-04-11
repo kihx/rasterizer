@@ -30,21 +30,38 @@ EXTERN_FORM DLL_API Dvoid __cdecl coold_LoadMeshFromFile( const Dchar* filename 
 	GETSINGLE(MeshManager).LoadMesh(filename);
 }
 
-EXTERN_FORM DLL_API Dvoid __cdecl coold_RenderToBuffer( Dvoid* buffer, Dint width, Dint height, Dint bpp )
-{	
+EXTERN_FORM DLL_API Dvoid __cdecl coold_RenderToBuffer(Dvoid* buffer, Dint width, Dint height, Dint bpp)
+{
 	ClearColorBuffer(buffer, width, height, BLACK);
 	AreaFilling renderCore;
 
-	renderCore.SetScreenInfo(buffer, width, height);
-	renderCore.SetTransform(WORLD, g_matWorld);
-	renderCore.SetTransform(VIEW, g_matView);
-	renderCore.SetTransform(PERSPECTIVE, g_matPers);
-	renderCore.SetTransform(VIEWPORT, TransformHelper::CreateViewport(0, 0, width, height));
-
+	parallel_invoke( 
+		[&renderCore, buffer, width, height]{ renderCore.SetScreenInfo(buffer, width, height); },
+		[&renderCore]{ renderCore.SetTransform(WORLD, g_matWorld); },
+		[&renderCore]{ renderCore.SetTransform(VIEW, g_matView); },
+		[&renderCore]{ renderCore.SetTransform(PERSPECTIVE, g_matPers); },
+		[&renderCore, width, height]{ renderCore.SetTransform(VIEWPORT, TransformHelper::CreateViewport(0, 0, width, height)); }
+		);
+		
+	//병렬 루프 가능-----------------------------------
+	/*vector<tuple_meshInfo> vecMeshInfo;
 	for( auto& Mesh : GETSINGLE(MeshManager).GetMeshMap() )
 	{
-		tuple_meshInfo pMesh = GETSINGLE(MeshManager).AdjustTransform(Mesh.second, renderCore.GetArrayTransform());
-		renderCore.Render( pMesh );
+		vecMeshInfo.push_back( GETSINGLE(MeshManager).AdjustTransform(Mesh.second, renderCore.GetArrayTransform()) );
+	}*/
+
+	vector<tuple_meshInfo> vecMeshInfo;
+	//for( auto& Mesh : GETSINGLE(MeshManager).GetMeshMap() )
+	const map<string, CustomMesh*>& rMeshMap = GETSINGLE(MeshManager).GetMeshMap();
+	parallel_for_each(begin(rMeshMap), end(rMeshMap), [&renderCore, &vecMeshInfo](pair<string, CustomMesh*> pMesh)
+	{
+		vecMeshInfo.push_back( GETSINGLE(MeshManager).AdjustTransform(pMesh.second, renderCore.GetArrayTransform()) );
+	});
+	//----------------------------------------------
+
+	for (auto& Mesh : vecMeshInfo)
+	{
+		renderCore.Render( Mesh );
 	}
 }
 EXTERN_FORM DLL_API Dvoid __cdecl coold_SetTransform(Dint transformType, const Dfloat* matrix4x4)

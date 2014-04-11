@@ -12,47 +12,57 @@ namespace CoolD
 
 	AreaFilling::~AreaFilling()
 	{					
-		m_ListLine.clear();
-		m_ActiveTable.clear();
-		m_EdgeTable.clear();		
+		Clear();
 		Safe_Delete_Array(m_DepthBuffer);
 	}
 
 	Dvoid AreaFilling::Render( tuple_meshInfo& meshInfo)
 	{							
-		TimeForm start = chrono::system_clock::now();
+		//TimeForm start = chrono::system_clock::now();
 		
 		for( Duint faceNum = 0; faceNum < get<1>(meshInfo).size(); ++faceNum )
 		{
-			CreatePointsToLines(meshInfo, faceNum);	//메쉬에서 어떤 면을 그릴 것 인지
-			CreateEdgeTable( );			
-			CreateChainTable( );
+			tuple_OptimizeY opY = CreatePointsToLines(meshInfo, faceNum);
+			if (CheckYStandInLine())
+			{
+				Clear();
+				continue;
+			}
 
+			CreateEdgeTable( );		
+			CreateChainTable(opY);			
+			
 			RandomGenerator<int> rand(0, 255);
 			BaseColor color;
 			color = { rand.GetRand(), rand.GetRand(), rand.GetRand(), rand.GetRand() };
 
 			DrawFace( MixDotColor(color) );
 		}
-
-
-		TimeForm end = chrono::system_clock::now();
-		chrono::milliseconds mill = chrono::duration_cast<chrono::milliseconds>(end - start);		//test 시간 측정						
+		
+		//TimeForm end = chrono::system_clock::now();
+		//chrono::milliseconds mill = chrono::duration_cast<chrono::milliseconds>(end - start);		//test 시간 측정						
 	}
 
 	//-----------------------------------------------------------------------
 	//점 -> 선 만들기
 	//-----------------------------------------------------------------------
-	Dvoid AreaFilling::CreatePointsToLines(tuple_meshInfo meshInfo, Duint faceNum)
+	tuple_OptimizeY AreaFilling::CreatePointsToLines(tuple_meshInfo& meshInfo, Duint faceNum)
 	{		
+		//병렬 루프 안에서 사용하기 위해서 아토믹 사용
+		atomic<Dfloat> minOptimizeY = 99999.0f;
+		atomic<Dfloat> maxOptimizeY = -1.0f;
+		vector<Line> vecLine; //병렬화 수준을 끌어올리기 위해서 추가
+
 		const BaseFace& face = get<1>(meshInfo)[faceNum];
 
+		//parallel_for에서는 일반 정수 만 가능하다 즉 unsigned 사용 못한다.---------------------
+		//parallel_for(0, (Dint)face.vecIndex.size(), [&](Dint j)
 		for( Duint j = 0; j < face.vecIndex.size(); ++j )
 		{
 			LineKey lineKey;
 			lineKey.beginIndex = face.vecIndex[ j ];
 					
-			//시작 정점 ViewPort변환
+			//시작 정점
 			Vector3 beginVertex = get<0>(meshInfo)[lineKey.beginIndex - 1 ];
 			
 			if( j == face.vecIndex.size() - 1 )
@@ -72,8 +82,24 @@ namespace CoolD
 			endVertex.x = ceilf(endVertex.x);
 			endVertex.y = ceilf(endVertex.y);
 
-			m_ListLine.emplace_back(lineKey, beginVertex, endVertex );			
-		}		
+			vecLine.emplace_back(lineKey, beginVertex, endVertex);
+								
+			Dfloat value = GetSmallYValue(beginVertex, endVertex);
+			if (minOptimizeY > value)
+			{
+				minOptimizeY = value;
+			}
+
+			value = GetBigYValue(beginVertex, endVertex);
+			if (maxOptimizeY < value)
+			{
+				maxOptimizeY = value;
+			}			
+		}
+
+		m_VecLine.swap(vecLine);	//병렬 루프안에서는 m_VecLine이 스레드 세이프하지 않기 때문에 외부에서 스왑
+		return make_tuple(minOptimizeY.load(), maxOptimizeY.load());
+		//--------------------------------------------------
 	}
 
 	//-----------------------------------------------------------------------
@@ -81,10 +107,11 @@ namespace CoolD
 	//-----------------------------------------------------------------------
 	Dvoid AreaFilling::CreateEdgeTable( )
 	{
-		assertm( !m_ListLine.empty(), m_ListLine is empty!!!! );		
+		assert( !m_VecLine.empty());		
 
-		for(const auto& line : m_ListLine )
-		{
+		//for(const auto& line : m_VecLine )
+		parallel_for_each(begin(m_VecLine), end(m_VecLine), [this](const Line& line)
+		{ //이 병렬 루프에서 m_VecLine는 스레드 세이프하지않지만 읽기만 하므로 문제안됨
 			EdgeNode node;
 			
 			Dfloat dx = line.endVertex.x - line.beginVertex.x;
@@ -99,7 +126,6 @@ namespace CoolD
 				node.reverseSlope = dx / dy; // dx/dy가 기울기이고 그 역수값을 저장해야하기 때문에
 			}
 					
-			Dfloat y_min = 0.0f;
 			if( line.beginVertex.y < line.endVertex.y )
 			{
 				node.x_min		= line.beginVertex.x;
@@ -119,33 +145,39 @@ namespace CoolD
 				node.max_depth = line.beginVertex.z;	//
 			}			
 
-			m_EdgeTable.emplace_back( line.lineKey, node );			
-		}
+			m_EdgeTable.push_back(LineEdge(line.lineKey, node));
+		});
 	}
 
 	//-----------------------------------------------------------------------
 	//체인 테이블 생성 및 PreProcessing
 	//-----------------------------------------------------------------------
-	Dvoid AreaFilling::CreateChainTable( )
+	Dvoid AreaFilling::CreateChainTable(tuple_OptimizeY opY)
 	{
-		assertm(!m_ListLine.empty(), m_ListLine is empty!!!);
-
-		int totalEdgeSize = m_ListLine.size();
+		assert(!m_VecLine.empty());
+		
+		int totalEdgeSize = m_VecLine.size();
 		list<int> upLineSavelist;	//한 번이라도 윗줄로 올라간 정점들 인덱스 저장
 
-		m_ListLine.sort([] (const Line& lhs, const Line& rhs) {	return lhs.lineKey.beginIndex < rhs.lineKey.beginIndex;	 });	//인덱스 순으로 오름차순 정렬
+		//parallel_buffered_sort는 리스트에는 적용할수 없다. 연속된 메모리가 아니기 때문에 end와 begin의 메모리 차이를 구할수 없다.
+		//m_VecLine.sort([] (const Line& lhs, const Line& rhs) {	return lhs.lineKey.beginIndex < rhs.lineKey.beginIndex;	 });	//인덱스 순으로 오름차순 정렬
+		parallel_buffered_sort(begin(m_VecLine), end(m_VecLine), [](const Line& lhs, const Line& rhs) {	return lhs.lineKey.beginIndex < rhs.lineKey.beginIndex;	 });
 
-		for( int y = 0; y < m_Height; ++y )
+		//루프마다 m_VecLine이 변화하면서 다음 라인에 영향을 미치므로 병렬화 X
+		Dint minY = (Dint)(get<0>(opY));
+		Dint maxY = (Dint)(get<1>(opY));
+
+		for (Dint y = minY; y < maxY; ++y)
 		{
 			list<Line> currentLine;			
 
-			for( auto& lineIter = m_ListLine.begin(); lineIter != m_ListLine.end(); )
+			for( auto& lineIter = m_VecLine.begin(); lineIter != m_VecLine.end(); )
 			{			
 				ITER_CONVERT(pLine, &(*lineIter));
 				if (y == pLine->beginVertex.y || y == pLine->endVertex.y) //해당 y축에 정점이 걸치는지 검사			 	
 				{
 					currentLine.emplace_back( *pLine );
-					lineIter = m_ListLine.erase( lineIter );
+					lineIter = m_VecLine.erase( lineIter );
 				}
 				else
 				{
@@ -183,7 +215,7 @@ namespace CoolD
 					{						
 						upLineSavelist.push_back( chainIter->lineKey.beginIndex );	//한번 올라간 내역 저장
 						++(chainIter->GetMinY());			//y축 값 1올리기								
-						m_ListLine.emplace_back( *chainIter );//다시 검색하기 위해서 리스트에 넣어두자						
+						m_VecLine.emplace_back( *chainIter );//다시 검색하기 위해서 리스트에 넣어두자						
 						chainIter = currentLine.erase( chainIter );
 					}
 					else
@@ -204,7 +236,9 @@ namespace CoolD
 			{
 				m_ActiveTable.emplace_back( y, currentLine );
 			}
-		}		
+		}	
+
+		assert(!m_ActiveTable.empty());		
 	}
 	
 	//-------------------------------------------------------------------
@@ -230,12 +264,14 @@ namespace CoolD
 	//-------------------------------------------------------------------
 	//현재 라인의 노드 사이 점 찍기
 	//-------------------------------------------------------------------
-	Dvoid AreaFilling::DrawLine(list<EdgeNode>& renderLine, const Dint currentHeight, const Dulong dotColor)
+	Dvoid AreaFilling::DrawLine(vector<EdgeNode>& renderLine, const Dint currentHeight, const Dulong dotColor)
 	{
 		Dint beginX = -1;
 		Dint endX = -1;
 		Dint odd_even = 0;
 		Dfloat DepthLeft, DepthRight;
+
+		//순서대로 진행해야함 병렬 X
 		for( auto& dotNode : renderLine )
 		{			
 			if( odd_even % 2 == 0 ) //짝수
@@ -257,7 +293,9 @@ namespace CoolD
 				Dfloat rate = (currentHeight - dotNode.y_min) / dy;
 				DepthRight = dotNode.min_depth + (dz * rate);
 
-				for( Dint i = beginX; i < endX; ++i )
+
+				//for( Dint i = beginX; i < endX; ++i )
+				parallel_for(beginX, endX, 1, [&]( Dint i )
 				{
 					//좌, 우 사이의 깊이값 보간
 					Dfloat dd = DepthRight - DepthLeft;
@@ -269,7 +307,7 @@ namespace CoolD
 					{
 						DrawDot(i, currentHeight, dotColor);
 					}					
-				}
+				});
 			}
 
 			dotNode.x_min += dotNode.reverseSlope;
@@ -282,26 +320,30 @@ namespace CoolD
 	//-------------------------------------------------------------------
 	Dvoid AreaFilling::DrawFace(const Dulong dotColor)
 	{		
-		assertm(m_Buffer != nullptr && !m_ActiveTable.empty(), m_Buffer or m_ActiveTable is Null );
+		assert(m_Buffer != nullptr && !m_ActiveTable.empty());
 
-		list<EdgeNode> continueRenderLine;
+		vector<EdgeNode> continueRenderLine;	//이 컨테이너는 erase를 사용해야하기 때문에 병렬컨테이너로 하면 안된다.
 		auto& activeIter = m_ActiveTable.begin();
 
-		m_ActiveTable.sort([] (const ActiveLine& lhs, const ActiveLine& rhs) -> Dbool { return lhs.height < rhs.height; } );
+		//m_ActiveTable.sort([] (const ActiveLine& lhs, const ActiveLine& rhs) -> Dbool { return lhs.height < rhs.height; } );
+		parallel_buffered_sort(begin(m_ActiveTable), end(m_ActiveTable), [](const ActiveLine& lhs, const ActiveLine& rhs) -> Dbool { return lhs.height < rhs.height; });
 		for (Dint y = activeIter->height;; ++y)	//한줄한줄 그려나가야 하기 때문에 ActiveTable에서 시작값의 높이로 초기화
 		{
 			if( y == activeIter->height )	//라인 정점과 높이가 겹치는 부분
 			{
-				for( auto& line : activeIter->currentLine ) //현재 높이에 걸쳐진 라인들을 순회
-				{					
+				list<Line>& currentLine = activeIter->currentLine;
+				//parallel_for_each(begin(currentLine), end(currentLine), [&](const Line& line)	//continueRenderLine이 스레드 세이프 하지 않기 떄문에 사용X
+				for( auto& line : activeIter->currentLine ) //현재 높이에 걸쳐진 라인들을 순회				
+				{
 					auto& etIter = STD_FIND_IF(m_EdgeTable, [&line] (const LineEdge& le) { return le.lineKey == line.lineKey; });
 					if( etIter != m_EdgeTable.end() )
 					{
 						continueRenderLine.emplace_back(etIter->edgeNode);
 					}
 				}
-
-				continueRenderLine.sort([] (const EdgeNode& lhs, const EdgeNode& rhs)
+				
+				//continueRenderLine.sort([](const EdgeNode& lhs, const EdgeNode& rhs)
+				parallel_buffered_sort(begin(continueRenderLine), end(continueRenderLine), [](const EdgeNode& lhs, const EdgeNode& rhs)
 				{
 					if( lhs.x_min == rhs.x_min )
 					{	//기울기가 0인 경우가 있기 때문에 기울기 값만으로는 순서를 결정할수 없어서 x_min과 더한 결과값으로 비교한다.
@@ -324,9 +366,7 @@ namespace CoolD
 			//--------------------------------
 			if( continueRenderLine.size() == 0 )	//한 면이 그려지는 시점에는 항상 이 리스트에 값이 존재한다. 없을경우는 끝난경우
 			{
-				m_ActiveTable.clear();
-				m_EdgeTable.clear();
-				m_ListLine.clear();
+				Clear();
 				break;
 			}
 		}
@@ -343,7 +383,6 @@ namespace CoolD
 	//-------------------------------------------------------------------
 	//라인 연결 여부 확인
 	//-------------------------------------------------------------------
-	
 	Dbool AreaFilling::CheckContinueLine(const LineKey& lhs, const LineKey& rhs) const
 	{	
 		if( lhs.beginIndex	== rhs.endIndex ||			
@@ -353,7 +392,28 @@ namespace CoolD
 		}
 
 		return false;
-	}		
+	}	
+
+	//-------------------------------------------------------------------
+	//y축 정점이 일렬로 있을경우 체크 (즉, 삼각형을 이루고 있지 않을 때)
+	//-------------------------------------------------------------------
+	Dbool AreaFilling::CheckYStandInLine() const
+	{
+		if ( m_VecLine.size() )
+		{
+			Dfloat y = m_VecLine[0].beginVertex.y;			
+			for (auto& line : m_VecLine)
+			{
+				if (y != line.endVertex.y)
+				{
+					return false;
+				}				
+			}
+			return true;			
+		}
+		
+		return true; //y축이 일치한다 즉 그려져선 안된다.
+	}
 
 	void AreaFilling::SetTransform(TransType type, const Matrix44 matrix)
 	{
@@ -391,4 +451,22 @@ namespace CoolD
 
 		return false;
 	}	
+
+	Dvoid AreaFilling::Clear()
+	{
+		m_ActiveTable.clear();
+		m_EdgeTable.clear();
+		m_VecLine.clear();
+	}	
+
+	Dfloat AreaFilling::GetBigYValue(const Vector3& begin, const Vector3& end) const
+	{
+		return (begin.y < end.y) ? end.y : begin.y;
+	}
+
+	Dfloat AreaFilling::GetSmallYValue(const Vector3& begin, const Vector3& end) const
+	{
+		return (begin.y < end.y) ? begin.y : end.y;
+	}
+
 }

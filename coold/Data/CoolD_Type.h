@@ -11,6 +11,10 @@
 #include <cassert>
 #include <chrono>
 #include <tuple>
+#include <ppl.h>
+#include <mutex>
+#include <atomic>
+#include <iostream>
 
 typedef void	Dvoid;
 typedef bool	Dbool;
@@ -24,6 +28,7 @@ typedef unsigned char	Duchar;
 typedef unsigned long	Dulong;
 
 using namespace std;
+using namespace Concurrency;
 typedef chrono::system_clock::time_point TimeForm;
 
 enum TransType
@@ -41,3 +46,5 @@ enum MeshType
 	PLY,
 	MESHTYPE_END
 };
+
+//#define assertm(_Expression, _Msg) (void)( (!!(_Expression)) || (_wassert(_CRT_WIDE(#_Msg), _CRT_WIDE(__FILE__), __LINE__), 0) )

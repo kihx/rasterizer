@@ -1,5 +1,6 @@
 #pragma once
 
+
 //------------Output FileName & LineNumber Show-----------------
 #define STR2(x) #x
 #define STR(x) STR2(x)
@@ -28,4 +29,3 @@
 //IterType
 #define ITER_CONVERT(Iter, IteratorValue) auto* Iter = IteratorValue;
 
-#define assertm(_Expression, _Msg) (void)( (!!(_Expression)) || (_wassert(_CRT_WIDE(#_Msg), _CRT_WIDE(__FILE__), __LINE__), 0) )
