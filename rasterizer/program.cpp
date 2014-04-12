@@ -39,7 +39,59 @@ std::string g_meshFileName = "cube.ply";
 // Customization 
 //
 namespace
-{
+{		
+	class PlatformTime
+	{
+	public:
+		static double MicroSeconds();
+
+	private:
+		static double FrequencyCycle;
+	};
+
+	class ScopeProfile
+	{
+	public:
+		ScopeProfile() :
+			m_beginTime( PlatformTime::MicroSeconds() )
+		{
+		}
+
+		~ScopeProfile();
+
+	private:
+		double m_beginTime;
+	};
+
+	double PlatformTime::FrequencyCycle = 0;
+
+	double PlatformTime::MicroSeconds()
+	{
+		static bool TimeInitialized = false;
+		if ( !TimeInitialized )
+		{
+			TimeInitialized = true;
+		
+			LARGE_INTEGER perfFrequency;
+			QueryPerformanceFrequency( &perfFrequency );
+			FrequencyCycle = 1.0 / perfFrequency.QuadPart;
+		}
+
+		LARGE_INTEGER counter;
+		QueryPerformanceCounter( &counter );
+		return counter.QuadPart * FrequencyCycle * 1000000;
+	}
+
+	ScopeProfile::~ScopeProfile()
+	{
+		//std::cout << ( PlatformTime::MicroSeconds() - m_beginTime ) / 1000.0 << std::endl;
+		char buff[32];
+		sprintf( buff, "%.2f", ( PlatformTime::MicroSeconds() - m_beginTime ) / 1000.0 );
+		glutSetWindowTitle( buff );
+	}
+
+
+
 	enum class TransformType
 	{
 		World = 0,
@@ -377,6 +429,8 @@ void SetupTransform()
 
 void makeCheckImage( void)
 {
+	ScopeProfile localProfile;
+
 	g_ModuleContext.RenderToBuffer( (byte*) g_pppScreenImage );
 }
 
