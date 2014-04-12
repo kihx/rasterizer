@@ -160,6 +160,20 @@ namespace kih
 			return m_value;
 		}
 
+		FORCEINLINE T FetchAndIncrement()
+		{
+			T old = Value();
+			interlock_func_impl<T>::f_interlockedincrement( &m_value );
+			return old;
+		}
+
+		FORCEINLINE T FetchAndDecrement()
+		{
+			T old = Value();
+			interlock_func_impl<T>::f_interlockeddecrement( &m_value );
+			return old;
+		}
+
 		FORCEINLINE operator T() const
 		{
 			return Value();
@@ -413,6 +427,8 @@ namespace kih
 			}
 		}
 
+		static int HardwareConcurrency();
+
 		FORCEINLINE void* Handle()
 		{
 			return m_tdata.Handle;
@@ -496,22 +512,19 @@ namespace kih
 	};
 
 
-	/* class ParallelWorker
+	/* class ThreadPool
 	*/
-	class ParallelWorker final
+	class ThreadPool : public Singleton<ThreadPool>
 	{
-		NONCOPYABLE_CLASS( ParallelWorker );
+		NONCOPYABLE_CLASS( ThreadPool );
 
-		friend class PooledThread;
-		friend void ParallelWorker_OnWorkCompleted( ParallelWorker* parallel, PooledThread* thread );
+		friend class Singleton<ThreadPool>;
+		friend class TaskThread;
 
+	private:
+		ThreadPool();
 	public:
-		explicit ParallelWorker( size_t maxConcurrency );
-		~ParallelWorker();
-		
-		void Queue( ThreadFunc funcWork );
-
-		void WaitForAllTasks();
+		~ThreadPool();
 
 		FORCEINLINE size_t QueuedWorkCount() const
 		{
@@ -520,15 +533,19 @@ namespace kih
 
 		FORCEINLINE size_t MaxConcurrency() const
 		{
-			return m_pooledThreads.size();
+			return m_allThreads.size();
 		}
 
-	private:
-		std::shared_ptr<PooledThread> FindIdleThread();
+		void Queue( ThreadFunc funcWork );
+
+		void WaitForAllTasks();
+
+		ThreadFunc FinishTaskAndGetNext( TaskThread* thread );
 
 	private:
 		std::queue<ThreadFunc> m_taskQueue;
-		std::vector<std::shared_ptr<PooledThread>> m_pooledThreads;
+		std::queue<TaskThread*> m_threadQueue;	// available threads to work
+		std::vector<std::shared_ptr<TaskThread>> m_allThreads;	// all of threads
 		Mutex m_mutex;
 	};
 };
@@ -537,4 +554,4 @@ using kih::Atomic;
 using kih::Event;
 using kih::Mutex;
 using kih::Thread;
-using kih::ParallelWorker;
+using kih::ThreadPool;

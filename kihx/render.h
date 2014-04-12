@@ -40,6 +40,17 @@ namespace kih
 	class RenderingContext;
 	
 
+	/* struct Viewport
+	*/
+	struct Viewport
+	{
+		unsigned short X;
+		unsigned short Y;
+		unsigned short Width;
+		unsigned short Height;
+	};
+
+
 	/* class RenderingContext
 	*/
 	class RenderingContext final
@@ -49,8 +60,6 @@ namespace kih
 		using DepthTestFunc = std::function< bool( byte /*src*/, byte /*dst*/ ) >;
 
 	public:
-		static const int ThreadConcurrency = 8;
-
 		explicit RenderingContext( size_t numRenderTargets );
 
 		// draw
@@ -59,7 +68,7 @@ namespace kih
 		
 		// In FuncPreRender, the world matrix of the specified mesh should be set onto the constant buffer of the rendering context.
 		using FuncPreRender = std::function<void( std::shared_ptr<RenderingContext> context, size_t index )>;
-		static void DrawInParallel( std::vector<std::shared_ptr<RenderingContext>>& contexts, const std::vector<std::shared_ptr<IMesh>>& meshes, FuncPreRender funcPreRender );
+		static void DrawInParallel( const std::vector<std::shared_ptr<RenderingContext>>& contexts, const std::vector<std::shared_ptr<IMesh>>& meshes, FuncPreRender funcPreRender );
 
 		// render targets
 		FORCEINLINE size_t NumberOfRenderTargets() const
@@ -94,6 +103,20 @@ namespace kih
 			return m_sharedConstantBuffer;
 		}
 
+		// render states
+		FORCEINLINE const Viewport& GetViewport() const
+		{
+			return m_viewport;
+		}
+
+		void SetViewport( unsigned short x, unsigned short y, unsigned short width, unsigned short height )
+		{
+			m_viewport.X = x;
+			m_viewport.Y = y;
+			m_viewport.Width = width;
+			m_viewport.Height = height;
+		}
+
 		// depth buffering
 		FORCEINLINE bool DepthWritable() const 
 		{
@@ -120,11 +143,11 @@ namespace kih
 
 	private:
 		// render stages
-		std::unique_ptr<InputAssembler> m_inputAssembler;
-		std::unique_ptr<VertexProcessor> m_vertexProcessor;
-		std::unique_ptr<Rasterizer> m_rasterizer;
-		std::unique_ptr<PixelProcessor> m_pixelProcessor;
-		std::unique_ptr<OutputMerger> m_outputMerger;
+		std::shared_ptr<InputAssembler> m_inputAssembler;
+		std::shared_ptr<VertexProcessor> m_vertexProcessor;
+		std::shared_ptr<Rasterizer> m_rasterizer;
+		std::shared_ptr<PixelProcessor> m_pixelProcessor;
+		std::shared_ptr<OutputMerger> m_outputMerger;
 		
 		// render target
 		std::vector< std::shared_ptr<Texture> > m_renderTargets;
@@ -132,6 +155,9 @@ namespace kih
 
 		// constant buffer
 		ConstantBuffer m_sharedConstantBuffer;
+
+		// render states
+		Viewport m_viewport;
 
 		// depth buffering
 #ifdef DEPTHFUNC_LAMDA

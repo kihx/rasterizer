@@ -143,25 +143,36 @@ namespace kih
 	}
 
 
-	/* class PooledThread
+	/* class Thread
 	*/
-	class PooledThread final
+	int Thread::HardwareConcurrency()
 	{
-		using CompletionCallback = std::function<void( ParallelWorker*, PooledThread* )>;
+		static int _HardwareConcurrency = 0;
+		if ( _HardwareConcurrency == 0 )
+		{
+			SYSTEM_INFO sysInfo;
+			GetSystemInfo( &sysInfo );
+			_HardwareConcurrency = static_cast< int >( sysInfo.dwNumberOfProcessors );
+		}
+		return _HardwareConcurrency;
+	}
 
+
+	/* class TaskThread
+	*/
+	class TaskThread final
+	{
 		// allow launch and go
-		friend class ParallelWorker;
-		friend void ParallelWorker_OnWorkCompleted( ParallelWorker* parallel, PooledThread* thread );
+		friend class ThreadPool;
 
 	public:
-		explicit PooledThread( ParallelWorker* owner ) :
+		explicit TaskThread( ThreadPool* owner ) :
 			m_owner( owner ),
-			m_working( false ),
 			m_dying( false )
 		{
 		}
 
-		~PooledThread()
+		~TaskThread()
 		{
 			if ( Launched() )
 			{
@@ -169,52 +180,49 @@ namespace kih
 			}
 		}
 
-		FORCEINLINE bool Working() const
-		{
-			return m_working.Value();
-		}
-
 		FORCEINLINE bool Launched() const
 		{
 			return m_tdata.Handle != nullptr;
 		}
 
+		unsigned int Main()
+		{
+			Assert( m_owner );
+
+			while ( !m_dying )
+			{
+				m_event.Wait();
+
+				ThreadFunc task = m_tdata.Func;
+				while ( task )
+				{
+					task();
+					task = m_owner->FinishTaskAndGetNext( this );
+				}
+			}
+			m_dying.Exchange( false );
+			return 0;
+		}
+
 	private:
-		void Launch( CompletionCallback completionCallback, unsigned int stackSize = 0 )
+		void Launch( unsigned int stackSize = 0 )
 		{
 			if ( Launched() )
 			{
 				throw std::runtime_error( "already running thread" );
 			}
 
-			m_event.Create( true );
-			m_callback = completionCallback;
+			m_event.Create( false );
+
 			m_tdata.Handle = f_beginthread(
 				nullptr,
 				stackSize,
 				[]( void* arg ) -> unsigned int		// thread func
 				{
-					if ( PooledThread* thread = reinterpret_cast< PooledThread* >( arg ) )
+					if ( TaskThread* thread = reinterpret_cast< TaskThread* >( arg ) )
 					{
-						while ( !thread->m_dying )
-						{
-							if ( thread->m_tdata.Func )
-							{
-								thread->m_tdata.Func();								
-								
-								thread->m_working.Exchange( false );
-								thread->m_event.Reset();
-
-								if ( thread->m_callback )
-								{
-									thread->m_callback( thread->m_owner, thread );
-								}
-								thread->m_event.Wait();
-							}
-						}
-						thread->m_dying.Exchange( false );
+						return thread->Main();
 					}
-					//f_endthreadex( 0 );
 					return 0;
 				},
 				this,	// arg
@@ -232,139 +240,113 @@ namespace kih
 		{
 			if ( !Launched() )
 			{
-				throw std::runtime_error( "not running thread" );
+				return;
 			}
 
-			WaitTaskDone();
-
+			m_tdata.Func = nullptr;
 			m_dying.Exchange( true );			
 			m_event.Signal();
-			while ( m_dying )
-			{
-				Thread::Sleep( 0 );
-			}
+			f_waitforsingleobject( m_tdata.Handle, 0xFFFFFFFF );
 			ThreadData::MakeNull( m_tdata );
 		}
 
-		FORCEINLINE void WaitTaskDone()
+		FORCEINLINE void Go( ThreadFunc task )
 		{
-			// Wait until the assigned task is completed.
-			while ( Working() );
-		}
+			if ( !Launched() )
+			{
+				Launch();
+			}
 
-		FORCEINLINE void Go( const ThreadFunc& f )
-		{
-			WaitTaskDone();
-
-			m_tdata.Func = f;
-			m_working.Exchange( true );
+			m_tdata.Func = task;
 			m_event.Signal();
 		}
 
 	private:
 		ThreadData m_tdata;
 		Event m_event;
-		CompletionCallback m_callback;
-		ParallelWorker* m_owner;
-		Atomic<bool> m_working;
+		ThreadPool* m_owner;
 		Atomic<bool> m_dying;
 	};
 
 
 	/* class ParallelWorker
 	*/
-	ParallelWorker::ParallelWorker( size_t maxConcurrency )
+	ThreadPool::ThreadPool()
 	{
-		m_pooledThreads.reserve( maxConcurrency );
-		for ( size_t i = 0; i < maxConcurrency; ++i )
+		int concurrency = Thread::HardwareConcurrency();
+		m_allThreads.reserve( concurrency );
+		for ( int i = 0; i < concurrency; ++i )
 		{
-			m_pooledThreads.emplace_back( std::make_shared<PooledThread>( this ) );
+			m_allThreads.emplace_back( std::make_shared<TaskThread>( this ) );
+			m_threadQueue.push( m_allThreads[i].get() );
 		}
 	}
 
-	ParallelWorker::~ParallelWorker()
+	ThreadPool::~ThreadPool()
 	{
 		WaitForAllTasks();
 		
-		for ( auto& thread : m_pooledThreads )
+		for ( auto& thread : m_allThreads )
 		{
 			if ( thread->Launched() )
 			{
 				thread->Kill();
 			}
 		}
-		m_pooledThreads.clear();
+		m_allThreads.clear();
 	}
 
-	void ParallelWorker::Queue( ThreadFunc funcWork )
+	void ThreadPool::Queue( ThreadFunc task )
 	{
-		// Find an idle thread to work.
-		auto thread = FindIdleThread();
+		if ( task == nullptr )
+		{
+			return;
+		}
+
+		LockGuard<Mutex> lockGuard( m_mutex );
 
 		// If there is no idle thread, queue the task.
-		if ( thread == nullptr )
+		if ( m_threadQueue.empty() )
 		{
-			LockGuard<Mutex> lockGuard( m_mutex );
-			m_taskQueue.push( funcWork );
+			m_taskQueue.push( task );
 			return;
 		}
 
 		// Otherwise, go the task now.
-		LockGuard<Mutex> lockGuard( m_mutex );
-		thread->Go( funcWork );
-	}
-
-	void ParallelWorker::WaitForAllTasks()
-	{
-		for ( auto& thread : m_pooledThreads )
-		{
-			Assert( thread );
-			while ( thread->Working() )
-			{
-				Thread::Sleep( 0 );
-			}
-		}
-	}
-
-	std::shared_ptr<PooledThread> ParallelWorker::FindIdleThread()
-	{
-		for ( auto& thread : m_pooledThreads )
-		{
-			Assert( thread );
-			if ( thread->Working() )
-			{
-				continue;
-			}
-
-			if ( !thread->Launched() )
-			{
-				thread->Launch( &ParallelWorker_OnWorkCompleted );
-			}
-			return thread;
-		}
-		return nullptr;
-	}
-
-	void ParallelWorker_OnWorkCompleted( ParallelWorker* parallel, PooledThread* thread )
-	{
-		Assert( parallel );
+		TaskThread* thread = m_threadQueue.front();
+		m_threadQueue.pop();		
 		Assert( thread );
+		thread->Go( task );
+	}
 
-		//LockGuard<Mutex> lockGuard( parallel->m_mutex );	// ?? slow?
-		if ( parallel->m_taskQueue.empty() )
+	void ThreadPool::WaitForAllTasks()
+	{
+		while ( m_threadQueue.size() != m_allThreads.size() )
 		{
-			return;
+			Thread::Sleep( 0 );
+		}
+	}
+
+	ThreadFunc ThreadPool::FinishTaskAndGetNext( TaskThread* thread )
+	{
+		ThreadFunc task = nullptr;
+
+		LockGuard<Mutex> lockGuard( m_mutex );
+
+		// Retrieve a queued task.
+		if ( !m_taskQueue.empty() )
+		{
+			task = m_taskQueue.front();
+			m_taskQueue.pop();
 		}
 
-		Thread::Sleep( 1 );
-
-		// HACK: test once again due to concurrency
-		LockGuard<Mutex> lockGuard( parallel->m_mutex );
-		if ( !parallel->m_taskQueue.empty() && !thread->Working() )
+		// If there is no task, push the thread into the idle thread pool.
+		if ( task == nullptr )
 		{
-			thread->Go( parallel->m_taskQueue.front() );
-			parallel->m_taskQueue.pop();
+			m_threadQueue.push( thread );
 		}
+
+		return task;
 	}
 };
 
@@ -403,7 +385,7 @@ DEFINE_UNITTEST( atomic_test )
 		std::cout << "<OK> atomic: " << atomInt64 << ", " << a << std::endl;
 	}
 
-	//Atomic<float> atomShort;
+	//Atomic<float> atomFloat;
 	//Atomic<Event> atomClass;
 }
 
@@ -426,11 +408,11 @@ DEFINE_UNITTEST( thread_test )
 	t.Join();
 }
 
-DEFINE_UNITTEST( parallel_test )
+DEFINE_UNITTEST( threadpool_test )
 {
 	std::cout.sync_with_stdio();
 
-	ParallelWorker parallel( 3 );
+	ThreadPool* threadPool = ThreadPool::GetInstance();
 
 	kih::ThreadFunc f0 = []() { std::cout << "f0" << std::endl;  };
 
@@ -445,16 +427,16 @@ DEFINE_UNITTEST( parallel_test )
 
 	for ( int i = 0; i < 10; ++i )
 	{
-		parallel.Queue( f0 );
-		parallel.Queue( f1 );
-		parallel.Queue( f2 );
-		parallel.Queue( f3 );
-		parallel.Queue( f4 );
+		threadPool->Queue( f0 );
+		threadPool->Queue( f1 );
+		threadPool->Queue( f2 );
+		threadPool->Queue( f3 );
+		threadPool->Queue( f4 );
 		
-		std::cout << "(task " << i << "th\n" << std::endl;
+		std::cout << "\n(task " << i << "th\n" << std::endl;
 	}
 
-	Thread::Sleep( 100 );
+	threadPool->WaitForAllTasks();
 
-	parallel.WaitForAllTasks();
+	std::cout << "\nthreadpool_test is done\n" << std::endl;
 }

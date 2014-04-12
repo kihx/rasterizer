@@ -15,8 +15,8 @@
 #include <thread>
 
 
-#define PARALLEL_THREADPOOL		0
-#define PARALLEL_PREEMPTIVE		1
+#define USE_THREAD_POOL
+#define PREEMPTIVE_PARALLEL
 
 #define Thread std::thread
 
@@ -26,11 +26,11 @@ namespace kih
 	/* class RenderingContext
 	*/
 	RenderingContext::RenderingContext( size_t numRenderTargets ) :
-		m_inputAssembler( std::make_unique<InputAssembler>( this ) ),
-		m_vertexProcessor( std::make_unique<VertexProcessor>( this ) ),
-		m_rasterizer( std::make_unique<Rasterizer>( this ) ),
-		m_pixelProcessor( std::make_unique<PixelProcessor>( this ) ),
-		m_outputMerger( std::make_unique<OutputMerger>( this ) ),
+		m_inputAssembler( std::make_shared<InputAssembler>( this ) ),
+		m_vertexProcessor( std::make_shared<VertexProcessor>( this ) ),
+		m_rasterizer( std::make_shared<Rasterizer>( this ) ),
+		m_pixelProcessor( std::make_shared<PixelProcessor>( this ) ),
+		m_outputMerger( std::make_shared<OutputMerger>( this ) ),
 		m_depthFunc( DepthFunc::None ),
 		m_depthWritable( false )
 	{
@@ -173,7 +173,7 @@ namespace kih
 		}
 	}
 
-	void RenderingContext::DrawInParallel( std::vector<std::shared_ptr<RenderingContext>>& contexts, const std::vector<std::shared_ptr<IMesh>>& meshes, FuncPreRender funcPreRender )
+	void RenderingContext::DrawInParallel( const std::vector<std::shared_ptr<RenderingContext>>& contexts, const std::vector<std::shared_ptr<IMesh>>& meshes, FuncPreRender funcPreRender )
 	{
 		if ( meshes.empty() )
 		{
@@ -218,7 +218,7 @@ namespace kih
 		Matrix4 viewProj = pDevice->GetViewMatrix() * pDevice->GetProjectionMatrix();
 
 		size_t numContexts = contexts.size();
-#if PARALLEL_PREEMPTIVE
+#ifdef PREEMPTIVE_PARALLEL
 		// nothing
 #else
 		// Distribute input meshes to each context.
@@ -232,40 +232,43 @@ namespace kih
 		std::vector<std::shared_ptr<OutputMergerInputStream>> omInputStreamList;
 		omInputStreamList.reserve( numContexts );
 		
+		// a mutext to collect thread-safely
 		static Mutex OutputCollectorMutex;
 		
-#if PARALLEL_THREADPOOL
-		static ParallelWorker parallelWork( RenderingContext::ThreadConcurrency );
+#ifdef USE_THREAD_POOL
+		ThreadPool* threadPool = ThreadPool::GetInstance();
 #else
 		// thread container to join after working
 		std::vector<Thread> threads;
 		threads.resize( numContexts );
 #endif
 
+#ifdef PREEMPTIVE_PARALLEL
 		Atomic<int> workIndex( 0 );
+#endif
 		for ( size_t c = 0; c < numContexts; ++c )
 		{
 			auto context = contexts[c];
 			Assert( context );
 
-#if PARALLEL_THREADPOOL
-
-			auto work = std::bind( 
+#ifdef PREEMPTIVE_PARALLEL
+			auto task = std::bind(
 				[=, &workIndex, &omInputStreamList]( std::shared_ptr<RenderingContext> context, Matrix4 viewProj, FuncPreRender funcPreRender )
 				{
-					std::vector<std::shared_ptr<OutputMergerInputStream>> output;
-					output.reserve( meshes.size() );
+					bool hasRT = ( context->GetRenderTagetConst( 0 ) != nullptr );
 
 					ConstantBuffer& cbuffer = context->GetSharedConstantBuffer();
+
+					std::vector<std::shared_ptr<OutputMergerInputStream>> output;
+					output.reserve( meshes.size() );					
 
 					int meshCount = static_cast< int >( meshes.size() );
 
 					// Until the last index...
 					while ( workIndex.Value() < meshCount )
 					{
-						// Prefech the workIndex to avoid changing the value on other thread.
-						int index = workIndex.Value();
-						++workIndex;
+						// Prefech the workIndex to avoid changing the value on other thread, and then increment the workIndex.
+						int index = workIndex.FetchAndIncrement();
 
 						// Call the PreRender functor.
 						funcPreRender( context, index );
@@ -277,67 +280,36 @@ namespace kih
 						// Run the rendering pipeline for the mesh.
 						std::shared_ptr<OutputMergerInputStream> omInput = context->RunRenderingPipeline( meshes[index] );
 
-						// And then collect the input stream for the output merger.
-						output.emplace_back( std::move( omInput->Clone() ) );
+						// If a context has a RT, go to the output merger stage.
+						if ( hasRT )
+						{
+							context->m_outputMerger->Process( omInput );
+						}
+						else
+						{
+							// Otherwise, collect the input stream for late output merge.
+							output.emplace_back( std::move( omInput->Clone() ) );
+						}
 					}
 
-					// Collect output stream.
-					LockGuard<Mutex> lockGuard( OutputCollectorMutex );
-					std::copy( output.begin(), output.end(), std::back_inserter( omInputStreamList ) );
+					// Collect all of output stream.
+					if ( !hasRT )
+					{
+						LockGuard<Mutex> lockGuard( OutputCollectorMutex );
+						std::copy( output.begin(), output.end(), std::back_inserter( omInputStreamList ) );
+					}
 				},
 				context,
 				viewProj,
 				funcPreRender );
 
-			parallelWork.Queue( work );
+#ifdef USE_THREAD_POOL
+			threadPool->Queue( task );
 #else
+ 			Thread t { task };
+#endif
 
-#if PARALLEL_PREEMPTIVE
-
-			auto work = std::bind(
-				[=, &workIndex, &omInputStreamList]( std::shared_ptr<RenderingContext> context, Matrix4 viewProj, FuncPreRender funcPreRender )
-			{
-				std::vector<std::shared_ptr<OutputMergerInputStream>> output;
-				output.reserve( meshes.size() );
-
-				ConstantBuffer& cbuffer = context->GetSharedConstantBuffer();
-
-				int meshCount = static_cast< int >( meshes.size() );
-
-				// Until the last index...
-				while ( workIndex.Value() < meshCount )
-				{
-					// Prefech the workIndex to avoid changing the value on other thread.
-					int index = workIndex.Value();
-					++workIndex;
-
-					// Call the PreRender functor.
-					funcPreRender( context, index );
-
-					// Now compute the final WVP matrix of this mesh.
-					Matrix4 wvp = cbuffer.GetMatrix4( ConstantBuffer::WorldMatrix ) * viewProj;
-					cbuffer.SetMatrix4( ConstantBuffer::WVPMatrix, wvp );
-
-					// Run the rendering pipeline for the mesh.
-					std::shared_ptr<OutputMergerInputStream> omInput = context->RunRenderingPipeline( meshes[index] );
-
-					// And then collect the input stream for the output merger.
-					output.emplace_back( std::move( omInput->Clone() ) );
-				}
-
-				// Collect output stream.
-				LockGuard<Mutex> lockGuard( OutputCollectorMutex );
-				std::copy( output.begin(), output.end(), std::back_inserter( omInputStreamList ) );
-			},
-				context,
-				viewProj,
-				funcPreRender );
-
-			Thread t
-			{
-				work
-			};
-#else
+#else // PREEMPTIVE_PARALLEL
 			// Distribute input meshes to each context.
 			std::map<size_t, std::shared_ptr<IMesh>> inputMeshes;			
 			for ( size_t m = 0; m < numMeshesPerContext; ++m )
@@ -387,6 +359,7 @@ namespace kih
 						output.emplace_back( omInput->Clone() );
 					}
 
+					// Collect all of output stream.
 					LockGuard<Mutex> lockGuard( OutputCollectorMutex );
 					std::copy( output.begin(), output.end(), std::back_inserter( omInputStreamList ) );
 				},
@@ -395,16 +368,18 @@ namespace kih
 				viewProj,
 				funcPreRender
 			};		
-#endif	// PARALLEL_PREEMPTIVE
+#endif	// PREEMPTIVE_PARALLEL
 
+#ifdef USE_THREAD_POOL
+			// do nothing
+#else
 			t.swap( threads[c] );
-
-#endif	// PARALLEL_THREADPOOL
+#endif
 		}
 
 		// Join all rendering threads.
-#if PARALLEL_THREADPOOL
-		parallelWork.WaitForAllTasks();
+#ifdef USE_THREAD_POOL
+		threadPool->WaitForAllTasks();
 #else
 		for ( size_t i = 0; i < threads.size(); ++i )
 		{
@@ -413,6 +388,7 @@ namespace kih
 #endif
 
 		// Merge all input stream data of the output merger on the first rendering context.
+		// We assume that rendering order is independent.
 		auto context = contexts[0];
 		for ( auto stream : omInputStreamList )
 		{

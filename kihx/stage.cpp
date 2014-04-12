@@ -271,14 +271,9 @@ namespace kih
 
 		m_outputStream->Clear();
 
-		const std::shared_ptr<Texture>& rt = GetContext()->GetRenderTagetConst( 0 );
-		if ( rt == nullptr )
-		{
-			return m_outputStream;
-		}
-
-		unsigned short width = static_cast< unsigned short >( rt->Width() );
-		unsigned short height = static_cast< unsigned short >( rt->Height() );
+		const Viewport& viewport = GetContext()->GetViewport();
+		unsigned short width = static_cast< unsigned short >( viewport.Width );
+		unsigned short height = static_cast< unsigned short >( viewport.Height );
 		Assert( ( width > 0 && height > 0 ) && "invalid operation" );
 
 		// NDC -> Window space

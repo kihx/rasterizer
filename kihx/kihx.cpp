@@ -134,20 +134,24 @@ KIHX_API void kiRenderToBuffer( void* buffer, int width, int height, int bpp )
 	static std::shared_ptr<Texture> renderTarget = Texture::Create( width, height, colorFormat, buffer );
 	static std::shared_ptr<Texture> depthStencil = Texture::Create( width, height, ColorFormat::D32F, NULL );
 
-	// Create rendering contexts as many of RenderingContext::ThreadConcurrency.
-	static std::array<std::shared_ptr<RenderingContext>, RenderingContext::ThreadConcurrency> contexts;
+	// Create rendering contexts as many of Thread::HardwareConcurrency.
+	const int Concurrency = 8;
+	static std::array<std::shared_ptr<RenderingContext>, Concurrency> contexts;
 	if ( contexts[0] == nullptr )
 	{
 		int index = 0;
-		LoopUnroll<RenderingContext::ThreadConcurrency>::Work( 
+		LoopUnroll<Concurrency>::Work( 
 			[&index]() 
 			{ 
 				auto context = RenderingDevice::GetInstance()->CreateRenderingContext(); 
-				context->SetRenderTarget( renderTarget, 0 );		// Assume that we have only one RT.
-				context->SetDepthStencil( depthStencil );
+				context->SetViewport( 0, 0, static_cast<unsigned short>( renderTarget->Width() ), static_cast<unsigned short>( renderTarget->Height() ) );
 				contexts[index++] = context;
 			} 
 		);
+
+		// only for the first context
+		contexts[0]->SetRenderTarget( renderTarget, 0 );		// Assume that we have only one RT.
+		contexts[0]->SetDepthStencil( depthStencil );
 	}
 	
 	auto context = contexts[0];
