@@ -55,7 +55,7 @@ namespace xtozero
 		return true;
 	}
 
-	void COutputMerger::Process( std::vector<COmElementDesc>& omInput )
+	void COutputMerger::Process( const std::vector<COmElementDesc>& omInput )
 	{
 		assert( m_pFrameBuffer );
 
@@ -63,27 +63,21 @@ namespace xtozero
 
 		unsigned int color = PIXEL_COLOR( 0, 0, 0 );
 
-		for ( int i = 0; i < m_height; ++i )
-		{
-			for ( int j = 0; j < m_width; ++j )
-			{
-				memcpy_s( m_pFrameBuffer + ((m_width * i) + j) * size,
-					size,
-					&color,
-					size );
-			}
-		}
+		memset( m_pFrameBuffer, 0, m_width * m_height * size );
 
-		for ( std::vector<COmElementDesc>::iterator& iter = omInput.begin(); iter != omInput.end(); ++iter )
+		int nPixels = omInput.size();
+
+		for ( int i = 0; i < nPixels; ++i )
 		{
 			assert( 0 <= iter->m_x && iter->m_x < m_width );
 			assert( 0 <= iter->m_y && iter->m_y < m_height );
 			assert( 0.0f <= iter->m_z && iter->m_z <= 1.0f );
-			if ( ProcessDepthTest( iter->m_x, iter->m_y, iter->m_z ) )
+			const COmElementDesc& input = omInput.at( i );
+			if ( ProcessDepthTest( input.m_x, input.m_y, input.m_z ) )
 			{
-				memcpy_s( m_pFrameBuffer + ((m_width * iter->m_y) + iter->m_x) * size,
+				memcpy_s( m_pFrameBuffer + ((m_width * input.m_y) + input.m_x) * size,
 					size,
-					&iter->m_color,
+					&input.m_color,
 					size );
 			}
 		}

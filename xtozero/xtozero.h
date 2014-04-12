@@ -12,6 +12,7 @@
 #include "VertexShader.h"
 #include "PixelShader.h"
 #include "OutputMerger.h"
+#include "XtzThreadPool.h"
 
 XTZ_API void XtzRenderToBuffer( void* buffer, int width, int height, int dpp );
 

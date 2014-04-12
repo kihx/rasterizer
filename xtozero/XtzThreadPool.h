@@ -2,14 +2,13 @@
 #define _XTZTHREADPOOL_H_
 
 #include <list>
+#include <Windows.h>
 
 namespace xtozero
 {
 	const int MAX_THREAD = 8;
 
 	typedef void( *WorkerFuntion )(LPVOID);
-
-	CRITICAL_SECTION cs;
 
 	struct WORK
 	{
@@ -25,7 +24,7 @@ namespace xtozero
 	class CXtzThreadPool
 	{
 	private:
-		CXtzThreadPool();
+		static CRITICAL_SECTION m_cs;
 
 		int m_nThread;
 
@@ -35,9 +34,10 @@ namespace xtozero
 
 		static WORK m_work[MAX_THREAD];
 
-		std::list<WORK> m_workquere;
+		static std::list<WORK> m_workquere;
 
 	public:
+		CXtzThreadPool( );
 		~CXtzThreadPool();
 
 		void CreateThreadPool(int maxThread);

@@ -7,10 +7,12 @@ namespace xtozero
 {
 	class CPixelShader
 	{
+	private:
+		std::vector<COmElementDesc> m_psOutput;
 	public:
 		CPixelShader( );
 		~CPixelShader( );
-		std::vector<COmElementDesc> Process( std::vector<CPsElementDesc>& psInput );
+		const std::vector<COmElementDesc>& Process( const std::vector<CPsElementDesc>& psInput );
 	};
 }
 

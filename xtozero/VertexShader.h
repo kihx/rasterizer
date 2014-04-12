@@ -12,6 +12,7 @@ namespace xtozero
 	class CVertexShader
 	{
 	private:
+		CRsElementDesc m_vsOutput;
 		Matrix4 m_worldMatrix;
 		Matrix4 m_viewMatrix;
 		Matrix4 m_projectionMatrix;
@@ -19,7 +20,7 @@ namespace xtozero
 		CVertexShader() {}
 		~CVertexShader() {}
 
-		CRsElementDesc Process( const std::shared_ptr<CMesh> pMesh );
+		CRsElementDesc& Process( const std::shared_ptr<CMesh> pMesh );
 
 		void SetWorldMatrix( const float* mmatrix4x4 )
 		{

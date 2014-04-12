@@ -23,7 +23,7 @@ namespace xtozero
 		void SetFrameBuffer( void* pbuffer, int dpp, int width, int height );
 
 		bool ProcessDepthTest( int x, int y, float depth );
-		void Process( std::vector<COmElementDesc>& omInput );
+		void Process( const std::vector<COmElementDesc>& omInput );
 	};
 }
 

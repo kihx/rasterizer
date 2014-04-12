@@ -3,11 +3,14 @@
 
 namespace xtozero
 {
+	CRITICAL_SECTION CXtzThreadPool::m_cs;
+
 	HANDLE CXtzThreadPool::m_thread[MAX_THREAD];
 	HANDLE CXtzThreadPool::m_threadEvent[MAX_THREAD];
 
 	WORK CXtzThreadPool::m_work[MAX_THREAD];
 	bool CXtzThreadPool::m_bWork[MAX_THREAD];
+	std::list<WORK> CXtzThreadPool::m_workquere;
 
 	CXtzThreadPool::CXtzThreadPool( ) : m_nThread( 0 )
 	{
@@ -15,11 +18,19 @@ namespace xtozero
 
 	CXtzThreadPool::~CXtzThreadPool( )
 	{
+		for ( int i = 0; i < m_nThread; ++i )
+		{
+			TerminateThread( m_thread[i], 0 );
+		}
+		DestroyThreadPool();
 	}
 
 	void CXtzThreadPool::CreateThreadPool( int maxThread )
 	{
-		InitializeCriticalSection( &cs );
+		if ( m_nThread > 0 )
+			return;
+
+		InitializeCriticalSection( &m_cs );
 		m_nThread = maxThread;
 
 		for ( int i = 0; i < MAX_THREAD; ++i )
@@ -36,13 +47,31 @@ namespace xtozero
 		}
 	}
 
-	DWORD WINAPI CXtzThreadPool::ThreadFunction( LPVOID arg )
+	DWORD WINAPI CXtzThreadPool::ThreadFunction( void* arg )
 	{
 		int threadIdx = (DWORD)arg;
 		while ( true )
 		{
 			WaitForSingleObject( m_threadEvent[threadIdx], INFINITE );
+			m_bWork[threadIdx] = true;
 
+			EnterCriticalSection( &m_cs );
+			WORK work;
+			if ( m_workquere.size() > 0 )
+			{
+				work = m_workquere.front();
+				m_workquere.pop_front();
+			}
+			else
+			{
+				LeaveCriticalSection( &m_cs );
+				m_bWork[threadIdx] = false;
+				continue;
+			}
+			LeaveCriticalSection( &m_cs );
+			m_work[threadIdx].m_worker = work.m_worker;
+			m_work[threadIdx].m_arg = work.m_arg;
+			
 			assert( m_work[threadIdx].m_worker );
 			if ( m_work[threadIdx].m_worker )
 			{
@@ -61,24 +90,22 @@ namespace xtozero
 			CloseHandle( m_threadEvent[i] );
 			CloseHandle( m_thread[i] );
 		}
-		DeleteCriticalSection( &cs );
+		DeleteCriticalSection( &m_cs );
 	}
 
-	void CXtzThreadPool::AddWork( WorkerFuntion worker, LPVOID arg )
+	void CXtzThreadPool::AddWork( WorkerFuntion worker, void* arg )
 	{
-		EnterCriticalSection( &cs );
+		EnterCriticalSection( &m_cs );
 
 		m_workquere.emplace_back( worker, arg );
 
-		LeaveCriticalSection( &cs );
+		LeaveCriticalSection( &m_cs );
 	}
 
 	void CXtzThreadPool::Run( void )
 	{
 		while ( true )
 		{
-			EnterCriticalSection( &cs );
-
 			if ( m_workquere.size() > 0 )
 			{
 				for ( int i = 0; i < m_nThread; ++i )
@@ -89,11 +116,6 @@ namespace xtozero
 					}
 					else
 					{
-						WORK& work = m_workquere.front();
-						m_work[i].m_worker = work.m_worker;
-						m_work[i].m_arg = work.m_arg;
-						m_bWork[i] = true;
-						m_workquere.pop_front();
 						SetEvent( m_threadEvent[i] );
 						break;
 					}
@@ -101,10 +123,9 @@ namespace xtozero
 			}
 			else
 			{
-				break;
+				return;
 			}
-
-			LeaveCriticalSection( &cs );
+			Sleep( 0 );
 		}
 	}
 }	

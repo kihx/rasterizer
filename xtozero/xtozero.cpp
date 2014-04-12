@@ -11,7 +11,12 @@ std::unique_ptr<xtozero::CVertexShader> gVertexShader( new xtozero::CVertexShade
 std::unique_ptr<xtozero::CRasterizer> gRasterizer( new xtozero::CRasterizer( ) );
 std::unique_ptr<xtozero::CPixelShader> gPixelShader( new xtozero::CPixelShader() );
 std::unique_ptr<xtozero::COutputMerger> gOutputMerger( new xtozero::COutputMerger() );
+std::unique_ptr<xtozero::CXtzThreadPool> gThreadPool( new xtozero::CXtzThreadPool() );
 
+void TestThreadFunc( LPVOID arg )
+{
+	std::cout << (int)arg << std::endl;
+}
 XTZ_API void XtzRenderToBuffer( void* buffer, int width, int height, int dpp )
 {
 	if ( buffer )
@@ -21,8 +26,8 @@ XTZ_API void XtzRenderToBuffer( void* buffer, int width, int height, int dpp )
 		gOutputMerger->ClearDepthBuffer();
 		gOutputMerger->SetFrameBuffer( buffer, dpp, width, height );
 		CRsElementDesc& vsOut = gVertexShader->Process( gMeshManager->LoadRecentMesh() );
-		std::vector<CPsElementDesc>& rsOut = gRasterizer->Process( vsOut );
-		std::vector<COmElementDesc>& psOut = gPixelShader->Process( rsOut );
+		const std::vector<CPsElementDesc>& rsOut = gRasterizer->Process( vsOut );
+		const std::vector<COmElementDesc>& psOut = gPixelShader->Process( rsOut );
 		gOutputMerger->Process( psOut );
 	}
 }

@@ -4,7 +4,7 @@
 
 namespace xtozero
 {
-	void CRasterizer::CreateEdgeTable( CRsElementDesc& rsInput, unsigned int faceNumber )
+	void CRasterizer::CreateEdgeTable( const CRsElementDesc& rsInput, unsigned int faceNumber )
 	{
 		if ( faceNumber >= rsInput.m_faces.size( ) )
 		{
@@ -21,11 +21,12 @@ namespace xtozero
 		float gradient = 0.0f;
 		float dx = 0.0f;
 		float dy = 0.0f;
-		std::vector<int>& faces = rsInput.m_faces[faceNumber];
+		const std::vector<int>& faces = rsInput.m_faces[faceNumber];
 
-		for ( std::vector<int>::iterator& index = faces.begin( ); index != faces.end( ); ++index )
+		int nfaces = faces.size();
+		for ( int i = 0; i < nfaces; ++i )
 		{
-			if ( (index + 1) == faces.end( ) )
+			if ( (i + 1) == nfaces )
 			{
 				//선분이 성립 안 됨.
 				//Do Nothing
@@ -33,8 +34,8 @@ namespace xtozero
 			}
 			else
 			{
-				const Vector4& start = rsInput.m_vertices[*index];
-				const Vector4& end = rsInput.m_vertices[*(index + 1)];
+				const Vector4& start = rsInput.m_vertices[faces.at( i )];
+				const Vector4& end = rsInput.m_vertices[faces.at( i + 1 )];
 
 				//기울기를 구함
 				dy = end.Y - start.Y;
@@ -248,20 +249,13 @@ namespace xtozero
 				}
 				else
 				{
-					if ( i == startX || i == endX )
-					{
-						m_outputRS.emplace_back( i, scanline, z, PIXEL_COLOR( 255, 255, 255 ) );
-					}
-					else
-					{
-						m_outputRS.emplace_back( i, scanline, z, facecolor );
-					}
+					m_outputRS.emplace_back( i, scanline, z, facecolor );
 				}	
 			}
 		}
 	}
 
-	std::vector<CPsElementDesc> CRasterizer::Process( CRsElementDesc& rsInput )
+	const std::vector<CPsElementDesc>& CRasterizer::Process( CRsElementDesc& rsInput )
 	{
 		//여기에서 메시내부의 픽셀을 계산
 		m_outputRS.clear();

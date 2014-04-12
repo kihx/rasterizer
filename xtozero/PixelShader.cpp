@@ -12,16 +12,19 @@ namespace xtozero
 	{
 	}
 
-	std::vector<COmElementDesc> CPixelShader::Process( std::vector<CPsElementDesc>& psInput )
+	const std::vector<COmElementDesc>& CPixelShader::Process( const std::vector<CPsElementDesc>& psInput )
 	{
-		std::vector<COmElementDesc> psOutput;
-		psOutput.reserve( psInput.size() );
+		m_psOutput.clear();
+		int size = psInput.size( );
 
-		for ( std::vector<CPsElementDesc>::iterator& iter = psInput.begin( ); iter != psInput.end( ); ++iter )
+		m_psOutput.reserve( size );
+
+		for ( int i = 0; i < size; ++i )
 		{
-			psOutput.emplace_back( iter->m_x, iter->m_y, iter->m_z, iter->m_color );
+			const CPsElementDesc& ominput = psInput.at( i );
+			m_psOutput.emplace_back( ominput.m_x, ominput.m_y, ominput.m_z, ominput.m_color );
 		}
 
-		return psOutput;
+		return m_psOutput;
 	}
 }

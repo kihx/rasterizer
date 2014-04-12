@@ -54,14 +54,14 @@ namespace xtozero
 		std::vector<CPsElementDesc> m_outputRS;
 		Rect m_viewport;
 
-		void CreateEdgeTable( CRsElementDesc& rsInput, unsigned int faceNumber );
+		void CreateEdgeTable( const CRsElementDesc& rsInput, unsigned int faceNumber );
 		void UpdateActiveEdgeTable( int scanline );
 		float GetIntersectXpos( int minY, int maxY, int scanlineY, float minX, float gradient ) const;
 		void ProcessScanline( int scanline, unsigned int facecolor );
 	public:
 		CRasterizer( void ) {}
 		~CRasterizer( void ) {}
-		std::vector<CPsElementDesc> Process( CRsElementDesc& rsInput );
+		const std::vector<CPsElementDesc>& Process( CRsElementDesc& rsInput );
 		void SetViewPort( int left, int top, int right, int bottom );
 	};
 }
