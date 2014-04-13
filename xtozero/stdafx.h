@@ -18,3 +18,6 @@
 
 #define PIXEL_COLOR(r, g, b)  ( ( b << 16 ) + ( g << 8 ) + r )
 #define RAND_COLOR() PIXEL_COLOR( ( rand()%255 + 1 ), ( rand()%255 + 1 ), ( rand()%255 + 1 ) )
+#define GET_RED(color) (color & 0xFF)
+#define GET_GREEN(color) ( (color & 0x00FF00) >> 8 )
+#define GET_BULE(color) ( (color & 0xFF0000) >> 16 )

@@ -17,15 +17,18 @@ void TestThreadFunc( LPVOID arg )
 {
 	std::cout << (int)arg << std::endl;
 }
+
 XTZ_API void XtzRenderToBuffer( void* buffer, int width, int height, int dpp )
 {
 	if ( buffer )
 	{
+		gThreadPool->CreateThreadPool( 8 );
 		gRasterizer->SetViewPort( 0, 0, width, height );
 		gOutputMerger->CreateDepthBuffer( width, height );
 		gOutputMerger->ClearDepthBuffer();
 		gOutputMerger->SetFrameBuffer( buffer, dpp, width, height );
-		CRsElementDesc& vsOut = gVertexShader->Process( gMeshManager->LoadRecentMesh() );
+		//CRsElementDesc& vsOut = gVertexShader->Process( gMeshManager->LoadRecentMesh() );
+		CRsElementDesc& vsOut = gVertexShader->ProcessParallel( gMeshManager->LoadRecentMesh( ), gThreadPool.get() );
 		const std::vector<CPsElementDesc>& rsOut = gRasterizer->Process( vsOut );
 		const std::vector<COmElementDesc>& psOut = gPixelShader->Process( rsOut );
 		gOutputMerger->Process( psOut );

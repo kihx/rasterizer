@@ -150,7 +150,7 @@ namespace xtozero
 	void CRasterizer::ProcessScanline( int scanline, unsigned int facecolor )//정점 보간하면 컬러 넘겨주지 않을 예정...
 	{
 		std::vector<std::pair<int, float>> horizontalLine;
-		horizontalLine.reserve( m_activeEdgeTable.size() * 2 );
+		horizontalLine.reserve( m_activeEdgeTable.size() );
  
 		//수평선을 그릴 구간을 지정
 
@@ -302,6 +302,11 @@ namespace xtozero
 		}
 
 		return m_outputRS;
+	}
+
+	const std::vector<CPsElementDesc>& CRasterizer::ProcessParallel( CRsElementDesc& rsInput )
+	{
+		m_outputRS.clear( );
 	}
 
 	void CRasterizer::SetViewPort( int left, int top, int right, int bottom )

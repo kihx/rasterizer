@@ -3,6 +3,7 @@
 
 #include "Mesh.h"
 #include "pipelineElements.h"
+#include "XtzThreadPool.h"
 #include <utility>
 
 #include <vector>
@@ -16,11 +17,21 @@ namespace xtozero
 		Matrix4 m_worldMatrix;
 		Matrix4 m_viewMatrix;
 		Matrix4 m_projectionMatrix;
+		CRITICAL_SECTION m_cs;
 	public:
-		CVertexShader() {}
-		~CVertexShader() {}
+		CVertexShader() 
+		{
+			InitializeCriticalSection( &m_cs );
+		}
+		~CVertexShader() 
+		{
+			DeleteCriticalSection( &m_cs );
+		}
 
 		CRsElementDesc& Process( const std::shared_ptr<CMesh> pMesh );
+		
+		CRsElementDesc& ProcessParallel( const std::shared_ptr<CMesh> pMesh, CXtzThreadPool* threadPool );
+		void InsertTransformedVertex( Vector3& pos, int& index );
 
 		void SetWorldMatrix( const float* mmatrix4x4 )
 		{
@@ -35,6 +46,29 @@ namespace xtozero
 			memcpy( &m_projectionMatrix, mmatrix4x4, sizeof(Matrix4) );
 		}
 	};
+
+	struct vsThreadarg
+	{
+		CVertexShader* pVs;
+		int index;
+		Matrix4 matrix;
+		std::shared_ptr<CMesh> pMesh;
+	};
+
+	static void vsThreadWork(LPVOID arg)
+	{
+		vsThreadarg* pVsarg = (vsThreadarg*)arg;
+		
+		Vector3 position = pVsarg->pMesh->m_vertices[pVsarg->index];
+		if ( pVsarg->pMesh->m_coordinate == COORDINATE::OBJECT_COORDINATE )
+		{
+			position.Transform( pVsarg->matrix );
+		}
+
+		pVsarg->pVs->InsertTransformedVertex( position, pVsarg->index );
+
+		delete pVsarg;
+	}
 }
 #endif
 

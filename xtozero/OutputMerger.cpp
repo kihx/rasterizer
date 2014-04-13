@@ -15,7 +15,7 @@ namespace xtozero
 	{
 	}
 
-	void COutputMerger::CreateDepthBuffer( int width, int height )
+	void COutputMerger::CreateDepthBuffer( const int& width, const int& height )
 	{
 		if ( m_pDepthBuffer.size( ) < width * height )
 		{
@@ -39,7 +39,7 @@ namespace xtozero
 		m_pFrameBuffer = static_cast<unsigned char*>(pbuffer);
 	}
 
-	bool COutputMerger::ProcessDepthTest( int x, int y, float depth )
+	bool COutputMerger::ProcessDepthTest( const int& x, const int& y, const float& depth )
 	{
 		assert( m_pDepthBuffer.size() >= m_width * m_height );
 
@@ -48,11 +48,8 @@ namespace xtozero
 			m_pDepthBuffer[y * m_width + x] = static_cast<unsigned char>(depth * depthPrecision);
 			return true;
 		}
-		else
-		{
-			return false;
-		}
-		return true;
+
+		return false;
 	}
 
 	void COutputMerger::Process( const std::vector<COmElementDesc>& omInput )
@@ -69,16 +66,16 @@ namespace xtozero
 
 		for ( int i = 0; i < nPixels; ++i )
 		{
-			assert( 0 <= iter->m_x && iter->m_x < m_width );
-			assert( 0 <= iter->m_y && iter->m_y < m_height );
-			assert( 0.0f <= iter->m_z && iter->m_z <= 1.0f );
+			assert( 0 <= omInput.at( i ).m_x && omInput.at( i ).m_x < m_width );
+			assert( 0 <= omInput.at( i ).m_y && omInput.at( i ).m_y < m_height );
+			assert( 0.0f <= omInput.at( i ).m_z && omInput.at( i ).m_z <= 1.0f );
 			const COmElementDesc& input = omInput.at( i );
 			if ( ProcessDepthTest( input.m_x, input.m_y, input.m_z ) )
 			{
-				memcpy_s( m_pFrameBuffer + ((m_width * input.m_y) + input.m_x) * size,
-					size,
-					&input.m_color,
-					size );
+				unsigned char* pixel = m_pFrameBuffer + ((m_width * input.m_y) + input.m_x) * size;
+				pixel[0] = GET_RED( input.m_color );
+				pixel[1] = GET_GREEN( input.m_color );
+				pixel[2] = GET_BULE( input.m_color );
 			}
 		}
 	}

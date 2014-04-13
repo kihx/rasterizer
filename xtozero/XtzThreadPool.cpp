@@ -57,16 +57,16 @@ namespace xtozero
 
 			EnterCriticalSection( &m_cs );
 			WORK work;
-			if ( m_workquere.size() > 0 )
-			{
-				work = m_workquere.front();
-				m_workquere.pop_front();
-			}
-			else
+			if ( m_workquere.empty() )
 			{
 				LeaveCriticalSection( &m_cs );
 				m_bWork[threadIdx] = false;
 				continue;
+			}
+			else
+			{
+				work = m_workquere.front( );
+				m_workquere.pop_front( );
 			}
 			LeaveCriticalSection( &m_cs );
 			m_work[threadIdx].m_worker = work.m_worker;
@@ -123,7 +123,23 @@ namespace xtozero
 			}
 			else
 			{
-				return;
+				bool IsRun = false;
+				for ( int i = 0; i < m_nThread; ++i )
+				{
+					if ( m_bWork[i] )
+					{
+						IsRun = true;
+						break;
+					}
+				}
+				if ( IsRun )
+				{
+
+				}
+				else
+				{
+					return;
+				}
 			}
 			Sleep( 0 );
 		}
