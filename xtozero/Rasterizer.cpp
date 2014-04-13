@@ -307,6 +307,25 @@ namespace xtozero
 	const std::vector<CPsElementDesc>& CRasterizer::ProcessParallel( CRsElementDesc& rsInput )
 	{
 		m_outputRS.clear( );
+
+		if ( rsInput.m_coodinate == COORDINATE::OBJECT_COORDINATE )
+		{
+			for ( std::vector<Vector4>::iterator& iter = rsInput.m_vertices.begin( ); iter != rsInput.m_vertices.end( ); ++iter )
+			{
+				Vector4& vertex = *iter;
+				vertex /= vertex.W;
+
+				vertex.X = (vertex.X * m_viewport.m_right * 0.5f) + m_viewport.m_right * 0.5f;
+				vertex.Y = -(vertex.Y * m_viewport.m_bottom * 0.5f) + m_viewport.m_bottom * 0.5f;
+			}
+		}
+
+		for ( unsigned int i = 0; i < rsInput.m_faces.size( ); ++i )
+		{
+			
+		}
+
+		return m_outputRS;
 	}
 
 	void CRasterizer::SetViewPort( int left, int top, int right, int bottom )
