@@ -51,6 +51,26 @@ struct EdgeInfo
 	void Sort()
 	{
 		std::sort(m_edgeData.begin(), m_edgeData.end());
+
+		if (m_edgeData.size() & 1)
+		{
+			Adjust();
+		}
+	}
+
+	// 중복되어 들어간 홀수 edgData 제거
+	void Adjust()
+	{
+		size_t num = m_edgeData.size();
+		for (size_t i = 0; i + 1 < num; i += 2)
+		{
+			// 중복된 데이터 밀어당긴 후 pop
+			if (m_edgeData[i].m_x == m_edgeData[i + 1].m_x)
+			{
+				m_edgeData[i + 1] = m_edgeData[i + 2];
+			}
+		}
+		m_edgeData.pop_back();
 	}
 
 	std::vector<PixelInfo> m_edgeData;

@@ -88,8 +88,10 @@ void WPolygon::InsertLineInfo(WModule* pPainter, const Vector3* v1, const Vector
 	{
 		gradient = 1.0f;
 	}
-	else if (dy == 0.0f)
+	else if ( dy == 0.0f )
 	{
+		pPainter->InsertLineDepthInfo(Float2Int(v1->Y), Float2Int(v1->X), v1->Z, color);
+		pPainter->InsertLineDepthInfo(Float2Int(v2->Y), Float2Int(v2->X), v2->Z, color);
 		return;
 	}
 	else
@@ -132,4 +134,6 @@ void WPolygon::InsertLineInfo(WModule* pPainter, const Vector3* v1, const Vector
 		pPainter->InsertLineDepthInfo(Float2Int(y), Float2Int(x), lerpZ, color);
 		y += 1.0f;
 	}
+
+	pPainter->InsertLineDepthInfo(Float2Int(endY), Float2Int(endX), endZ, color);
 }
