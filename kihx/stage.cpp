@@ -372,11 +372,11 @@ namespace kih
 				float slope = ( dy == 0.0f ) ? 0.0f : ( dx / dy );
 
 				// Select start and end scanlines with Y-axis clipping.
-				unsigned short startY = Float_ToInteger<unsigned short>( std::ceil( yMin ) );
+				unsigned short startY = static_cast<unsigned short>( Ceil( yMin ) );
 				startY = Clamp<unsigned short>( startY, 0, height - 1 );
 				minScanline = Min( minScanline, startY );
 
-				unsigned short endY = Float_ToInteger<unsigned short>( std::ceil( yMax ) );
+				unsigned short endY = static_cast<unsigned short>( Ceil( yMax ) );
 				endY = Clamp<unsigned short>( endY, startY, height - 1 );
 				maxScanline = Max( maxScanline, endY );
 
@@ -439,8 +439,8 @@ namespace kih
 				// Approximate intersection pixels betweeen edges on the scanline.
 				if ( elemLeft.CurrentX != elemRight.CurrentX )
 				{
-					unsigned short xLeft = Float_ToInteger<unsigned short>( std::round( elemLeft.CurrentX ) );
-					unsigned short xRight = Float_ToInteger<unsigned short>( std::round( elemRight.CurrentX ) );
+					unsigned short xLeft = static_cast<unsigned short>( Round( elemLeft.CurrentX ) );
+					unsigned short xRight = static_cast<unsigned short>( Round( elemRight.CurrentX ) );
 
 					// clipping on RT
 					xLeft = Max<unsigned short>( xLeft, 0 );
