@@ -10,17 +10,17 @@
 
 namespace kih
 {
-	class VertexProcInputStream;
-	typedef VertexProcInputStream InputAssemblerOutputStream;
+	class VertexShaderInputStream;
+	typedef VertexShaderInputStream InputAssemblerOutputStream;
 
 	class RasterizerInputStream;
-	typedef RasterizerInputStream VertexProcOutputStream;
+	typedef RasterizerInputStream VertexShaderOutputStream;
 
-	class PixelProcInputStream;
-	typedef PixelProcInputStream RasterizerOutputStream;
+	class PixelShaderInputStream;
+	typedef PixelShaderInputStream RasterizerOutputStream;
 
 	class OutputMergerInputStream;
-	typedef OutputMergerInputStream PixelProcOutputStream;
+	typedef OutputMergerInputStream PixelShaderOutputStream;
 
 	class IMesh;
 	class Texture;
@@ -60,7 +60,7 @@ namespace kih
 		}
 
 	private:
-		template<typename T>
+		template<class T>
 		bool ExecuteInternal( unsigned short x, unsigned short y, T depth );
 
 	private:
@@ -100,6 +100,16 @@ namespace kih
 			return GetContext()->GetSharedConstantBuffer();
 		}
 
+		std::shared_ptr<UnorderedAccessView<InputStream>> GetUnorderedAccessView()
+		{
+			return m_uav;
+		}
+
+		FORCEINLINE void SetUnorderedAccessView( std::shared_ptr<UnorderedAccessView<InputStream>> uav )
+		{
+			m_uav = uav;
+		}
+
 	protected:
 		FORCEINLINE RenderingContext* GetContext()
 		{
@@ -108,6 +118,7 @@ namespace kih
 
 	protected:
 		std::shared_ptr<OutputStream> m_outputStream;
+		std::shared_ptr<UnorderedAccessView<InputStream>> m_uav;
 
 	private:
 		RenderingContext* m_pRenderingContext;
@@ -143,23 +154,23 @@ namespace kih
 	};
 
 
-	/* class VertexProcessor
+	/* class VertexShader
 	*/
-	class VertexProcessor : public BaseGraphicsStage<VertexProcInputStream, VertexProcOutputStream>
+	class VertexShader : public BaseGraphicsStage<VertexShaderInputStream, VertexShaderOutputStream>
 	{
-		NONCOPYABLE_CLASS( VertexProcessor );
+		NONCOPYABLE_CLASS( VertexShader );
 
 	public:
-		explicit VertexProcessor( RenderingContext* pRenderingContext ) :
+		explicit VertexShader( RenderingContext* pRenderingContext ) :
 			BaseGraphicsStage( pRenderingContext )
 		{
 		}
 
-		virtual ~VertexProcessor()
+		virtual ~VertexShader()
 		{
 		}
 
-		virtual std::shared_ptr<VertexProcOutputStream> Process( const std::shared_ptr<VertexProcInputStream>& inputStream );
+		virtual std::shared_ptr<VertexShaderOutputStream> Process( const std::shared_ptr<VertexShaderInputStream>& inputStream );
 
 	private:
 		void TransformWVP( const Vector3& position, const Matrix4& wvp, Vector4& outPosition ) const;
@@ -247,23 +258,23 @@ namespace kih
 	};
 
 
-	/* class PixelProcessor
+	/* class PixelShader
 	*/
-	class PixelProcessor : public BaseGraphicsStage<PixelProcInputStream, PixelProcOutputStream>
+	class PixelShader : public BaseGraphicsStage<PixelShaderInputStream, PixelShaderOutputStream>
 	{
-		NONCOPYABLE_CLASS( PixelProcessor );
+		NONCOPYABLE_CLASS( PixelShader );
 		
 	public:
-		explicit PixelProcessor( RenderingContext* pRenderingContext ) :
+		explicit PixelShader( RenderingContext* pRenderingContext ) :
 			BaseGraphicsStage( pRenderingContext )
 		{
 		}
 
-		virtual ~PixelProcessor()
+		virtual ~PixelShader()
 		{
 		}
 
-		virtual std::shared_ptr<PixelProcOutputStream> Process( const std::shared_ptr<PixelProcInputStream>& inputStream );
+		virtual std::shared_ptr<PixelShaderOutputStream> Process( const std::shared_ptr<PixelShaderInputStream>& inputStream );
 	};
 
 
@@ -284,5 +295,8 @@ namespace kih
 		}
 
 		virtual std::shared_ptr<OutputMergerOutputStream> Process( const std::shared_ptr<OutputMergerInputStream>& inputStream );
+
+		// Do traditional depth buffering and pixel operations.
+		void Resolve( const std::shared_ptr<OutputMergerInputStream>& inputStream );
 	};
 };

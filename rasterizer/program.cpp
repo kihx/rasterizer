@@ -86,7 +86,7 @@ namespace
 	{
 		//std::cout << ( PlatformTime::MicroSeconds() - m_beginTime ) / 1000.0 << std::endl;
 		char buff[32];
-		sprintf( buff, "%.2f", ( PlatformTime::MicroSeconds() - m_beginTime ) / 1000.0 );
+		sprintf_s( buff, 32, "%.2f", ( PlatformTime::MicroSeconds() - m_beginTime ) / 1000.0 );
 		glutSetWindowTitle( buff );
 	}
 

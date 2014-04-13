@@ -57,13 +57,13 @@ namespace kih
 
 
 	// interlock-function overrides using template specilization
-	template<typename T, int = sizeof( T ) * 8>
+	template<class T, int = sizeof( T ) * 8>
 	struct interlock_func_impl
 	{
 	};
 
 	#define DEFINE_INTERLOCK_FUNC( Size ) \
-	template<typename T>\
+	template<class T>\
 	struct interlock_func_impl<T, Size>\
 	{\
 		static FORCEINLINE T f_interlockedexchange( volatile T* target, T value )\
@@ -91,7 +91,7 @@ namespace kih
 
 	/* class Atomic
 	*/
-	template<typename T, bool = std::is_integral<T>::value>
+	template<class T, bool = std::is_integral<T>::value>
 	class Atomic
 	{
 		static_assert( std::is_integral<T>::value, "only integral type is allowed" );
@@ -139,7 +139,7 @@ namespace kih
 	};	
 	
 	// integral specialization
-	template<typename T>
+	template<class T>
 	class Atomic<T, true>
 	{
 		NONCOPYABLE_CLASS( Atomic );
@@ -382,7 +382,7 @@ namespace kih
 			MakeNull( other );
 		}
 
-		template<typename Func, typename... Args>
+		template<class Func, class... Args>
 		explicit Thread( Func&& func, Args&&... args )
 		{
 			m_started.Exchange( false );

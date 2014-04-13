@@ -9,6 +9,7 @@
 #include "render.h"
 #include "concommand.h"
 #include "profiler.h"
+#include "stream.h"
 
 #include <array>
 
@@ -133,9 +134,10 @@ KIHX_API void kiRenderToBuffer( void* buffer, int width, int height, int bpp )
 	ColorFormat colorFormat = kih::GetSuitableColorFormatFromBpp( bpp );
 	static std::shared_ptr<Texture> renderTarget = Texture::Create( width, height, colorFormat, buffer );
 	static std::shared_ptr<Texture> depthStencil = Texture::Create( width, height, ColorFormat::D32F, NULL );
+	static std::shared_ptr<UnorderedAccessView<OutputMergerInputStream>> omUAV = std::make_shared<UnorderedAccessView<OutputMergerInputStream>>( width * height );
 
 	// Create rendering contexts as many of Thread::HardwareConcurrency.
-	const int Concurrency = 8;
+	const int Concurrency = 8;	// HACK
 	static std::array<std::shared_ptr<RenderingContext>, Concurrency> contexts;
 	if ( contexts[0] == nullptr )
 	{
@@ -169,6 +171,7 @@ KIHX_API void kiRenderToBuffer( void* buffer, int width, int height, int bpp )
 		// threading or not
 		if ( context_concurrency.Int() <= 1 )
 		{
+			context->SetUnorderedAccessView( nullptr );
 			DrawGridScene( context, matWorld );
 		}
 		else
@@ -179,6 +182,7 @@ KIHX_API void kiRenderToBuffer( void* buffer, int width, int height, int bpp )
 			for ( int i = 0; i < context_concurrency.Int(); ++i )
 			{
 				concurrencyContexts.emplace_back( contexts[i] );
+				contexts[i]->SetUnorderedAccessView( omUAV );
 			}
 
 			DrawGridSceneInParallel( concurrencyContexts, matWorld );
@@ -186,6 +190,7 @@ KIHX_API void kiRenderToBuffer( void* buffer, int width, int height, int bpp )
 	}
 	else
 	{
+		context->SetUnorderedAccessView( nullptr );
 		context->GetSharedConstantBuffer().SetMatrix4( ConstantBuffer::WorldMatrix, matWorld );
 		context->GetSharedConstantBuffer().SetVector4( ConstantBuffer::DiffuseColor, Vector4( 1.0f, 1.0f, 1.0f, 1.0f ) );
 		context->Draw( g_meshes[0] );

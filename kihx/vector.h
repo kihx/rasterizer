@@ -301,7 +301,7 @@ namespace kih
 
 	/* struct Color4
 	*/
-	template<typename T>
+	template<class T>
 	struct Color4
 	{
 		static_assert( std::is_integral<T>::value || std::is_floating_point<T>::value, "base type must be integral or floating point" );

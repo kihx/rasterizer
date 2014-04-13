@@ -227,7 +227,7 @@ namespace kih
 				},
 				this,	// arg
 				0,
-				&m_tdata.ID ); 
+				&m_tdata.ID );
 
 			if ( m_tdata.Handle == nullptr )
 			{
@@ -303,27 +303,34 @@ namespace kih
 			return;
 		}
 
-		LockGuard<Mutex> lockGuard( m_mutex );
-
-		// If there is no idle thread, queue the task.
-		if ( m_threadQueue.empty() )
+		// local scope
+		TaskThread* thread = nullptr;
 		{
-			m_taskQueue.push( task );
-			return;
+			LockGuard<Mutex> lockGuard( m_mutex );
+
+			// If there is no idle thread, queue the task.
+			if ( m_threadQueue.empty() )
+			{
+				m_taskQueue.push( task );
+				return;
+			}
+
+			// Otherwise, go the task now.
+			thread = m_threadQueue.front();
+			m_threadQueue.pop();
 		}
 
-		// Otherwise, go the task now.
-		TaskThread* thread = m_threadQueue.front();
-		m_threadQueue.pop();		
-		Assert( thread );
-		thread->Go( task );
+		if ( thread )
+		{
+			thread->Go( task );
+		}
 	}
 
 	void ThreadPool::WaitForAllTasks()
 	{
 		while ( m_threadQueue.size() != m_allThreads.size() )
 		{
-			Thread::Sleep( 0 );
+			Thread::Sleep( 1 );
 		}
 	}
 

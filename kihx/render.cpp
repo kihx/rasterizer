@@ -9,6 +9,7 @@
 #include "concommand.h"
 #include "threading.h"
 #include "profiler.h"
+#include "stream.h"
 
 #include <list>
 #include <map>
@@ -16,7 +17,6 @@
 
 
 #define USE_THREAD_POOL
-#define PREEMPTIVE_PARALLEL
 
 #define Thread std::thread
 
@@ -27,9 +27,9 @@ namespace kih
 	*/
 	RenderingContext::RenderingContext( size_t numRenderTargets ) :
 		m_inputAssembler( std::make_shared<InputAssembler>( this ) ),
-		m_vertexProcessor( std::make_shared<VertexProcessor>( this ) ),
+		m_VertexShader( std::make_shared<VertexShader>( this ) ),
 		m_rasterizer( std::make_shared<Rasterizer>( this ) ),
-		m_pixelProcessor( std::make_shared<PixelProcessor>( this ) ),
+		m_PixelShader( std::make_shared<PixelShader>( this ) ),
 		m_outputMerger( std::make_shared<OutputMerger>( this ) ),
 		m_depthFunc( DepthFunc::None ),
 		m_depthWritable( false )
@@ -137,9 +137,9 @@ namespace kih
 		RenderingDevice* pDevice = RenderingDevice::GetInstance();
 		Assert( pDevice );
 		Assert( m_inputAssembler );
-		Assert( m_vertexProcessor );
+		Assert( m_VertexShader );
 		Assert( m_rasterizer );
-		Assert( m_pixelProcessor );
+		Assert( m_PixelShader );
 		Assert( m_outputMerger );
 
 		// Set a constant buffer for WVP transform.
@@ -212,28 +212,12 @@ namespace kih
 		RenderingDevice* pDevice = RenderingDevice::GetInstance();
 		Assert( pDevice );
 		
+		size_t numContexts = contexts.size();
+
 		// Note that the world matrix would be multiplied just before drawing a mesh
 		// because the world matrix of a mesh is different each other.
 		// So premultiply view-projection matrices only.
 		Matrix4 viewProj = pDevice->GetViewMatrix() * pDevice->GetProjectionMatrix();
-
-		size_t numContexts = contexts.size();
-#ifdef PREEMPTIVE_PARALLEL
-		// nothing
-#else
-		// Distribute input meshes to each context.
-		size_t numMeshes = meshes.size();
-		size_t numMeshesPerContext = static_cast<size_t>( std::ceil( numMeshes / static_cast<float>( numContexts ) ) );
-#endif
-
-		// Reserve the series of the input stream of the output merge
-		// which are the result of the work for each rendering context.
-		// We should sequentially merge them on the output merger in a single thread (the first context).
-		std::vector<std::shared_ptr<OutputMergerInputStream>> omInputStreamList;
-		omInputStreamList.reserve( numContexts );
-		
-		// a mutext to collect thread-safely
-		static Mutex OutputCollectorMutex;
 		
 #ifdef USE_THREAD_POOL
 		ThreadPool* threadPool = ThreadPool::GetInstance();
@@ -243,20 +227,15 @@ namespace kih
 		threads.resize( numContexts );
 #endif
 
-#ifdef PREEMPTIVE_PARALLEL
 		Atomic<int> workIndex( 0 );
-#endif
 		for ( size_t c = 0; c < numContexts; ++c )
 		{
 			auto context = contexts[c];
 			Assert( context );
 
-#ifdef PREEMPTIVE_PARALLEL
 			auto task = std::bind(
-				[=, &workIndex, &omInputStreamList]( std::shared_ptr<RenderingContext> context, Matrix4 viewProj, FuncPreRender funcPreRender )
+				[=, &workIndex]( std::shared_ptr<RenderingContext> context, Matrix4 viewProj, FuncPreRender funcPreRender )
 				{
-					bool hasRT = ( context->GetRenderTagetConst( 0 ) != nullptr );
-
 					ConstantBuffer& cbuffer = context->GetSharedConstantBuffer();
 
 					std::vector<std::shared_ptr<OutputMergerInputStream>> output;
@@ -270,6 +249,13 @@ namespace kih
 						// Prefech the workIndex to avoid changing the value on other thread, and then increment the workIndex.
 						int index = workIndex.FetchAndIncrement();
 
+						// Check the index again to guarantee atomic.
+						// FIXME: Is this necessary?
+						if ( index >= meshCount )
+						{
+							return;
+						}
+
 						// Call the PreRender functor.
 						funcPreRender( context, index );
 
@@ -277,26 +263,8 @@ namespace kih
 						Matrix4 wvp = cbuffer.GetMatrix4( ConstantBuffer::WorldMatrix ) * viewProj;
 						cbuffer.SetMatrix4( ConstantBuffer::WVPMatrix, wvp );
 
-						// Run the rendering pipeline for the mesh.
-						std::shared_ptr<OutputMergerInputStream> omInput = context->RunRenderingPipeline( meshes[index] );
-
-						// If a context has a RT, go to the output merger stage.
-						if ( hasRT )
-						{
-							context->m_outputMerger->Process( omInput );
-						}
-						else
-						{
-							// Otherwise, collect the input stream for late output merge.
-							output.emplace_back( std::move( omInput->Clone() ) );
-						}
-					}
-
-					// Collect all of output stream.
-					if ( !hasRT )
-					{
-						LockGuard<Mutex> lockGuard( OutputCollectorMutex );
-						std::copy( output.begin(), output.end(), std::back_inserter( omInputStreamList ) );
+						// Draw the mesh.
+						context->Draw( meshes[index] );
 					}
 				},
 				context,
@@ -307,72 +275,6 @@ namespace kih
 			threadPool->Queue( task );
 #else
  			Thread t { task };
-#endif
-
-#else // PREEMPTIVE_PARALLEL
-			// Distribute input meshes to each context.
-			std::map<size_t, std::shared_ptr<IMesh>> inputMeshes;			
-			for ( size_t m = 0; m < numMeshesPerContext; ++m )
-			{
-				size_t index = c * numMeshesPerContext + m;
-				if ( index < 0 || index >= numMeshes )
-				{
-					continue;
-				}
-
-				const auto& mesh = meshes[index];
-				if ( mesh == nullptr )
-				{
-					continue;
-				}
-				
-				if ( mesh->GetPrimitiveType() != PrimitiveType::Triangles )
-				{
-					continue;
-				}
-
-				inputMeshes.emplace( index, mesh );
-			}
-
-			Thread t
-			{
-				[&omInputStreamList]( std::shared_ptr<RenderingContext> context, std::map<size_t, std::shared_ptr<IMesh>> inputMeshes, Matrix4 viewProj, FuncPreRender funcPreRender )
-				{
-					std::vector<std::shared_ptr<OutputMergerInputStream>> output;
-					output.reserve( inputMeshes.size() );
-
-					ConstantBuffer& cbuffer = context->GetSharedConstantBuffer();
-
-					for ( auto iter = inputMeshes.begin(); iter != inputMeshes.end(); ++iter )
-					{										
-						// Call the PreRender functor.
-						funcPreRender( context, iter->first );
-
-						// Now compute the final WVP matrix of this mesh.
-						Matrix4 wvp = cbuffer.GetMatrix4( ConstantBuffer::WorldMatrix ) * viewProj;
-						cbuffer.SetMatrix4( ConstantBuffer::WVPMatrix, wvp );
-
-						// Run the rendering pipeline for the mesh.
-						std::shared_ptr<OutputMergerInputStream> omInput = context->RunRenderingPipeline( iter->second );
-
-						// And then collect the input stream for the output merger.
-						output.emplace_back( omInput->Clone() );
-					}
-
-					// Collect all of output stream.
-					LockGuard<Mutex> lockGuard( OutputCollectorMutex );
-					std::copy( output.begin(), output.end(), std::back_inserter( omInputStreamList ) );
-				},
-				context,
-				inputMeshes,
-				viewProj,
-				funcPreRender
-			};		
-#endif	// PREEMPTIVE_PARALLEL
-
-#ifdef USE_THREAD_POOL
-			// do nothing
-#else
 			t.swap( threads[c] );
 #endif
 		}
@@ -387,13 +289,9 @@ namespace kih
 		}
 #endif
 
-		// Merge all input stream data of the output merger on the first rendering context.
+		// Resolve the UAV to display.
 		// We assume that rendering order is independent.
-		auto context = contexts[0];
-		for ( auto stream : omInputStreamList )
-		{
-			context->m_outputMerger->Process( stream );
-		}
+		contexts[0]->ResolveUnorderedAccessView();
 	}
 
 	bool RenderingContext::SetRenderTarget( std::shared_ptr<Texture> texture, size_t index )
@@ -431,6 +329,11 @@ namespace kih
 
 		m_depthStencil = texture;
 		return true;
+	}
+	
+	void RenderingContext::SetUnorderedAccessView( std::shared_ptr<UnorderedAccessView<OutputMergerInputStream>> omUAV )
+	{
+		m_outputMerger->SetUnorderedAccessView( omUAV );
 	}
 
 	void RenderingContext::SetDepthWritable( bool writable )
@@ -475,39 +378,47 @@ namespace kih
 
 	void RenderingContext::DrawInternal( const std::shared_ptr<IMesh>& mesh, PrimitiveType primitiveType /*= PrimitiveType::Triangles */ )
 	{
+		Assert( m_inputAssembler );
+		Assert( m_VertexShader );
+		Assert( m_rasterizer );
+		Assert( m_PixelShader );
 		Assert( m_outputMerger );
 
-		// Run the rendering pipeline from the input assembler to the output merger at a time.
-		m_outputMerger->Process( RunRenderingPipeline( mesh, primitiveType ) );
-		// Note that the output stream of the output merger is meaningless
-		// because the output merger directly write data on render targets and a depth-stencil buffer.
-	}
-
-	std::shared_ptr<OutputMergerInputStream> RenderingContext::RunRenderingPipeline( const std::shared_ptr<IMesh>& mesh, PrimitiveType primitiveType )
-	{
-		Assert( m_inputAssembler );
-		Assert( m_vertexProcessor );
-		Assert( m_rasterizer );
-		Assert( m_pixelProcessor );
-
 		// input assembler stage
-		std::shared_ptr<VertexProcInputStream> vpInput = m_inputAssembler->Process( mesh );
-		//printf( "\nVertexProcInputStream Size: %d\n", vpInput->Size() );
-	
+		std::shared_ptr<VertexShaderInputStream> vpInput = m_inputAssembler->Process( mesh );
+		//printf( "\nVertexShaderInputStream Size: %d\n", vpInput->Size() );
+
 		// vertex processor stage
-		std::shared_ptr<RasterizerInputStream> raInput = m_vertexProcessor->Process( vpInput );
+		std::shared_ptr<RasterizerInputStream> raInput = m_VertexShader->Process( vpInput );
 		//printf( "RasterizerInputStream Size: %d\n", raInput->Size() );
 
 		// rasterizer stage
 		raInput->SetPrimitiveType( primitiveType );
-		std::shared_ptr<PixelProcInputStream> ppInput = m_rasterizer->Process( raInput );
-		//printf( "PixelProcInputStream Size: %d\n", ppInput->Size() );
+		std::shared_ptr<PixelShaderInputStream> ppInput = m_rasterizer->Process( raInput );
+		//printf( "PixelShaderInputStream Size: %d\n", ppInput->Size() );
 
 		// pixel processor stage
-		std::shared_ptr<OutputMergerInputStream> omInput = m_pixelProcessor->Process( ppInput );
+		std::shared_ptr<OutputMergerInputStream> omInput = m_PixelShader->Process( ppInput );
 		//printf( "OutputMergerInputStream Size: %d\n", 0 );
+		
+		// output merger stage
+		m_outputMerger->Process( omInput );
+		// Note that the output stream of the output merger is meaningless
+		// because the output merger directly write data on render targets and a depth-stencil buffer, or a unordered resource view.
+	}
 
-		return omInput;
+	void RenderingContext::ResolveUnorderedAccessView()
+	{
+		Assert( m_outputMerger );
+
+		auto uav = m_outputMerger->GetUnorderedAccessView();
+		if ( uav == nullptr )
+		{
+			return;
+		}
+
+		m_outputMerger->Resolve( uav->GetStreamSource() );
+		uav->Clear();
 	}
 
 
