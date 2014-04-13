@@ -8,7 +8,7 @@
 namespace kih
 {
 	// String splitter: http://stackoverflow.com/questions/236129/how-to-split-a-string-in-c
-	template<typename T>
+	template<class T>
 	std::vector<T> SplitString( const T& str, const T& delimiters ) 
 	{
 		std::vector<T> v;

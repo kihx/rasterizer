@@ -14,21 +14,21 @@ namespace kih
 		return radian * ( 180.0f / PI );
 	}
 
-	template<typename T>
+	template<class T>
 	inline const T& Min( const T& lhs, const T& rhs )
 	{
 		static_assert( std::is_integral<T>::value || std::is_floating_point<T>::value, "base type must be integral or floating point" );
 		return ( lhs <= rhs ) ? lhs : rhs;
 	}
 
-	template<typename T>
+	template<class T>
 	inline const T& Max( const T& lhs, const T& rhs )
 	{
 		static_assert( std::is_integral<T>::value || std::is_floating_point<T>::value, "base type must be integral or floating point" );
 		return ( lhs >= rhs ) ? lhs : rhs;
 	}
 
-	template<typename T>
+	template<class T>
 	inline const T& Clamp( const T& value, const T& min, const T& max )
 	{
 		static_assert( std::is_integral<T>::value || std::is_floating_point<T>::value, "base type must be integral or floating point" );
@@ -51,7 +51,7 @@ namespace kih
 		return static_cast< byte >( Clamp<float>( f, 0.0f, 1.0f ) * 255.0f );
 	}
 
-	template<typename T>
+	template<class T>
 	inline T Float_ToInteger( float f )
 	{
 		static_assert( std::is_integral<T>::value, "return type must be integer" );

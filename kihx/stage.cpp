@@ -67,7 +67,7 @@ namespace kih
 		}
 	}
 
-	template<typename T>
+	template<class T>
 	bool DepthBuffering::ExecuteInternal( unsigned short x, unsigned short y, T depth )
 	{
 		VerifyReentry();
@@ -209,9 +209,9 @@ namespace kih
 	}
 
 
-	/* class VertexProcessor
+	/* class VertexShader
 	*/
-	std::shared_ptr<VertexProcOutputStream> VertexProcessor::Process( const std::shared_ptr<VertexProcInputStream>& inputStream )
+	std::shared_ptr<VertexShaderOutputStream> VertexShader::Process( const std::shared_ptr<VertexShaderInputStream>& inputStream )
 	{
 		Assert( inputStream );
 
@@ -255,7 +255,7 @@ namespace kih
 		return m_outputStream;
 	}
 
-	void VertexProcessor::TransformWVP( const Vector3& position, const Matrix4& wvp, Vector4& outPosition ) const
+	void VertexShader::TransformWVP( const Vector3& position, const Matrix4& wvp, Vector4& outPosition ) const
 	{
 		Vector3_Transform( position, wvp, outPosition );
 
@@ -598,9 +598,9 @@ namespace kih
 	}
 		
 
-	/* class PixelProcessor
+	/* class PixelShader
 	*/
-	std::shared_ptr<PixelProcOutputStream> PixelProcessor::Process( const std::shared_ptr<PixelProcInputStream>& inputStream )
+	std::shared_ptr<PixelShaderOutputStream> PixelShader::Process( const std::shared_ptr<PixelShaderInputStream>& inputStream )
 	{
 		Assert( inputStream );
 		
@@ -648,12 +648,27 @@ namespace kih
 	{
 		Assert( inputStream );
 
+		// If the output merger has a UAV, just merge input stream into the UAV.
+		if ( m_uav )
+		{
+			m_uav->Merge( inputStream );
+			return nullptr;
+		}
+
+		// Otherwise, resolve the input stream.
+		Resolve( inputStream );
+
+		return m_outputStream;
+	}
+
+	void OutputMerger::Resolve( const std::shared_ptr<OutputMergerInputStream>& inputStream )
+	{
 		VerifyReentry();
 
 		size_t inputStreamSize = inputStream->Size();
 		if ( inputStreamSize <= 0 )
 		{
-			return m_outputStream;
+			return;
 		}
 
 		// UNDONE: Currently, we assume RTs is only one.
@@ -661,7 +676,7 @@ namespace kih
 		std::shared_ptr<Texture> rt = GetContext()->GetRenderTaget( 0 );
 		if ( rt == nullptr )
 		{
-			return m_outputStream;
+			return;
 		}
 
 		// Get raw memory from the render target.
@@ -669,7 +684,7 @@ namespace kih
 		byte* bufferRT = static_cast< byte* >( guardRT.Ptr() );
 		if ( bufferRT == nullptr )
 		{
-			return m_outputStream;
+			return;
 		}
 
 		int widthRT = rt->Width();
@@ -717,7 +732,5 @@ namespace kih
 			//rt->WriteTexel( fragment.PX, fragment.PY, fragment.Color.Value );
 #endif
 		}
-
-		return m_outputStream;
 	}
 };

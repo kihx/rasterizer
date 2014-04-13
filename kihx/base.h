@@ -39,7 +39,7 @@ namespace kih
 {
 	// utility functions
 	//
-	template<typename T>
+	template<class T>
 	inline void Swap( T& lhs, T& rhs, typename std::enable_if< std::is_scalar<T>::value >::type* = nullptr )
 	{
 		// if T is scalar type, we do not use move semantics
@@ -48,7 +48,7 @@ namespace kih
 		rhs = tmp;
 	}
 
-	template<typename T>
+	template<class T>
 	inline void Swap( T& lhs, T& rhs, typename std::enable_if< !std::is_scalar<T>::value >::type* = nullptr )
 	{
 		T tmp = std::move( lhs );
@@ -60,7 +60,7 @@ namespace kih
 	template<class T, size_t N>
 	char( &_SizeOfArray( const T( &a )[N] ) )[N];
 	// VS 2013 does not support constexpr
-	//template<typename... Args>
+	//template<class... Args>
 	//constexpr size_t SizeOfArray( Args&&... args )
 	//{
 	//	return sizeof( _SizeOfArray( args ) );
@@ -76,7 +76,7 @@ namespace kih
 	template<int N>
 	struct LoopUnroll
 	{
-		template<typename Func>
+		template<class Func>
 		static void Work( Func func )
 		{			
 			func();
@@ -87,7 +87,7 @@ namespace kih
 	template<>
 	struct LoopUnroll<1>
 	{
-		template<typename Func>
+		template<class Func>
 		static void
 		Work( Func func )
 		{
@@ -102,7 +102,7 @@ namespace kih
 	class Singleton
 	{
 	public:
-		template<typename... Args>
+		template<class... Args>
 		static T* GetInstance( Args&&... args )
 		{
 			static_assert(
@@ -141,7 +141,7 @@ namespace kih
 		NONCOPYABLE_CLASS( LockGuard );
 
 	public:
-		LockGuard( T& obj ) :
+		explicit LockGuard( T& obj ) :
 			m_obj( obj )
 		{
 			m_obj.Lock();
@@ -165,7 +165,7 @@ namespace kih
 		NONCOPYABLE_CLASS( LockGuardPtr );
 
 	public:
-		LockGuardPtr( std::shared_ptr<T> obj ) :
+		explicit LockGuardPtr( std::shared_ptr<T> obj ) :
 			m_obj( obj ),
 			m_ptr( nullptr )
 		{

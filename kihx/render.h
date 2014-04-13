@@ -18,24 +18,27 @@ namespace kih
 
 	class Texture;
 
-	class VertexProcInputStream;	
-	typedef VertexProcInputStream InputAssemblerOutputStream;
+	class VertexShaderInputStream;	
+	typedef VertexShaderInputStream InputAssemblerOutputStream;
 
 	class RasterizerInputStream;
-	typedef RasterizerInputStream VertexProcOutputStream;
+	typedef RasterizerInputStream VertexShaderOutputStream;
 
-	class PixelProcInputStream;
-	typedef PixelProcInputStream RasterizerOutputStream;
+	class PixelShaderInputStream;
+	typedef PixelShaderInputStream RasterizerOutputStream;
 
 	class OutputMergerInputStream;
-	typedef OutputMergerInputStream PixelProcOutputStream;
+	typedef OutputMergerInputStream PixelShaderOutputStream;
 	
 	class OutputMergerOutputStream;
 
+	template<class T>
+	class UnorderedAccessView;
+
 	class InputAssembler;
-	class VertexProcessor;
+	class VertexShader;
 	class Rasterizer;
-	class PixelProcessor;
+	class PixelShader;
 	class OutputMerger;
 	class RenderingContext;
 	
@@ -96,6 +99,8 @@ namespace kih
 		bool SetRenderTarget( std::shared_ptr<Texture> texture, size_t index );
 		bool SetDepthStencil( std::shared_ptr<Texture> texture );
 
+		void SetUnorderedAccessView( std::shared_ptr<UnorderedAccessView<OutputMergerInputStream>> omUAV );
+
 		// constant buffers
 		// SharedConstantBuffer can be accessed in all rendering stages. 
 		FORCEINLINE ConstantBuffer& GetSharedConstantBuffer()
@@ -136,17 +141,16 @@ namespace kih
 	private:
 		void DrawInternal( const std::shared_ptr<IMesh>& mesh, PrimitiveType primitiveType = PrimitiveType::Triangles );
 
-		// Run the rendering pipeline from the input assembler stage to the pixel processor stage,
-		// and return the input stream for the output merger.
-		// To display the rendering result, we must run the output merger stage using the input stream.
-		std::shared_ptr<OutputMergerInputStream> RunRenderingPipeline( const std::shared_ptr<IMesh>& mesh, PrimitiveType primitiveType = PrimitiveType::Triangles );		
+		// Resolve the UAV to display. This function processes the traditional output merger stage using the UAC.
+		// Note that UAV and RT must be binded.
+		void ResolveUnorderedAccessView();
 
 	private:
 		// render stages
 		std::shared_ptr<InputAssembler> m_inputAssembler;
-		std::shared_ptr<VertexProcessor> m_vertexProcessor;
+		std::shared_ptr<VertexShader> m_VertexShader;
 		std::shared_ptr<Rasterizer> m_rasterizer;
-		std::shared_ptr<PixelProcessor> m_pixelProcessor;
+		std::shared_ptr<PixelShader> m_PixelShader;
 		std::shared_ptr<OutputMerger> m_outputMerger;
 		
 		// render target

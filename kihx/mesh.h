@@ -20,7 +20,7 @@ namespace kih
 
 	/* Vertex
 	*/
-	template<typename VertexType>
+	template<class VertexType>
 	struct Vertex
 	{
 		VertexType x;
@@ -28,7 +28,7 @@ namespace kih
 		VertexType z;
 	};
 
-	template<typename IndexType>
+	template<class IndexType>
 	struct Face
 	{
 		unsigned char r;
@@ -41,14 +41,14 @@ namespace kih
 	
 	/* class VertexBuffer
 	*/
-	template<typename VertexType>
+	template<class VertexType>
 	class VertexBuffer
 	{
 	public:
 		VertexBuffer() = default;
 		virtual ~VertexBuffer() = default;
 
-		template <typename... Args>
+		template <class... Args>
 		FORCEINLINE void Push( Args&&... args )
 		{ 
 			m_vertices.emplace_back( args... );
@@ -93,14 +93,14 @@ namespace kih
 		
 	/* class IndexBuffer
 	*/
-	template<typename IndexType>
+	template<class IndexType>
 	class IndexBuffer
 	{
 	public:
 		IndexBuffer() = default;
 		virtual ~IndexBuffer() = default;
 
-		template <typename... Args>
+		template <class... Args>
 		FORCEINLINE void Push( Args&&... args )
 		{
 			m_vertices.emplace_back( args... );

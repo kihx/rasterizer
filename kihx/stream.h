@@ -2,34 +2,35 @@
 
 #include "base.h"
 #include "vector.h"
+#include "threading.h"
 
 #include <vector>
 
 
 namespace kih
 {
-	/* struct VertexProcData
+	/* struct VertexShaderData
 	*/
-	struct VertexProcData
+	struct VertexShaderData
 	{		
 		Vector3 Position;		// object-space position
 		//Color32 Color;		// vertex color
 
-		VertexProcData() = default;
+		VertexShaderData() = default;
 
-		VertexProcData( const float position[3]/*, const Color32& color*/ ) :
+		VertexShaderData( const float position[3]/*, const Color32& color*/ ) :
 			Position( position )/*,
 			Color( color )*/
 		{
 		}
 
-		VertexProcData( const Vector3& position/*, const Color32& color*/ ) :
+		VertexShaderData( const Vector3& position/*, const Color32& color*/ ) :
 			Position( position )/*,
 			Color( color )*/
 		{
 		}
 
-		VertexProcData( const VertexProcData& data ) = default;
+		VertexShaderData( const VertexShaderData& data ) = default;
 	};
 
 	/* struct RasterizerData
@@ -99,7 +100,7 @@ namespace kih
 		BaseInputOutputStream() = default;
 		virtual ~BaseInputOutputStream() = default;
 
-		template <typename... Args>
+		template <class... Args>
 		FORCEINLINE void Push( Args&&... args )
 		{
 			m_streamSource.emplace_back( args... );
@@ -139,6 +140,11 @@ namespace kih
 			m_streamSource.resize( size );
 		}
 
+		FORCEINLINE size_t Capacity() const
+		{
+			return m_streamSource.capacity();
+		}
+
 		FORCEINLINE void Reserve( size_t capacity )
 		{
 			m_streamSource.reserve( capacity );
@@ -153,17 +159,27 @@ namespace kih
 		{
 			m_streamSource = std::move( src.m_streamSource );
 		}
+
+		void Merge( const BaseInputOutputStream& src )
+		{
+			if ( src.Size() <= 0 )
+			{
+				return;
+			}
+
+			std::copy( src.m_streamSource.begin(), src.m_streamSource.end(), std::back_inserter( m_streamSource ) );
+		}
 		
 	private:
 		std::vector<Data> m_streamSource;
 	};	
 
-	/* class VertexProcInputStream
+	/* class VertexShaderInputStream
 	*/
-	class VertexProcInputStream : public BaseInputOutputStream<VertexProcData>
+	class VertexShaderInputStream : public BaseInputOutputStream<VertexShaderData>
 	{
 	public:
-		VertexProcInputStream() :
+		VertexShaderInputStream() :
 			m_coordinatesType( CoordinatesType::Projective )
 		{
 		}
@@ -218,12 +234,12 @@ namespace kih
 		PrimitiveType m_primitiveType;
 	};		
 
-	/* class PixelProcInputStream
+	/* class PixelShaderInputStream
 	*/
-	class PixelProcInputStream : public BaseInputOutputStream<FragmentData>
+	class PixelShaderInputStream : public BaseInputOutputStream<FragmentData>
 	{
 	public:
-		PixelProcInputStream()
+		PixelShaderInputStream()
 		{
 		}
 	};
@@ -268,5 +284,66 @@ namespace kih
 	private:
 
 	};
+
+
+	/* class UnorderedAccessView
+	*/
+	template<class InputStream>
+	class UnorderedAccessView
+	{
+	public:
+		explicit UnorderedAccessView( size_t capacity ) :
+			m_inputStream( std::make_shared<InputStream>() )
+		{
+			m_inputStream->Reserve( capacity );
+		}
+
+		~UnorderedAccessView()
+		{
+		}
+
+		std::shared_ptr<InputStream> GetStreamSource()
+		{
+			return m_inputStream;
+		}
+
+		FORCEINLINE void Reserve( size_t capacity )
+		{
+			Assert( m_inputStream );
+
+			LockGuard<Mutex> lockGuard( m_mergeMutex );
+			m_inputStream->Reserve( capacity );
+		}
+
+		FORCEINLINE void Clear()
+		{
+			Assert( m_inputStream );
+
+			LockGuard<Mutex> lockGuard( m_mergeMutex );
+			m_inputStream->Clear();
+		}
+
+		void Merge( const std::shared_ptr<InputStream>& src )
+		{	
+			Assert( m_inputStream );
+
+			if ( src == nullptr || src->Size() <= 0 )
+			{
+				return;
+			}
+
+			LockGuard<Mutex> lockGuard( m_mergeMutex );
+			m_inputStream->Merge( *src.get() );
+		}
+
+	private:
+		std::shared_ptr<InputStream> m_inputStream;
+		Mutex m_mergeMutex;
+	};
 };
 
+using kih::VertexShaderInputStream;
+using kih::RasterizerInputStream;
+using kih::PixelShaderInputStream;
+using kih::OutputMergerInputStream;
+using kih::UnorderedAccessView;
