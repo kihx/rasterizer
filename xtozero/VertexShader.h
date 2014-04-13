@@ -31,7 +31,7 @@ namespace xtozero
 		CRsElementDesc& Process( const std::shared_ptr<CMesh> pMesh );
 		
 		CRsElementDesc& ProcessParallel( const std::shared_ptr<CMesh> pMesh, CXtzThreadPool* threadPool );
-		void InsertTransformedVertex( Vector3& pos, int& index );
+		void InsertTransformedVertex( Vector3& pos, int index );
 
 		void SetWorldMatrix( const float* mmatrix4x4 )
 		{
@@ -47,7 +47,7 @@ namespace xtozero
 		}
 	};
 
-	struct vsThreadarg
+	struct VsThreadArg
 	{
 		CVertexShader* pVs;
 		int index;
@@ -57,7 +57,7 @@ namespace xtozero
 
 	static void vsThreadWork(LPVOID arg)
 	{
-		vsThreadarg* pVsarg = (vsThreadarg*)arg;
+		VsThreadArg* pVsarg = (VsThreadArg*)arg;
 		
 		Vector3 position = pVsarg->pMesh->m_vertices[pVsarg->index];
 		if ( pVsarg->pMesh->m_coordinate == COORDINATE::OBJECT_COORDINATE )

@@ -51,7 +51,7 @@ namespace xtozero
 
 		for ( int i = 0; i < pMesh->m_nVerties; ++i )
 		{
-			vsThreadarg* pArg = new vsThreadarg;
+			VsThreadArg* pArg = new VsThreadArg;
 
 			pArg->index = i;
 			pArg->pVs = this;
@@ -83,7 +83,7 @@ namespace xtozero
 		return m_vsOutput;
 	}
 
-	void CVertexShader::InsertTransformedVertex( Vector3& pos, int& index )
+	void CVertexShader::InsertTransformedVertex( Vector3& pos, int index )
 	{
 		m_vsOutput.m_vertices[index].X = pos.X;
 		m_vsOutput.m_vertices[index].Y = pos.Y;

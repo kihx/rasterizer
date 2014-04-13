@@ -15,7 +15,7 @@ namespace xtozero
 	{
 	}
 
-	void COutputMerger::CreateDepthBuffer( const int& width, const int& height )
+	void COutputMerger::CreateDepthBuffer( const int width, const int height )
 	{
 		if ( m_pDepthBuffer.size( ) < width * height )
 		{
@@ -39,7 +39,7 @@ namespace xtozero
 		m_pFrameBuffer = static_cast<unsigned char*>(pbuffer);
 	}
 
-	bool COutputMerger::ProcessDepthTest( const int& x, const int& y, const float& depth )
+	bool COutputMerger::ProcessDepthTest( const int x, const int y, const float depth )
 	{
 		assert( m_pDepthBuffer.size() >= m_width * m_height );
 

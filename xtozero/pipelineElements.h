@@ -27,7 +27,7 @@ namespace xtozero
 		CPsElementDesc() {}
 		CPsElementDesc( const CPsElementDesc& element ) 
 			: m_x( element.m_x ), m_y( element.m_y ), m_z( element.m_z ), m_color( element.m_color ) {}
-		CPsElementDesc( const int& x, const int& y, const float& z, const unsigned int& color )
+		CPsElementDesc( const int x, const int y, const float z, const unsigned int color )
 			: m_x( x ), m_y( y ), m_z( z ), m_color( color ) {}
 		~CPsElementDesc( ) {}
 
@@ -43,7 +43,7 @@ namespace xtozero
 		COmElementDesc() {}
 		COmElementDesc( const COmElementDesc& element )
 			: m_x( element.m_x ), m_y( element.m_y ), m_z( element.m_z ), m_color( element.m_color ) {}
-		COmElementDesc( const int& x, const int& y, const float& z, const unsigned int& color )
+		COmElementDesc( const int x, const int y, const float z, const unsigned int color )
 			: m_x( x ), m_y( y ), m_z( z ), m_color( color ) {}
 		~COmElementDesc( ) {}
 

@@ -135,18 +135,6 @@ namespace xtozero
 		}
 	}
 
-	float CRasterizer::GetIntersectXpos( int minY, int maxY, int scanlineY, float minX, float gradient ) const
-	{
-		if ( gradient > 0 )
-		{
-			return minX + (gradient * (scanlineY - minY));
-		}
-		else
-		{
-			return minX + (gradient * (scanlineY - maxY));
-		}
-	}
-
 	void CRasterizer::ProcessScanline( int scanline, unsigned int facecolor )//정점 보간하면 컬러 넘겨주지 않을 예정...
 	{
 		std::vector<std::pair<int, float>> horizontalLine;
@@ -255,6 +243,18 @@ namespace xtozero
 		}
 	}
 
+	float CRasterizer::GetIntersectXpos( int minY, int maxY, int scanlineY, float minX, float gradient ) const
+	{
+		if ( gradient > 0 )
+		{
+			return minX + (gradient * (scanlineY - minY));
+		}
+		else
+		{
+			return minX + (gradient * (scanlineY - maxY));
+		}
+	}
+
 	const std::vector<CPsElementDesc>& CRasterizer::Process( CRsElementDesc& rsInput )
 	{
 		//여기에서 메시내부의 픽셀을 계산
@@ -304,7 +304,7 @@ namespace xtozero
 		return m_outputRS;
 	}
 
-	const std::vector<CPsElementDesc>& CRasterizer::ProcessParallel( CRsElementDesc& rsInput )
+	const std::vector<CPsElementDesc>& CRasterizer::ProcessParallel( CRsElementDesc& rsInput, CXtzThreadPool* threadPool )
 	{
 		m_outputRS.clear( );
 
@@ -322,10 +322,257 @@ namespace xtozero
 
 		for ( unsigned int i = 0; i < rsInput.m_faces.size( ); ++i )
 		{
-			
+			RsThreadArg* pRsArg = new RsThreadArg;
+
+			pRsArg->pRs = this;
+			pRsArg->index = i;
+			pRsArg->pRsElementDesc = &rsInput;
+
+			threadPool->AddWork( rsThreadWork, (LPVOID)pRsArg );
 		}
 
+		threadPool->Run();
+
 		return m_outputRS;
+	}
+
+	void CRasterizer::CreateEdgeTableParallel( const CRsElementDesc& rsInput, unsigned int faceNumber, std::vector<Edge>& edgeTable )
+	{
+		if ( faceNumber >= rsInput.m_faces.size( ) )
+		{
+			return;
+		}
+		//To Do : EdgeTable을 만든다.
+
+		int minY = 0;
+		int maxY = 0;
+		float minX = 0.0f;
+		float maxX = 0.0f;
+		float startZ = 0.0f;
+		float endZ = 0.0f;
+		float gradient = 0.0f;
+		float dx = 0.0f;
+		float dy = 0.0f;
+		const std::vector<int>& faces = rsInput.m_faces[faceNumber];
+
+		int nfaces = faces.size( );
+		for ( int i = 0; i < nfaces; ++i )
+		{
+			if ( (i + 1) == nfaces )
+			{
+				//선분이 성립 안 됨.
+				//Do Nothing
+				break;
+			}
+			else
+			{
+				const Vector4& start = rsInput.m_vertices[faces.at( i )];
+				const Vector4& end = rsInput.m_vertices[faces.at( i + 1 )];
+
+				//기울기를 구함
+				dy = end.Y - start.Y;
+				dx = end.X - start.X;
+
+				if ( -1.0 < dy && dy < 1.0 ) //dy가 0.2와 같은 형태로 나온다면 기울기가 큰폭으로 늘어난다.
+				{
+					gradient = 0.0f;
+				}
+				else
+				{
+					gradient = dx / dy;
+				}
+
+				//minY, minX를 구함
+				maxY = static_cast<int>(end.Y);
+				minY = static_cast<int>(start.Y);
+
+				if ( start.Y > end.Y )
+				{
+					maxY = static_cast<int>(start.Y);
+					minY = static_cast<int>(end.Y);
+				}
+
+				minX = start.X;
+				maxX = end.X;
+				startZ = start.Z;
+				endZ = end.Z;
+				if ( minX > maxX )
+				{
+					minX = end.X;
+					maxX = start.X;
+					startZ = end.Z;
+					endZ = start.Z;
+				}
+
+				//edgeTable에 삽입
+
+				edgeTable.emplace_back(
+					minY, maxY,
+					minX, maxX,
+					startZ, endZ, gradient );
+			}
+		}
+		//edgeTable을 minY로 정렬
+		std::sort( edgeTable.begin( ), edgeTable.end( ),
+			[]( const Edge& lhs, const Edge& rhs ) -> bool
+		{
+			return lhs.m_minY < rhs.m_minY;
+		} );
+	}
+
+	void CRasterizer::UpdateActiveEdgeTableParallel( const int scanline, std::vector<Edge>& edgeTable, std::vector<Edge>& activeEdgeTable )
+	{
+		//AET 에서 사용하지 않는 Edge제거
+		for ( std::vector<Edge>::iterator& iter = activeEdgeTable.begin( ); iter != activeEdgeTable.end( ); )
+		{
+			Edge& edge = *iter;
+			if ( edge.m_maxY < scanline )
+			{
+				iter = activeEdgeTable.erase( iter );
+			}
+			else
+			{
+				++iter;
+			}
+		}
+
+		while ( true )
+		{
+			if ( edgeTable.empty( ) )
+			{
+				return;
+			}
+			else
+			{
+				if ( edgeTable.begin( )->m_minY < scanline )
+				{
+					activeEdgeTable.emplace_back( *edgeTable.begin( ) );
+					edgeTable.erase( edgeTable.begin( ) );
+				}
+				else
+				{
+					return;
+				}
+			}
+		}
+
+		//minX로 정렬
+		if ( activeEdgeTable.size( ) > 1 )
+		{
+			std::sort( activeEdgeTable.begin( ), activeEdgeTable.end( ),
+				[]( const Edge& lhs, const Edge& rhs )->bool
+			{
+				return lhs.m_minX < rhs.m_minX;
+			} );
+		}
+	}
+
+	void CRasterizer::ProcessScanlineParallel( int scanline, unsigned int facecolor, std::vector<Edge>& activeEdgeTable, std::vector<CPsElementDesc>& outputRS )//정점 보간하면 컬러 넘겨주지 않을 예정...
+	{
+		std::vector<std::pair<int, float>> horizontalLine;
+		horizontalLine.reserve( activeEdgeTable.size( ) );
+
+		//수평선을 그릴 구간을 지정
+
+		float intersectX = 0;
+
+		for ( std::vector<Edge>::iterator& iter = activeEdgeTable.begin( ); iter != activeEdgeTable.end( ); ++iter )
+		{
+			Edge& edge = *iter;
+			if ( edge.m_maxY == edge.m_minY ) // 수평한 선분은 제외
+			{
+
+			}
+			else
+			{
+				intersectX = GetIntersectXpos(
+					edge.m_minY, edge.m_maxY, scanline, edge.m_minX, edge.m_gradient
+					);
+
+				// y축에 대한 기울기는 x축에 대한 정밀도가 떨어진다.
+				// 따라서 구한 교차점이 maxX 보다 크면 maxX로 강제한다.
+				if ( intersectX > edge.m_maxX )
+				{
+					intersectX = edge.m_maxX;
+				}
+
+				float lerpRatio = 1.0f;
+				if ( (edge.m_maxX - edge.m_minX) == 0 )
+				{
+					//Do Nothing
+				}
+				else
+				{
+					lerpRatio = (intersectX - edge.m_minX) / (edge.m_maxX - edge.m_minX);
+				}
+
+				float z = Lerp( edge.m_startZ, edge.m_endZ, lerpRatio );
+
+				horizontalLine.emplace_back( ceilf( intersectX ), z );
+			}
+		}
+
+		int startX;
+		int endX;
+		float startZ;
+		float endZ;
+		for ( std::vector<std::pair<int, float>>::iterator& iter = horizontalLine.begin( ); iter != horizontalLine.end( ); iter += 2 )
+		{
+			std::pair<int, float>& posXZ = *iter;
+
+			if ( (iter + 1) == horizontalLine.end( ) )
+			{
+				outputRS.emplace_back( posXZ.first, scanline, posXZ.second, facecolor );
+				break;
+			}
+
+			std::pair<int, float>& posNextXZ = *(iter + 1);
+
+			startX = posXZ.first;
+			endX = posNextXZ.first;
+			startZ = posXZ.second;
+			endZ = posNextXZ.second;
+			if ( startX > endX )
+			{
+				startX = posNextXZ.first;
+				endX = posXZ.first;
+				startZ = posNextXZ.second;
+				endZ = posXZ.second;
+			}
+
+			if ( startX < m_viewport.m_left )
+			{
+				startX = m_viewport.m_left;
+			}
+
+			if ( endX >= m_viewport.m_right )
+			{
+				endX = m_viewport.m_right - 1;
+			}
+
+			for ( int i = startX; i <= endX; ++i )
+			{
+				float lerpRatio = 1.0f;
+				if ( endX == startX )
+				{
+					//Do Nothing
+				}
+				else
+				{
+					lerpRatio = static_cast<float>(i - startX) / (endX - startX);
+				}
+				float z = Lerp( startZ, endZ, lerpRatio );
+
+				if ( z > 1.0f || z < 0.0f )
+				{
+
+				}
+				else
+				{
+					outputRS.emplace_back( i, scanline, z, facecolor );
+				}
+			}
+		}
 	}
 
 	void CRasterizer::SetViewPort( int left, int top, int right, int bottom )

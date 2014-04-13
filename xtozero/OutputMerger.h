@@ -18,11 +18,11 @@ namespace xtozero
 		COutputMerger();
 		~COutputMerger();
 
-		void CreateDepthBuffer( const int& width, const int& height );
+		void CreateDepthBuffer( const int width, const int height );
 		void ClearDepthBuffer( );
 		void SetFrameBuffer( void* pbuffer, int dpp, int width, int height );
 
-		bool ProcessDepthTest( const int& x, const int& y, const float& depth );
+		bool ProcessDepthTest( const int x, const int y, const float depth );
 		void Process( const std::vector<COmElementDesc>& omInput );
 	};
 }
