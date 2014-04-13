@@ -9,8 +9,8 @@
 #include "random.h"
 #include "concommand.h"
 
-#include <list>
 
+#define USE_SSE_OPTIMZATION
 
 //#define EARLY_Z_CULLING
 
@@ -321,6 +321,10 @@ namespace kih
 		std::vector<unsigned short> validEdgeIndices;
 		validEdgeIndices.reserve( numVerticesPerPrimitive );
 
+		// active edge table
+		std::vector<ActiveEdgeTableElement> aet;
+		aet.reserve( 8 );
+
 		// Build an edge table by traversing each primitive in vertices,
 		// and draw each primitive.
 		size_t numPrimitives = numVertices / numVerticesPerPrimitive;
@@ -340,7 +344,7 @@ namespace kih
 
 			// This enables code to skip uncovered scanelines of the primitive.
 			// We only interest scanlines from min to max.
-			unsigned short minScanline = 0;
+			unsigned short minScanline = 0xFFFF;
 			unsigned short maxScanline = 0;
 
 			// for each vertex
@@ -372,11 +376,11 @@ namespace kih
 				float slope = ( dy == 0.0f ) ? 0.0f : ( dx / dy );
 
 				// Select start and end scanlines with Y-axis clipping.
-				unsigned short startY = static_cast<unsigned short>( Ceil( yMin ) );
+				unsigned short startY = static_cast<unsigned short>( SSE::Ceil( yMin ) );
 				startY = Clamp<unsigned short>( startY, 0, height - 1 );
 				minScanline = Min( minScanline, startY );
 
-				unsigned short endY = static_cast<unsigned short>( Ceil( yMax ) );
+				unsigned short endY = static_cast<unsigned short>( SSE::Ceil( yMax ) );
 				endY = Clamp<unsigned short>( endY, startY, height - 1 );
 				maxScanline = Max( maxScanline, endY );
 
@@ -389,9 +393,11 @@ namespace kih
 				++v1Index;
 			}
 
-			GatherPixelsBeingDrawnFromScanlines( outputStream, minScanline, maxScanline, width, depthBuffering );
+			GatherPixelsBeingDrawnFromScanlines( outputStream, aet, minScanline, maxScanline, width, depthBuffering );			
 
 			// Clear the current edge table.
+			aet.clear();
+
 			size_t size = validEdgeIndices.size();
 			for ( size_t i = 0; i < size; ++i )
 			{
@@ -403,18 +409,12 @@ namespace kih
 		}
 	}
 
-	void Rasterizer::GatherPixelsBeingDrawnFromScanlines( std::shared_ptr<RasterizerOutputStream> outputStream, unsigned short minScanline, unsigned short maxScanline, unsigned short width, DepthBuffering& depthBuffering )
+	void Rasterizer::GatherPixelsBeingDrawnFromScanlines( std::shared_ptr<RasterizerOutputStream> outputStream, std::vector<ActiveEdgeTableElement>& aet, unsigned short minScanline, unsigned short maxScanline, unsigned short width, DepthBuffering& depthBuffering )
 	{
 		Assert( outputStream );
 		Assert( GetContext() );
-		Assert( minScanline >= 0 && minScanline < maxScanline );
+		Assert( minScanline >= 0 && minScanline <= maxScanline );
 		Assert( maxScanline < m_edgeTable.size() );
-
-		// FIXME: test code
-		Color32 color( 255, 255, 255, 255 );
-
-		// active edge table
-		std::list<ActiveEdgeTableElement> aet;
 
 		// for each scanline
 		for ( unsigned short y = minScanline; y < maxScanline; ++y )
@@ -428,19 +428,21 @@ namespace kih
 			for ( auto iter = aet.begin(); iter != aet.end(); ++iter )
 			{
 				// First, select left (=current) and right (=next) edge elements.
-				ActiveEdgeTableElement& elemLeft = *iter;
+				ActiveEdgeTableElement& aetLeft = *iter;
+				const EdgeTableElement& etLeft = *aetLeft.ET;
 				if ( ++iter == aet.end() )
 				{
-					elemLeft.CurrentX += elemLeft.ET.Slope;
+					aetLeft.CurrentX += etLeft.Slope;
 					break;
 				}
-				ActiveEdgeTableElement& elemRight = *iter;
+				ActiveEdgeTableElement& aetRight = *iter;
+				const EdgeTableElement& etRight = *aetRight.ET;
 
 				// Approximate intersection pixels betweeen edges on the scanline.
-				if ( elemLeft.CurrentX != elemRight.CurrentX )
+				if ( aetLeft.CurrentX != aetRight.CurrentX )
 				{
-					unsigned short xLeft = static_cast<unsigned short>( Round( elemLeft.CurrentX ) );
-					unsigned short xRight = static_cast<unsigned short>( Round( elemRight.CurrentX ) );
+					unsigned short xLeft = static_cast<unsigned short>( SSE::Round( aetLeft.CurrentX ) );
+					unsigned short xRight = static_cast<unsigned short>( SSE::Round( aetRight.CurrentX ) );
 
 					// clipping on RT
 					xLeft = Max<unsigned short>( xLeft, 0 );
@@ -449,17 +451,17 @@ namespace kih
 					if ( xLeft != xRight )
 					{
 						// Compute lerp ratio for the left-end pixel and the right-end pixel.
-						float lerpRatioLeft = ( elemLeft.CurrentX - elemLeft.ET.XMin ) / max( elemLeft.ET.XMax - elemLeft.ET.XMin, FLT_EPSILON );
-						float lerpRatioRight = ( elemRight.CurrentX - elemRight.ET.XMin ) / max( elemRight.ET.XMax - elemRight.ET.XMin, FLT_EPSILON );
+						float lerpRatioLeft = ( aetLeft.CurrentX - etLeft.XMin ) / max( etLeft.XMax - etLeft.XMin, FLT_EPSILON );
+						float lerpRatioRight = ( aetRight.CurrentX - etRight.XMin ) / max( etRight.XMax - etRight.XMin, FLT_EPSILON );
 
 						// Lerp depth values of L and R between their own edges.
-						float depthLeft = Lerp( elemLeft.ET.ZStart, elemLeft.ET.ZEnd, lerpRatioLeft );
-						float depthRight = Lerp( elemRight.ET.ZStart, elemRight.ET.ZEnd, lerpRatioRight );
+						float depthLeft = Lerp( etLeft.ZStart, etLeft.ZEnd, lerpRatioLeft );
+						float depthRight = Lerp( etRight.ZStart, etRight.ZEnd, lerpRatioRight );
 
 						// TODO: other lerp vars...
 
 						// an incremetal approach to lerp depth
-						float depthRatioFactor = 1.0f / ( elemRight.CurrentX - elemLeft.CurrentX );
+						float depthRatioFactor = 1.0f / ( aetRight.CurrentX - aetLeft.CurrentX );
 						float ddxDepth = ( depthRight - depthLeft ) * depthRatioFactor;
 						float interpolatedDepth = depthLeft;
 
@@ -482,7 +484,7 @@ namespace kih
 							}
 #endif
 
-							outputStream->Push( x, y, interpolatedDepth, color );
+							outputStream->Push( x, y, interpolatedDepth );
 
 							// Update the next depth value incrementally.
 							interpolatedDepth += ddxDepth;
@@ -491,22 +493,24 @@ namespace kih
 				}
 
 				// Update the next position incrementally.
-				elemLeft.CurrentX += elemLeft.ET.Slope;
-				elemRight.CurrentX += elemRight.ET.Slope;				
+				aetLeft.CurrentX += etLeft.Slope;
+				aetRight.CurrentX += etRight.Slope;				
 			}
 		}
 	}
 
-	bool Rasterizer::UpdateActiveEdgeTable( std::list<ActiveEdgeTableElement>& aet, unsigned short scanline ) const
+	bool Rasterizer::UpdateActiveEdgeTable( std::vector<ActiveEdgeTableElement>& aet, unsigned short scanline ) const
 	{
 		Assert( scanline >= 0 && scanline < m_edgeTable.size() );
+
+		float fScanline = static_cast<float>( scanline );
 
 		// Find outside elements in the AET and remove them.
 		auto iter = aet.begin();
 		while ( iter != aet.end() )
 		{
 			const ActiveEdgeTableElement& elem = *iter;
-			if ( scanline >= elem.ET.YMax )
+			if ( fScanline >= elem.ET->YMax )
 			{
 				iter = aet.erase( iter );
 			}
@@ -522,7 +526,7 @@ namespace kih
 		for ( size_t i = 0; i < elemSize; ++i )
 		{
 			const EdgeTableElement& elem = elemList[i];
-			if ( scanline < elem.YMax )
+			if ( fScanline < elem.YMax )
 			{
 				aet.emplace_back( elem );
 			}
@@ -537,22 +541,22 @@ namespace kih
 		// Sort AET elements from left to right.	
 		if ( aet.size() > 1 )
 		{
-			// std::list::sort() is very very slow. :(
+			// std::sort() is very very slow. :(
 			// So, if the size of AET is only two,
 			// we reverse AET where node0 > node1 instead of sort().
 			// This optimization is meaningful because a triangle mostly haves two edges on a scanline.
 			if ( aet.size() == 2 )
 			{
-				const auto& node0 = aet.front();
-				const auto& node1 = aet.back();
+				auto& node0 = aet[0];
+				auto& node1 = aet[1];
 				if ( node0.CurrentX > node1.CurrentX )
 				{
-					aet.reverse();
+					Swap( node0, node1 );
 				}
 			}
 			else
 			{
-				aet.sort();
+				std::sort( aet.begin(), aet.end() );
 			}
 		}
 
@@ -570,15 +574,31 @@ namespace kih
 		float factorX = width * 0.5f;
 		float factorY = height * 0.5f;
 
+#ifdef USE_SSE_OPTIMZATION
+		SSE::Vector4SSE toViewportMul = SSE::MakeVector4SSE( factorX, -factorY, 0.5f, 1.0f );
+		SSE::Vector4SSE toViewportAdd = SSE::MakeVector4SSE( factorX, factorY, 0.5f, 0.0f );
+#endif
+
 		size_t numVertices = inputStream->Size();
 		for ( size_t v = 0; v < numVertices; ++v )
 		{
 			auto& data = inputStream->GetData( v );
 
 			// perspective division
+#ifdef USE_SSE_OPTIMZATION
+			SSE::Vector4SSE position = SSE::MakeVector4SSE_Unaligned( data.Position.Value );
+			SSE::Vector4SSE divider = SSE::MakeVector4SSE( data.Position.W, data.Position.W, data.Position.W, data.Position.W );
+			position = SSE::Vector4SSE_Divide( position, divider );
+#else
 			data.Position /= data.Position.W;
+#endif
 
 			// NDC -> viewport
+#ifdef USE_SSE_OPTIMZATION
+			position = SSE::Vector4SSE_Multiply( position, toViewportMul );
+			position = SSE::Vector4SSE_Add( position, toViewportAdd );
+			SSE::Vector4SSE_ToFloatArray_Unaligned( data.Position.Value, position );
+#else
 			data.Position.X *= factorX;
 			data.Position.X += factorX;	// + x
 
@@ -588,12 +608,7 @@ namespace kih
 			// [-1, 1] to [0, 1]
 			data.Position.Z *= 0.5f;
 			data.Position.Z += 0.5f;
-
-			//printf( "data: %.2f %.2f %.2f\n", data.Position.X, data.Position.Y, data.Position.Z );
-			//if ( (v + 1) % 3 == 0 )
-			//{
-			//	printf( "\n" );
-			//}
+#endif
 		}	
 	}
 		
@@ -603,13 +618,18 @@ namespace kih
 	std::shared_ptr<PixelShaderOutputStream> PixelShader::Process( const std::shared_ptr<PixelShaderInputStream>& inputStream )
 	{
 		Assert( inputStream );
-		
+
 		m_outputStream->Clear();
 
 		size_t inputStreamSize = inputStream->Size();
 		if ( inputStreamSize <= 0 )
 		{
 			return m_outputStream;
+		}
+
+		if ( m_outputStream->Capacity() < inputStreamSize )
+		{
+			m_outputStream->Reserve( inputStreamSize );
 		}
 
 #ifdef BYPASS_PIXEL_SHADING
@@ -624,19 +644,13 @@ namespace kih
 		for ( size_t i = 0; i < inputStreamSize; ++i )
 		{
 			auto& fragment = inputStream->GetData( i );
-
-			//Color32 color = fragment.Color;			
-
+			
 			// TODO: pixel shading
 			//
 
-			// update
-			fragment.Color = color;
+			m_outputStream->Push( fragment, color );
 		}
 #endif
-
-		// Move stream memory from input to output for performance.
-		m_outputStream->MoveFrom( std::move( *inputStream.get() ) );
 
 		return m_outputStream;
 	}

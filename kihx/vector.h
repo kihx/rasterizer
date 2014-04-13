@@ -357,6 +357,7 @@ namespace kih
 	}
 }
 
+
 using kih::Vector3;
 using kih::Vector4;
 

@@ -98,7 +98,7 @@ namespace kih
 			return;
 		}
 
-		m_int = Trunc( value );
+		m_int = SSE::Trunc( value );
 		m_float = value;
 		m_value = std::to_string( value );
 		Call();

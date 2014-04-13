@@ -57,9 +57,36 @@ namespace kih
 	};
 	
 	/* struct FragmentData
-		This FragmentData is used for both a pixel processor and the output merger.
 	*/
 	struct FragmentData
+	{
+		// x and y coordinates of a pixel
+		unsigned short PX;
+		unsigned short PY;
+		
+		// z of a pixel
+		float Depth;
+
+		FragmentData() :
+			PX( 0 ),
+			PY( 0 ),
+			Depth( 1.0f ) // farthest
+		{
+		}
+
+		FragmentData( unsigned short px, unsigned short py, float Depth ) :
+			PX( px ),
+			PY( py ),
+			Depth( Depth )
+		{
+		}
+
+		FragmentData( const FragmentData& data ) = default;
+	};
+
+	/* struct PixelData
+	*/
+	struct PixelData
 	{
 		// x and y coordinates of a pixel
 		unsigned short PX;
@@ -70,22 +97,22 @@ namespace kih
 		
 		Color32 Color;
 
-		FragmentData() :
+		PixelData() :
 			PX( 0 ),
 			PY( 0 ),
 			Depth( 1.0f ) // farthest
 		{
 		}
 
-		FragmentData( unsigned short px, unsigned short py, float Depth, const Color32& color ) :
-			PX( px ),
-			PY( py ),
-			Depth( Depth ),
+		PixelData( const FragmentData& fragment, const Color32& color ) :
+			PX( fragment.PX ),
+			PY( fragment.PY ),
+			Depth( fragment.Depth ),
 			Color( color )
 		{
 		}
 
-		FragmentData( const FragmentData& data ) = default;
+		PixelData( const PixelData& data ) = default;
 	};
 
 
@@ -162,11 +189,7 @@ namespace kih
 
 		void Merge( const BaseInputOutputStream& src )
 		{
-			if ( src.Size() <= 0 )
-			{
-				return;
-			}
-
+			Assert( src.Size() > 0 );
 			std::copy( src.m_streamSource.begin(), src.m_streamSource.end(), std::back_inserter( m_streamSource ) );
 		}
 		
@@ -246,7 +269,7 @@ namespace kih
 
 	/* class OutputMergerInputStream
 	*/
-	class OutputMergerInputStream : public BaseInputOutputStream<FragmentData>
+	class OutputMergerInputStream : public BaseInputOutputStream<PixelData>
 	{
 	public:
 		OutputMergerInputStream()
@@ -260,7 +283,7 @@ namespace kih
 			if ( size > 0 )
 			{
 				clone->Resize( size );
-				memcpy( &clone->GetData( 0 ), &GetData( 0 ), sizeof( FragmentData ) * size );
+				memcpy( &clone->GetData( 0 ), &GetData( 0 ), sizeof( PixelData ) * size );
 			}
 			return clone;
 		}
@@ -274,7 +297,7 @@ namespace kih
 		because the output merger directly write data on render targets and a depth-stencil buffer.
 		Don't push and handle any data if possible.
 	*/
-	class OutputMergerOutputStream : public BaseInputOutputStream<FragmentData>
+	class OutputMergerOutputStream : public BaseInputOutputStream<PixelData>
 	{
 	public:
 		OutputMergerOutputStream()

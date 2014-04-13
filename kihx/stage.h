@@ -205,35 +205,28 @@ namespace kih
 			float ZStart;
 			float ZEnd;
 
-			//const Color32& ColorL;
-			//const Color32& ColorR;
-
 			EdgeTableElement() = delete;
 
-			explicit EdgeTableElement( float yMax, float xMin, float xMax, float slope, float zStart, float zEnd /*, const Color32& colorL, const Color32& colorR*/ ) :
+			explicit EdgeTableElement( float yMax, float xMin, float xMax, float slope, float zStart, float zEnd ) :
 				YMax( yMax ),
 				XMin( xMin ),
 				XMax( xMax ),
 				Slope( slope ),
 				ZStart( zStart ),
-				ZEnd( zEnd )/*,
-				ColorL( colorL ),
-				ColorR( colorR )*/
+				ZEnd( zEnd )
 			{
 			}
 		};
 
 		struct ActiveEdgeTableElement
 		{
-			NONCOPYABLE_STRUCT( ActiveEdgeTableElement );
-
-			const EdgeTableElement& ET;
+			const EdgeTableElement* ET;
 			float CurrentX;
 
 			ActiveEdgeTableElement() = delete;
 
 			explicit ActiveEdgeTableElement( const EdgeTableElement& etElem ) :
-				ET( etElem ),
+				ET( &etElem ),
 				CurrentX( etElem.Slope > 0.0f ? etElem.XMin : etElem.XMax )
 			{
 			}
@@ -247,8 +240,8 @@ namespace kih
 
 		// scanline conversion
 		void DoScanlineConversion( const std::shared_ptr<RasterizerInputStream>& inputStream, std::shared_ptr<RasterizerOutputStream> outputStream, unsigned short width, unsigned short height );
-		void GatherPixelsBeingDrawnFromScanlines( std::shared_ptr<RasterizerOutputStream> outputStream, unsigned short minScanline, unsigned short maxScanline, unsigned short width, DepthBuffering& depthBufferingParam );
-		bool UpdateActiveEdgeTable( std::list<ActiveEdgeTableElement>& aet, unsigned short scanline ) const;
+		void GatherPixelsBeingDrawnFromScanlines( std::shared_ptr<RasterizerOutputStream> outputStream, std::vector<ActiveEdgeTableElement>& aet, unsigned short minScanline, unsigned short maxScanline, unsigned short width, DepthBuffering& depthBufferingParam );
+		bool UpdateActiveEdgeTable( std::vector<ActiveEdgeTableElement>& aet, unsigned short scanline ) const;
 
 		// transform
 		void TransformViewport( const std::shared_ptr<RasterizerInputStream>& inputStream, unsigned short width, unsigned short height ) const;

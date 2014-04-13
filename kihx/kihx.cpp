@@ -17,7 +17,11 @@
 
 // ConsoleVariables
 static ConsoleVariable grid_scene( "grid_scene", "0" );
-static ConsoleVariable context_concurrency( "context_concurrency", "1" );
+static ConsoleVariable grid_size( "grid_size", "5" );
+
+static ConsoleVariable model_scale( "model_scale", "0.3" );
+
+static ConsoleVariable concurrency( "concurrency", "1" );
 
 
 // Resources
@@ -36,7 +40,7 @@ KIHX_API void kiLoadMeshFromFile( const char* filename )
 		return;
 	}
 
-	for ( int i = 0; i < 4 * 4 - 1; ++i )
+	for ( int i = 0; i < 6 * 6 - 1; ++i )
 	{
 		auto mesh = g_meshes[0]->Clone();
 		if ( mesh )
@@ -56,22 +60,23 @@ void DrawGridScene( std::shared_ptr<RenderingContext> context, const Matrix4& ma
 
 	ConstantBuffer& cbuffer = context->GetSharedConstantBuffer();
 
-	const size_t Rows = 4;
-	size_t columns = g_meshes.size() / Rows;	
-	float rowFactor = 1.0f / Rows;
+	float scale = model_scale.Float();
+
+	size_t columns = grid_size.Int();
+	float rowFactor = 1.0f / grid_size.Int();
 	float colFactor = 1.0f / columns;
-	for ( size_t row = 0; row < Rows; ++row )
+	for ( int row = 0; row < grid_size.Int(); ++row )
 	{
 		for ( size_t col = 0; col < columns; ++col )
 		{
 			// world transform
 			Matrix4 matTrans;
-			matTrans.Translate( ( ( col + 1 ) * colFactor - colFactor * 2.5f ) * 4.0f,
-				( ( row + 1 ) * rowFactor - rowFactor * 2.5f ) * 4.0f,
-				( ( row + 1 ) * rowFactor - rowFactor * 2.5f ) * 4.0f );
+			matTrans.Translate( ( ( col + 1 ) * colFactor - colFactor * ( columns * 0.5f ) ) * columns,
+				( ( row + 1 ) * rowFactor - rowFactor * ( columns * 0.5f ) ) * columns,
+				( ( row + 1 ) * rowFactor - rowFactor * ( columns * 0.5f ) ) * columns );
 
 			Matrix4 matScale;
-			matScale.Scaling( 0.3f, 0.3f, 0.3f );
+			matScale.Scaling( scale, scale, scale );
 
 			Matrix4 matNewWorld = matScale * matWorld * matTrans;
 			cbuffer.SetMatrix4( ConstantBuffer::WorldMatrix, matNewWorld );
@@ -86,10 +91,11 @@ void DrawGridScene( std::shared_ptr<RenderingContext> context, const Matrix4& ma
 
 void DrawGridSceneInParallel( std::vector<std::shared_ptr<RenderingContext>>& contexts, const Matrix4& matWorld )
 {
-	const size_t Rows = 4;
-	size_t numMeshes = g_meshes.size();
-	size_t columns = numMeshes / Rows;
-	float rowFactor = 1.0f / Rows;
+	float scale = model_scale.Float();
+
+	size_t rows = grid_size.Int();
+	size_t columns = grid_size.Int();
+	float rowFactor = 1.0f / grid_size.Int();
 	float colFactor = 1.0f / columns;
 
 	//using FuncPreRender = std::function<void( std::shared_ptr<RenderingContext> context, const std::shared_ptr<IMesh>& mesh, size_t index )>;
@@ -99,16 +105,16 @@ void DrawGridSceneInParallel( std::vector<std::shared_ptr<RenderingContext>>& co
 			ConstantBuffer& cbuffer = context->GetSharedConstantBuffer();
 
 			// world transform
-			size_t row = kih::Clamp<size_t>( index / Rows, 0, Rows - 1 );
+			size_t row = kih::Clamp<size_t>( index / rows, 0, rows - 1 );
 			size_t col = kih::Clamp<size_t>( index - row * columns, 0, columns - 1 );
 
 			Matrix4 matTrans;
-			matTrans.Translate( ( ( col + 1 ) * colFactor - colFactor * 2.5f ) * 4.0f,
-				( ( row + 1 ) * rowFactor - rowFactor * 2.5f ) * 4.0f,
-				( ( row + 1 ) * rowFactor - rowFactor * 2.5f ) * 4.0f );
+			matTrans.Translate( ( ( col + 1 ) * colFactor - colFactor * ( columns * 0.5f ) ) * columns,
+				( ( row + 1 ) * rowFactor - rowFactor * ( columns * 0.5f ) ) * columns,
+				( ( row + 1 ) * rowFactor - rowFactor * ( columns * 0.5f ) ) * columns );
 
 			Matrix4 matScale;
-			matScale.Scaling( 0.3f, 0.3f, 0.3f );
+			matScale.Scaling( scale, scale, scale );
 
 			Matrix4 matNewWorld = matScale * matWorld * matTrans;			
 			cbuffer.SetMatrix4( ConstantBuffer::WorldMatrix, matNewWorld );
@@ -169,7 +175,7 @@ KIHX_API void kiRenderToBuffer( void* buffer, int width, int height, int bpp )
 	if ( grid_scene.Bool() )
 	{
 		// threading or not
-		if ( context_concurrency.Int() <= 1 )
+		if ( concurrency.Int() <= 1 )
 		{
 			context->SetUnorderedAccessView( nullptr );
 			DrawGridScene( context, matWorld );
@@ -178,8 +184,8 @@ KIHX_API void kiRenderToBuffer( void* buffer, int width, int height, int bpp )
 		{
 			// Copy array contexts to vector one.
 			std::vector<std::shared_ptr<RenderingContext>> concurrencyContexts;
-			concurrencyContexts.reserve( context_concurrency.Int() );			
-			for ( int i = 0; i < context_concurrency.Int(); ++i )
+			concurrencyContexts.reserve( concurrency.Int() );			
+			for ( int i = 0; i < concurrency.Int(); ++i )
 			{
 				concurrencyContexts.emplace_back( contexts[i] );
 				contexts[i]->SetUnorderedAccessView( omUAV );
