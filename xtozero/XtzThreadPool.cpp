@@ -85,8 +85,9 @@ namespace xtozero
 
 	void CXtzThreadPool::DestroyThreadPool( )
 	{
-		for ( int i = 0; i < MAX_THREAD; ++i )
+		for ( int i = 0; i < m_nThread; ++i )
 		{
+			TerminateThread( m_thread[i], 0 );
 			CloseHandle( m_threadEvent[i] );
 			CloseHandle( m_thread[i] );
 		}

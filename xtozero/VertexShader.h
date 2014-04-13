@@ -17,20 +17,13 @@ namespace xtozero
 		Matrix4 m_worldMatrix;
 		Matrix4 m_viewMatrix;
 		Matrix4 m_projectionMatrix;
-		CRITICAL_SECTION m_cs;
 	public:
-		CVertexShader() 
-		{
-			InitializeCriticalSection( &m_cs );
-		}
-		~CVertexShader() 
-		{
-			DeleteCriticalSection( &m_cs );
-		}
+		CVertexShader() {}
+		~CVertexShader() {}
 
 		CRsElementDesc& Process( const std::shared_ptr<CMesh> pMesh );
 		
-		CRsElementDesc& ProcessParallel( const std::shared_ptr<CMesh> pMesh, CXtzThreadPool* threadPool );
+		CRsElementDesc& ProcessParallel( const std::shared_ptr<CMesh> pMesh, std::shared_ptr<xtozero::CXtzThreadPool> threadPool );
 		void InsertTransformedVertex( Vector3& pos, int index );
 
 		void SetWorldMatrix( const float* mmatrix4x4 )
@@ -55,7 +48,7 @@ namespace xtozero
 		std::shared_ptr<CMesh> pMesh;
 	};
 
-	static void vsThreadWork(LPVOID arg)
+	static void VsThreadWork(LPVOID arg)
 	{
 		VsThreadArg* pVsarg = (VsThreadArg*)arg;
 		

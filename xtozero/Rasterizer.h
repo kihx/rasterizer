@@ -75,12 +75,13 @@ namespace xtozero
 			DeleteCriticalSection( &m_cs );
 		}
 		const std::vector<CPsElementDesc>& Process( CRsElementDesc& rsInput );
-		const std::vector<CPsElementDesc>& ProcessParallel( CRsElementDesc& rsInput, CXtzThreadPool* threadPool );
+		const std::vector<CPsElementDesc>& ProcessParallel( CRsElementDesc& rsInput, std::shared_ptr<xtozero::CXtzThreadPool> threadPool );
 
 		void CreateEdgeTableParallel( const CRsElementDesc& rsInput, unsigned int faceNumber, 
 			std::vector<Edge>& edgeTable );
 		void UpdateActiveEdgeTableParallel( int scanline, std::vector<Edge>& edgeTable, std::vector<Edge>& activeEdgeTable );
-		void ProcessScanlineParallel( int scanline, unsigned int facecolor, std::vector<Edge>& activeEdgeTable, std::vector<CPsElementDesc>& outputRS );
+		void ProcessScanlineParallel( int scanline, unsigned int facecolor, std::vector<Edge>& activeEdgeTable, 
+			std::vector<CPsElementDesc>& outputRS, std::vector<std::pair<int, float>>& horizontalLine );
 
 		void SetViewPort( int left, int top, int right, int bottom );
 	};
@@ -92,7 +93,7 @@ namespace xtozero
 		int index;
 	};
 
-	static void rsThreadWork( LPVOID arg )
+	static void RsThreadWork( LPVOID arg )
 	{
 		RsThreadArg* pRsArg = (RsThreadArg*)arg;
 
@@ -101,8 +102,16 @@ namespace xtozero
 		std::vector<Edge> edgeTable;
 		std::vector<Edge> activeEdgeTable;
 		std::vector<CPsElementDesc> outputRS;
+		std::vector<std::pair<int, float>> horizontalLine;
+
+		Rect& viewport = rasterizer->m_viewport;
+
+		outputRS.reserve( (viewport.m_right - viewport.m_left) );
 
 		rasterizer->CreateEdgeTableParallel( *pRsArg->pRsElementDesc, pRsArg->index, edgeTable );
+
+		activeEdgeTable.reserve( edgeTable.size() );
+		horizontalLine.reserve( edgeTable.size( ) );
 
 		int scanline = edgeTable.begin( )->m_minY;
 
@@ -112,7 +121,11 @@ namespace xtozero
 		{
 			rasterizer->UpdateActiveEdgeTableParallel( scanline , edgeTable, activeEdgeTable );
 
-			rasterizer->ProcessScanlineParallel( scanline, facecolor, activeEdgeTable, outputRS );
+			rasterizer->ProcessScanlineParallel( scanline, 
+				facecolor, 
+				activeEdgeTable, 
+				outputRS, 
+				horizontalLine );
 
 			++scanline;
 		}

@@ -29,7 +29,7 @@ namespace xtozero
 			if ( m_vsOutput.m_faces.size( ) <= key )
 			{
 				m_vsOutput.m_faces.emplace_back( );
-				m_vsOutput.m_faces[key].reserve( pMesh->m_nfaces );
+				m_vsOutput.m_faces[key].reserve( faceiter->m_indices.size( ) );
 			}
 			for ( std::vector<int>::iterator& indexiter = faceiter->m_indices.begin( ); indexiter != faceiter->m_indices.end( ); ++indexiter )
 			{
@@ -42,7 +42,7 @@ namespace xtozero
 		return m_vsOutput;
 	}
 
-	CRsElementDesc& CVertexShader::ProcessParallel( const std::shared_ptr<CMesh> pMesh, CXtzThreadPool* threadPool )
+	CRsElementDesc& CVertexShader::ProcessParallel( const std::shared_ptr<CMesh> pMesh, std::shared_ptr<xtozero::CXtzThreadPool> threadPool )
 	{
 		m_vsOutput.m_vertices.clear( );
 		m_vsOutput.m_vertices.resize( pMesh->m_nVerties );
@@ -58,7 +58,7 @@ namespace xtozero
 			pArg->matrix = wvpMatrix;
 			pArg->pMesh = pMesh;
 
-			threadPool->AddWork( vsThreadWork, (LPVOID)pArg );
+			threadPool->AddWork( VsThreadWork, (LPVOID)pArg );
 		}
 		threadPool->Run();
 

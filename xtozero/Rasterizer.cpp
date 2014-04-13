@@ -304,7 +304,7 @@ namespace xtozero
 		return m_outputRS;
 	}
 
-	const std::vector<CPsElementDesc>& CRasterizer::ProcessParallel( CRsElementDesc& rsInput, CXtzThreadPool* threadPool )
+	const std::vector<CPsElementDesc>& CRasterizer::ProcessParallel( CRsElementDesc& rsInput, std::shared_ptr<xtozero::CXtzThreadPool> threadPool )
 	{
 		m_outputRS.clear( );
 
@@ -328,7 +328,7 @@ namespace xtozero
 			pRsArg->index = i;
 			pRsArg->pRsElementDesc = &rsInput;
 
-			threadPool->AddWork( rsThreadWork, (LPVOID)pRsArg );
+			threadPool->AddWork( RsThreadWork, (LPVOID)pRsArg );
 		}
 
 		threadPool->Run();
@@ -356,6 +356,7 @@ namespace xtozero
 		const std::vector<int>& faces = rsInput.m_faces[faceNumber];
 
 		int nfaces = faces.size( );
+		edgeTable.reserve( nfaces );
 		for ( int i = 0; i < nfaces; ++i )
 		{
 			if ( (i + 1) == nfaces )
@@ -467,11 +468,14 @@ namespace xtozero
 		}
 	}
 
-	void CRasterizer::ProcessScanlineParallel( int scanline, unsigned int facecolor, std::vector<Edge>& activeEdgeTable, std::vector<CPsElementDesc>& outputRS )//정점 보간하면 컬러 넘겨주지 않을 예정...
+	void CRasterizer::ProcessScanlineParallel( int scanline, unsigned int facecolor, std::vector<Edge>& activeEdgeTable, 
+		std::vector<CPsElementDesc>& outputRS, std::vector<std::pair<int, float>>& horizontalLine )//정점 보간하면 컬러 넘겨주지 않을 예정...
 	{
-		std::vector<std::pair<int, float>> horizontalLine;
-		horizontalLine.reserve( activeEdgeTable.size( ) );
-
+		if ( activeEdgeTable.empty() )
+		{
+			return;
+		}
+		horizontalLine.clear();
 		//수평선을 그릴 구간을 지정
 
 		float intersectX = 0;

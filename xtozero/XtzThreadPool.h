@@ -6,7 +6,7 @@
 
 namespace xtozero
 {
-	const int MAX_THREAD = 8;
+	const int MAX_THREAD = 16;
 
 	typedef void( *WorkerFuntion )(LPVOID);
 
