@@ -6,6 +6,7 @@
 #include "WMesh.h"
 #include "WPolygon.h"
 #include "Utility.h"
+#include "Thread.h"
 
 #include <assert.h>
 #include <memory>
@@ -15,8 +16,11 @@
 std::shared_ptr<WModule> g_pPainter;
 std::shared_ptr<WIDrawable> g_pDrawObj;
 
+std::shared_ptr<WThreadPool> g_pool;
+
 WModule::WModule() : m_isInit(false)
 {
+	g_pool = std::make_shared<WThreadPool>(4);
 }
 
 WModule::~WModule()

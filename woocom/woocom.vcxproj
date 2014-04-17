@@ -95,9 +95,11 @@
     <ClInclude Include="WPainter.h" />
     <ClInclude Include="WPolyData.h" />
     <ClInclude Include="WPolygon.h" />
+    <ClInclude Include="Thread.h" />
     <ClInclude Include="WTrDatai.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Thread.cpp" />
     <ClCompile Include="Utility.cpp" />
     <ClCompile Include="WFileLoader.cpp" />
     <ClCompile Include="WMesh.cpp" />

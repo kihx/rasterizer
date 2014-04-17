@@ -3,6 +3,7 @@
 #include "../utility/math3d.h"
 
 #include "common.h"
+#include <mutex>
 #include <vector>
 
 class WModule
@@ -20,6 +21,8 @@ public:
 
 	void Init(void* buffer, int width, int height, int bpp);
 	bool IsInitialized();
+	int GetHeight(){ return m_screenHeight; }
+	int GetWidth(){ return m_screenWidth; }
 
 	void Render();
 	void Clear( void* pImage, int width, int height, unsigned int clearColor );
@@ -40,6 +43,7 @@ public:
 	const Matrix4& GetWorld() const;
 	const Matrix4& GetView() const;
 	const Matrix4& GetProj() const;
+
 private:
 	void DrawScanline(int lineIndex, const EdgeInfo& info );
 
@@ -55,6 +59,8 @@ private:
 	std::vector< EdgeInfo >	m_fillInfo;
 	int m_scanOffset;
 	int m_scanCount;
+
+	std::mutex m_mutex;
 
 	Matrix4	m_world;
 	Matrix4 m_view;
