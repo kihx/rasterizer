@@ -59,20 +59,25 @@ namespace kih
 			}
 		}
 
+		FORCEINLINE void SetWritable( bool writable )
+		{
+			m_depthWritable = writable;
+		}
+
 	private:
 		template<class T>
 		bool ExecuteInternal( unsigned short x, unsigned short y, T depth );
 
 	private:
+		std::shared_ptr<Texture> m_ds;
 		ColorFormat m_format;
-		DepthFunc m_depthFunc;
 		int m_width;
 		int m_stride;
 		byte* m_ptr;
-		std::shared_ptr<Texture> m_ds;
 #ifdef DEPTHFUNC_LAMDA
 		RenderingContext* m_context;
 #endif
+		DepthFunc m_depthFunc;
 		bool m_depthWritable;
 	};
 
@@ -149,8 +154,14 @@ namespace kih
 			m_faceIndex = index;
 		}
 
+		void BindFixedPipelineOutputStreamSource( std::shared_ptr<VertexShaderOutputStream> stream )
+		{
+			m_outputFixedPipeline = stream;
+		}
+
 	private:
 		size_t m_faceIndex;
+		std::shared_ptr<VertexShaderOutputStream> m_outputFixedPipeline;
 	};
 
 
@@ -169,8 +180,13 @@ namespace kih
 		virtual ~VertexShader()
 		{
 		}
-
+		
 		virtual std::shared_ptr<VertexShaderOutputStream> Process( const std::shared_ptr<VertexShaderInputStream>& inputStream );
+
+		std::shared_ptr<VertexShaderOutputStream> OutputStreamSource()
+		{
+			return m_outputStream;
+		}
 
 	private:
 		void TransformWVP( const Vector3& position, const Matrix4& wvp, Vector4& outPosition ) const;

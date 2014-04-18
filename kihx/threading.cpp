@@ -10,62 +10,77 @@ namespace kih
 {
 	char f_interlockedexchange8( volatile char* target, char value )
 	{
-		return _InterlockedExchange8( target, value );
+		return InterlockedExchange8( target, value );
 	}
 
 	short f_interlockedexchange16( volatile short* target, short value )
 	{
-		return _InterlockedExchange16( target, value );
+		return InterlockedExchange16( target, value );
 	}
 
 	int f_interlockedexchange32( volatile int* target, int value )
 	{
-		return _InterlockedExchange( ( volatile long* ) target, value );
+		return InterlockedExchange( ( volatile long* ) target, value );
 	}
 
 	__int64 f_interlockedexchange64( volatile __int64* target, __int64 value )
 	{
-		return _InterlockedExchange64( target, value );
+		return InterlockedExchange64( target, value );
 	}
 	
 	short f_interlockedincrement16( volatile short* target )
 	{
-		return _InterlockedIncrement16( target );
+		return InterlockedIncrement16( target );
 	}
 
 	int f_interlockedincrement32( volatile int* target )
 	{
-		return _InterlockedIncrement( ( volatile long* ) target );
+		return InterlockedIncrement( ( volatile long* ) target );
 	}
 
 	__int64 f_interlockedincrement64( volatile __int64* target )
 	{
-		return _InterlockedIncrement64( target );
+		return InterlockedIncrement64( target );
 	}
 
 	short f_interlockeddecrement16( volatile short* target )
 	{
-		return _InterlockedDecrement16( target );
+		return InterlockedDecrement16( target );
 	}
 
 	int f_interlockeddecrement32( volatile int* target )
 	{
-		return _InterlockedDecrement( ( volatile long* ) target );
+		return InterlockedDecrement( ( volatile long* ) target );
 	}
 
 	__int64 f_interlockeddecrement64( volatile __int64* target )
 	{
-		return _InterlockedDecrement64( target );
+		return InterlockedDecrement64( target );
 	}
 
 	int f_interlockedadd32( volatile int* target, int value )
 	{
-		return _InterlockedAdd( ( volatile long* ) target, value );
+		return InterlockedAdd( ( volatile long* ) target, value );
 	}
 
 	__int64 f_interlockedadd64( volatile __int64* target, __int64 value )
 	{
-		return _InterlockedAdd64( target, value );
+		return InterlockedAdd64( target, value );
+	}
+
+	short f_interlockedcompareexchange16( volatile short* destination, short exchange, short comparand )
+	{
+		return InterlockedCompareExchange16( destination, exchange, comparand );
+	}
+
+	int f_interlockedcompareexchange32( volatile int* destination, int exchange, int comparand )
+	{
+		return InterlockedCompareExchange( ( volatile long* ) destination, exchange, comparand );
+	}
+
+	__int64 f_interlockedcompareexchange64( volatile __int64* destination, __int64 exchange, __int64 comparand )
+	{
+		return InterlockedCompareExchange64( destination, exchange, comparand );
 	}
 
 	void* f_createevent( bool manualReset )
@@ -115,6 +130,25 @@ namespace kih
 	unsigned int f_waitforsingleobject( void* hHandle, unsigned int dwMilliseconds )
 	{
 		return WaitForSingleObject( static_cast< HANDLE >( hHandle ), dwMilliseconds );
+	}
+
+
+	/* class SpinLock
+	*/
+	void SpinLock::Lock()
+	{
+		while ( true )
+		{
+			if ( m_atom.CompareExchange( 1, 0 ) == 0 )
+			{
+				break;
+			}
+		}
+	}
+
+	void SpinLock::Unlock()
+	{
+		m_atom.Exchange( 0 );
 	}
 
 

@@ -129,6 +129,10 @@ namespace kih
 	/*
 	*/
 	void Vector3_Transform( const Vector3& vec, const Matrix4& mat, Vector4& result );
+	void Vector3_TransformSSE( const Vector3& vec, const Matrix4& mat, Vector4& result );
+
+	void Vector4_Transform( const Vector4& vec, const Matrix4& mat, Vector4& result );
+	void Vector4_TransformSSE( const Vector4& vec, const Matrix4& mat, Vector4& result );
 }
 
 using kih::Matrix4;

@@ -65,6 +65,17 @@ namespace kih
 	public:
 		explicit RenderingContext( size_t numRenderTargets );
 
+		// fixed pipeline
+		FORCEINLINE bool IsFixedPipelineMode() const
+		{
+			return m_fixedPipelineMode;
+		}
+
+		FORCEINLINE void SetFixedPipelineMode( bool mode )
+		{
+			m_fixedPipelineMode = mode;
+		}
+
 		// draw
 		void Clear( byte r, byte g, byte b, byte a, float z = 1.0f, int stencil = 0 );		
 		void Draw( const std::shared_ptr<IMesh>& mesh );
@@ -148,9 +159,9 @@ namespace kih
 	private:
 		// render stages
 		std::shared_ptr<InputAssembler> m_inputAssembler;
-		std::shared_ptr<VertexShader> m_VertexShader;
+		std::shared_ptr<VertexShader> m_vertexShader;
 		std::shared_ptr<Rasterizer> m_rasterizer;
-		std::shared_ptr<PixelShader> m_PixelShader;
+		std::shared_ptr<PixelShader> m_pixelShader;
 		std::shared_ptr<OutputMerger> m_outputMerger;
 		
 		// render target
@@ -169,6 +180,8 @@ namespace kih
 #endif
 		DepthFunc m_depthFunc;
 		bool m_depthWritable;
+
+		bool m_fixedPipelineMode;
 	};
 
 

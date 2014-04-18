@@ -81,7 +81,7 @@ namespace kih
 
 		FORCEINLINE float Divide( float f, float divider )
 		{
-			union V4SSE 
+			__declspec( align(16) ) union V4SSE 
 			{
 				__m128 m;
 				float vec[4];
@@ -91,83 +91,88 @@ namespace kih
 		}
 
 
-		/* typedef Vector4SSE
+		/* typedef XXM128
 		*/
-		typedef __m128	Vector4SSE;
+		typedef __m128	XXM128;
 
-		// Vector4SSE operators
+		// XXM128 operators
 		//
-		FORCEINLINE void Vector4SSE_ToFloatArray_Aligned( float* dst, const Vector4SSE& src )
+		FORCEINLINE void XXM128_ToFloatArray_Aligned( float* dst, const XXM128& src )
 		{
 			_mm_store_ps( dst, src );
 		}
 
-		FORCEINLINE void Vector4SSE_ToFloatArray_Unaligned( float* dst, const Vector4SSE& src )
+		FORCEINLINE void XXM128_ToFloatArray_Unaligned( float* dst, const XXM128& src )
 		{
 			_mm_storeu_ps( dst, src );
 		}
 
-		FORCEINLINE Vector4SSE MakeVector4SSE( float x, float y, float z, float w )
+		FORCEINLINE XXM128 XXM128_Load( float x )
 		{
-			return _mm_set_ps( w, z, y, x );	// little-endian?
+			return _mm_set_ps( x, x, x, x );
 		}
 
-		FORCEINLINE Vector4SSE MakeVector4SSE_Aligned( const float* value )
+		FORCEINLINE XXM128 XXM128_Load( float x, float y, float z, float w )
+		{
+			return _mm_set_ps( w, z, y, x );	// little-endian
+		}
+
+		FORCEINLINE XXM128 XXM128_LoadAligned( const float* value )
 		{
 			return _mm_load_ps( value );
 		}
 
-		FORCEINLINE Vector4SSE MakeVector4SSE_Unaligned( const float* value )
+		FORCEINLINE XXM128 XXM128_LoadUnaligned( const float* value )
 		{
 			return _mm_loadu_ps( value );
 		}
 
-		FORCEINLINE Vector4SSE Vector4SSE_Negate( const Vector4SSE& v )
+		FORCEINLINE XXM128 XXM128_Negate( const XXM128& v )
 		{
 			return _mm_sub_ps( _mm_setzero_ps(), v );
 		}
 
-		FORCEINLINE Vector4SSE Vector4SSE_Add( const Vector4SSE& v1, const Vector4SSE& v2 )
+		FORCEINLINE XXM128 XXM128_Add( const XXM128& v1, const XXM128& v2 )
 		{
 			return _mm_add_ps( v1, v2 );
 		}
 
-		FORCEINLINE Vector4SSE Vector4SSE_Subtract( const Vector4SSE& v1, const Vector4SSE& v2 )
+		FORCEINLINE XXM128 XXM128_Subtract( const XXM128& v1, const XXM128& v2 )
 		{
 			return _mm_sub_ps( v1, v2 );
 		}
 
-		FORCEINLINE Vector4SSE Vector4SSE_Multiply( const Vector4SSE& v1, const Vector4SSE& v2 )
+		FORCEINLINE XXM128 XXM128_Multiply( const XXM128& v1, const XXM128& v2 )
 		{
 			return _mm_mul_ps( v1, v2 );
 		}
 
-		FORCEINLINE Vector4SSE Vector4SSE_MultiplyAdd( const Vector4SSE& v1, const Vector4SSE& v2, const Vector4SSE& adder )
+		FORCEINLINE XXM128 XXM128_MultiplyAdd( const XXM128& v1, const XXM128& v2, const XXM128& adder )
 		{
 			return _mm_add_ps( _mm_mul_ps( v1, v2 ), adder );
 		}
 
-		FORCEINLINE Vector4SSE Vector4SSE_Divide( const Vector4SSE& v1, const Vector4SSE& v2 )
+		FORCEINLINE XXM128 XXM128_Divide( const XXM128& v1, const XXM128& v2 )
 		{
 			return _mm_div_ps( v1, v2 );
 		}
 
-		FORCEINLINE Vector4SSE Vector4SSE_Reciprocal( const Vector4SSE& v )
+		FORCEINLINE XXM128 XXM128_Reciprocal( const XXM128& v )
 		{
 			return _mm_rcp_ps( v );
 		}
 
-		FORCEINLINE Vector4SSE Vector4SSE_ReciprocalSqrt( const Vector4SSE& v )
+		FORCEINLINE XXM128 XXM128_ReciprocalSqrt( const XXM128& v )
 		{
 			return _mm_rsqrt_ps( v );
 		}
 
-		FORCEINLINE Vector4SSE Vector4SSE_Min( const Vector4SSE& v1, const Vector4SSE& v2 )
+		FORCEINLINE XXM128 XXM128_Min( const XXM128& v1, const XXM128& v2 )
 		{
 			return _mm_min_ps( v1, v2 );
 		}
 
-		FORCEINLINE Vector4SSE Vector4SSE_Max( const Vector4SSE& v1, const Vector4SSE& v2 )
+		FORCEINLINE XXM128 XXM128_Max( const XXM128& v1, const XXM128& v2 )
 		{
 			return _mm_max_ps( v1, v2 );
 		}

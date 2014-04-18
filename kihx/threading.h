@@ -36,6 +36,10 @@ namespace kih
 
 	int f_interlockedadd32( volatile int* target, int value );
 	__int64 f_interlockedadd64( volatile __int64* target, __int64 value );
+
+	short f_interlockedcompareexchange16( volatile short* destination, short exchange, short comparand );
+	int f_interlockedcompareexchange32( volatile int* destination, int exchange, int comparand );
+	__int64 f_interlockedcompareexchange64( volatile __int64* destination, __int64 exchange, __int64 comparand );
 	
 	void* f_createevent( bool manualReset );
 	void f_setevent( void* handle );
@@ -69,6 +73,10 @@ namespace kih
 		static FORCEINLINE T f_interlockedexchange( volatile T* target, T value )\
 		{\
 			return f_interlockedexchange##Size( target, value );\
+		}\
+		static FORCEINLINE T f_interlockedcompareexchange( volatile T* target, T value, T comparand )\
+		{\
+		return f_interlockedcompareexchange##Size( target, value, comparand );\
 		}\
 		static FORCEINLINE T f_interlockedincrement( volatile T* target )\
 		{\
@@ -182,6 +190,11 @@ namespace kih
 		FORCEINLINE void Exchange( T value ) volatile
 		{
 			interlock_func_impl<T>::f_interlockedexchange( &m_value, value );
+		}
+
+		FORCEINLINE T CompareExchange( T value, T comparand ) volatile
+		{
+			return interlock_func_impl<T>::f_interlockedcompareexchange( &m_value, value, comparand );
 		}
 
 		FORCEINLINE T operator++( )
@@ -302,6 +315,22 @@ namespace kih
 
 	private:
 		void* m_handle;
+	};
+
+	
+	/* class SpinLock
+	*/
+	class SpinLock final
+	{
+	public:
+		SpinLock() = default;
+		~SpinLock() = default;
+
+		void Lock();
+		void Unlock();
+
+	private:
+		Atomic<int> m_atom;
 	};
 
 

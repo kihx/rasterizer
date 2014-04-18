@@ -188,7 +188,7 @@ namespace kih
 
 	/* struct Vector4
 	*/
-	struct Vector4
+	_CRT_ALIGN( 16 ) struct Vector4
 	{
 		union
 		{

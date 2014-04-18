@@ -376,4 +376,58 @@ namespace kih
 		result.Z = mat.A[0][2] * vec.X + mat.A[1][2] * vec.Y + mat.A[2][2] * vec.Z + mat.A[3][2];
 		result.W = mat.A[0][3] * vec.X + mat.A[1][3] * vec.Y + mat.A[2][3] * vec.Z + mat.A[3][3];
 	}
+	
+	void Vector4_Transform( const Vector4& vec, const Matrix4& mat, Vector4& result )
+	{
+		result.X = mat.A[0][0] * vec.X + mat.A[1][0] * vec.Y + mat.A[2][0] * vec.Z + mat.A[3][0] * vec.W;
+		result.Y = mat.A[0][1] * vec.X + mat.A[1][1] * vec.Y + mat.A[2][1] * vec.Z + mat.A[3][1] * vec.W;
+		result.Z = mat.A[0][2] * vec.X + mat.A[1][2] * vec.Y + mat.A[2][2] * vec.Z + mat.A[3][2] * vec.W;
+		result.W = mat.A[0][3] * vec.X + mat.A[1][3] * vec.Y + mat.A[2][3] * vec.Z + mat.A[3][3] * vec.W;
+	}
+
+	void Vector3_TransformSSE( const Vector3& vec, const Matrix4& mat, Vector4& result )
+	{
+		SSE::XXM128 v0 = SSE::XXM128_Load( vec.X );
+		SSE::XXM128 v1 = SSE::XXM128_Load( vec.Y );
+		SSE::XXM128 v2 = SSE::XXM128_Load( vec.Z );
+
+		SSE::XXM128 r0 = SSE::XXM128_LoadUnaligned( mat.A[0] );
+		SSE::XXM128 r1 = SSE::XXM128_LoadUnaligned( mat.A[1] );
+		SSE::XXM128 r2 = SSE::XXM128_LoadUnaligned( mat.A[2] );
+		SSE::XXM128 r3 = SSE::XXM128_LoadUnaligned( mat.A[3] );
+
+		v0 = SSE::XXM128_Multiply( v0, r0 );
+		v1 = SSE::XXM128_Multiply( v1, r1 );
+		v2 = SSE::XXM128_Multiply( v2, r2 );
+
+		v0 = SSE::XXM128_Add( v0, v1 );
+		v2 = SSE::XXM128_Add( v2, r3 );
+		v0 = SSE::XXM128_Add( v0, v2 );
+
+		SSE::XXM128_ToFloatArray_Unaligned( result.Value, v0 );
+	}
+
+	void Vector4_TransformSSE( const Vector4& vec, const Matrix4& mat, Vector4& result )
+	{
+		SSE::XXM128 v0 = SSE::XXM128_Load( vec.X );
+		SSE::XXM128 v1 = SSE::XXM128_Load( vec.Y );
+		SSE::XXM128 v2 = SSE::XXM128_Load( vec.Z );
+		SSE::XXM128 v3 = SSE::XXM128_Load( 1.0f );
+
+		SSE::XXM128 r0 = SSE::XXM128_LoadUnaligned( mat.A[0] );
+		SSE::XXM128 r1 = SSE::XXM128_LoadUnaligned( mat.A[1] );
+		SSE::XXM128 r2 = SSE::XXM128_LoadUnaligned( mat.A[2] );
+		SSE::XXM128 r3 = SSE::XXM128_LoadUnaligned( mat.A[3] );
+
+		v0 = SSE::XXM128_Multiply( v0, r0 );
+		v1 = SSE::XXM128_Multiply( v1, r1 );
+		v2 = SSE::XXM128_Multiply( v2, r2 );
+		v3 = SSE::XXM128_Multiply( v3, r3 );
+
+		v0 = SSE::XXM128_Add( v0, v1 );
+		v2 = SSE::XXM128_Add( v2, v3 );
+		v0 = SSE::XXM128_Add( v0, v2 );
+
+		SSE::XXM128_ToFloatArray_Unaligned( result.Value, v0 );
+	}
 }

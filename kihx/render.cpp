@@ -27,9 +27,9 @@ namespace kih
 	*/
 	RenderingContext::RenderingContext( size_t numRenderTargets ) :
 		m_inputAssembler( std::make_shared<InputAssembler>( this ) ),
-		m_VertexShader( std::make_shared<VertexShader>( this ) ),
+		m_vertexShader( std::make_shared<VertexShader>( this ) ),
 		m_rasterizer( std::make_shared<Rasterizer>( this ) ),
-		m_PixelShader( std::make_shared<PixelShader>( this ) ),
+		m_pixelShader( std::make_shared<PixelShader>( this ) ),
 		m_outputMerger( std::make_shared<OutputMerger>( this ) ),
 		m_depthFunc( DepthFunc::None ),
 		m_depthWritable( false )
@@ -107,6 +107,7 @@ namespace kih
 			{
 				// FIXME: stencil value
 				memset( ptr, Float_ToByte( z ), width * height * bytePerPixel );
+				Unused( stencil );
 			}
 			break;
 
@@ -137,9 +138,9 @@ namespace kih
 		RenderingDevice* pDevice = RenderingDevice::GetInstance();
 		Assert( pDevice );
 		Assert( m_inputAssembler );
-		Assert( m_VertexShader );
+		Assert( m_vertexShader );
 		Assert( m_rasterizer );
-		Assert( m_PixelShader );
+		Assert( m_pixelShader );
 		Assert( m_outputMerger );
 
 		// Set a constant buffer for WVP transform.
@@ -379,17 +380,21 @@ namespace kih
 	void RenderingContext::DrawInternal( const std::shared_ptr<IMesh>& mesh, PrimitiveType primitiveType /*= PrimitiveType::Triangles */ )
 	{
 		Assert( m_inputAssembler );
-		Assert( m_VertexShader );
+		Assert( m_vertexShader );
 		Assert( m_rasterizer );
-		Assert( m_PixelShader );
+		Assert( m_pixelShader );
 		Assert( m_outputMerger );
 
 		// input assembler stage
+		if ( IsFixedPipelineMode() )
+		{
+			m_inputAssembler->BindFixedPipelineOutputStreamSource( m_vertexShader->OutputStreamSource() );
+		}
 		std::shared_ptr<VertexShaderInputStream> vpInput = m_inputAssembler->Process( mesh );
 		//printf( "\nVertexShaderInputStream Size: %d\n", vpInput->Size() );
 
 		// vertex processor stage
-		std::shared_ptr<RasterizerInputStream> raInput = m_VertexShader->Process( vpInput );
+		std::shared_ptr<RasterizerInputStream> raInput = m_vertexShader->Process( vpInput );
 		//printf( "RasterizerInputStream Size: %d\n", raInput->Size() );
 
 		// rasterizer stage
@@ -398,7 +403,7 @@ namespace kih
 		//printf( "PixelShaderInputStream Size: %d\n", ppInput->Size() );
 
 		// pixel processor stage
-		std::shared_ptr<OutputMergerInputStream> omInput = m_PixelShader->Process( ppInput );
+		std::shared_ptr<OutputMergerInputStream> omInput = m_pixelShader->Process( ppInput );
 		//printf( "OutputMergerInputStream Size: %d\n", 0 );
 		
 		// output merger stage

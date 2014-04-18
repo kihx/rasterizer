@@ -9,6 +9,8 @@
 #include <functional>
 
 
+#pragma warning( disable: 4127 )	// warning C4127: conditional expression is constant
+
 
 // macros
 //
@@ -70,6 +72,12 @@ namespace kih
 
 	// utility classes
 	//
+
+	/* Unused parameters
+	*/
+	template<class... Args> 
+	FORCEINLINE void Unused( Args&&... )
+	{}
 
 	/* struct LoopUnroll
 	*/

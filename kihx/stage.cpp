@@ -12,7 +12,7 @@
 
 #define USE_SSE_OPTIMZATION
 
-//#define EARLY_Z_CULLING
+#define EARLY_Z_CULLING
 
 //#define BYPASS_PIXEL_SHADING
 
@@ -155,7 +155,8 @@ namespace kih
 	std::shared_ptr<InputAssemblerOutputStream> InputAssembler::Process( const std::shared_ptr<IMesh>& inputStream )
 	{
 		Assert( inputStream );
-		
+		Assert( GetContext() );
+
 		m_outputStream->Clear();
 		
 		// Fill the output stream from the specified mesh.
@@ -174,9 +175,21 @@ namespace kih
 			// Convert the face geometry to an input stream of the vertex processor.
 			size_t face = m_faceIndex;
 			size_t numVertices = mesh->NumVerticesInFace( face );
-			for ( size_t vert = 0; vert < numVertices; ++vert )
+			if ( GetContext()->IsFixedPipelineMode() )
 			{
-				m_outputStream->Push( mesh->GetVertexInFaceAt( face, vert ) );
+				m_outputFixedPipeline->Clear();
+
+				for ( size_t vert = 0; vert < numVertices; ++vert )
+				{
+					m_outputFixedPipeline->Push( Vector3( mesh->GetVertexInFaceAt( face, vert ) ) );
+				}
+			}
+			else
+			{
+				for ( size_t vert = 0; vert < numVertices; ++vert )
+				{
+					m_outputStream->Push( mesh->GetVertexInFaceAt( face, vert ) );
+				}
 			}
 		}
 		else
@@ -193,12 +206,37 @@ namespace kih
 			// per mesh rendering
 			size_t numIndices = indexBuffer.Size();
 			m_outputStream->Reserve( numIndices );
-
-			// Convert the mesh geometry to an input stream of the vertex processor.
-			for ( size_t i = 0; i < numIndices; ++i )
+			
+			if ( GetContext()->IsFixedPipelineMode() )
 			{
-				unsigned short index = indexBuffer.GetIndexConst( i ) - 1;
-				m_outputStream->Push( &vertexBuffer.GetVertexConst( index ).x );
+				m_outputFixedPipeline->Clear();
+
+				// In fixed pipeline mode, transform vertices onto WVP.
+				const Matrix4& wvp = GetSharedConstantBuffer().GetMatrix4( ConstantBuffer::WVPMatrix );
+				Vector4 hPos;
+
+				for ( size_t i = 0; i < numIndices; ++i )
+				{
+					unsigned short index = indexBuffer.GetIndexConst( i ) - 1;
+					const auto& vertex = vertexBuffer.GetVertexConst( index );
+					
+					Vector3 v( vertex.x, vertex.y, vertex.z );
+#ifdef USE_SSE_OPTIMZATION
+					Vector3_TransformSSE( v, wvp, hPos );
+#else
+					Vector3_Transform( v, wvp, hPos );
+#endif
+					m_outputFixedPipeline->Push( hPos );
+				}
+			}
+			else
+			{
+				// Convert the mesh geometry to an input stream of the vertex processor.
+				for ( size_t i = 0; i < numIndices; ++i )
+				{
+					unsigned short index = indexBuffer.GetIndexConst( i ) - 1;
+					m_outputStream->Push( &vertexBuffer.GetVertexConst( index ).x );
+				}
 			}
 		}
 
@@ -214,6 +252,13 @@ namespace kih
 	std::shared_ptr<VertexShaderOutputStream> VertexShader::Process( const std::shared_ptr<VertexShaderInputStream>& inputStream )
 	{
 		Assert( inputStream );
+		Assert( GetContext() );
+
+		if ( GetContext()->IsFixedPipelineMode() )
+		{
+			return m_outputStream;
+		}
+
 
 		m_outputStream->Clear();
 
@@ -237,12 +282,12 @@ namespace kih
 			{
 				// WVP transformation
 				const Matrix4& wvp = GetSharedConstantBuffer().GetMatrix4( ConstantBuffer::WVPMatrix );
-
+				Vector4 hPos;
+				
 				for ( size_t i = 0; i < inputSize; ++i )
 				{
 					const auto& vertex = inputStream->GetData( i );
 
-					Vector4 hPos;
 					TransformWVP( vertex.Position, wvp, hPos );
 
 					m_outputStream->Push( hPos );
@@ -257,9 +302,11 @@ namespace kih
 
 	void VertexShader::TransformWVP( const Vector3& position, const Matrix4& wvp, Vector4& outPosition ) const
 	{
+#ifdef USE_SSE_OPTIMZATION
+		Vector3_TransformSSE( position, wvp, outPosition );
+#else
 		Vector3_Transform( position, wvp, outPosition );
-
-		//printf( "hpos: %.2f %.2f %.2f\n", hpos.X, hpos.Y, hpos.Z );
+#endif
 	}
 
 
@@ -306,6 +353,7 @@ namespace kih
 				
 #ifdef EARLY_Z_CULLING
 		DepthBuffering depthBuffering( GetContext() );
+		depthBuffering.SetWritable( false );	// depth-test only on the rasterizer
 #else
 		DepthBuffering depthBuffering( nullptr );
 #endif
@@ -416,6 +464,12 @@ namespace kih
 		Assert( minScanline >= 0 && minScanline <= maxScanline );
 		Assert( maxScanline < m_edgeTable.size() );
 
+#ifdef EARLY_Z_CULLING
+		// nothing
+#else
+		Unused( depthBuffering );
+#endif
+
 		// for each scanline
 		for ( unsigned short y = minScanline; y < maxScanline; ++y )
 		{
@@ -479,6 +533,8 @@ namespace kih
 							{
 								if ( !depthBuffering.Execute( x, y, interpolatedDepth ) )
 								{
+									// Update the next depth value incrementally.
+									interpolatedDepth += ddxDepth;
 									continue;
 								}
 							}
@@ -575,8 +631,8 @@ namespace kih
 		float factorY = height * 0.5f;
 
 #ifdef USE_SSE_OPTIMZATION
-		SSE::Vector4SSE toViewportMul = SSE::MakeVector4SSE( factorX, -factorY, 0.5f, 1.0f );
-		SSE::Vector4SSE toViewportAdd = SSE::MakeVector4SSE( factorX, factorY, 0.5f, 0.0f );
+		SSE::XXM128 toViewportMul = SSE::XXM128_Load( factorX, -factorY, 0.5f, 1.0f );
+		SSE::XXM128 toViewportAdd = SSE::XXM128_Load( factorX, factorY, 0.5f, 0.0f );
 #endif
 
 		size_t numVertices = inputStream->Size();
@@ -584,21 +640,21 @@ namespace kih
 		{
 			auto& data = inputStream->GetData( v );
 
-			// perspective division
 #ifdef USE_SSE_OPTIMZATION
-			SSE::Vector4SSE position = SSE::MakeVector4SSE_Unaligned( data.Position.Value );
-			SSE::Vector4SSE divider = SSE::MakeVector4SSE( data.Position.W, data.Position.W, data.Position.W, data.Position.W );
-			position = SSE::Vector4SSE_Divide( position, divider );
-#else
-			data.Position /= data.Position.W;
-#endif
+			// perspective division
+			SSE::XXM128 position = SSE::XXM128_LoadUnaligned( data.Position.Value );
+			SSE::XXM128 divider = SSE::XXM128_Load( data.Position.W );
+			position = SSE::XXM128_Divide( position, divider );
 
 			// NDC -> viewport
-#ifdef USE_SSE_OPTIMZATION
-			position = SSE::Vector4SSE_Multiply( position, toViewportMul );
-			position = SSE::Vector4SSE_Add( position, toViewportAdd );
-			SSE::Vector4SSE_ToFloatArray_Unaligned( data.Position.Value, position );
+			position = SSE::XXM128_Multiply( position, toViewportMul );
+			position = SSE::XXM128_Add( position, toViewportAdd );
+			SSE::XXM128_ToFloatArray_Unaligned( data.Position.Value, position );
 #else
+			// perspective division
+			data.Position /= data.Position.W;
+
+			// NDC -> viewport
 			data.Position.X *= factorX;
 			data.Position.X += factorX;	// + x
 
@@ -704,21 +760,14 @@ namespace kih
 		int widthRT = rt->Width();
 		int strideRT = GetBytesPerPixel( rt->Format() );
 
-#ifdef EARLY_Z_CULLING
-		// do nothing
-#else
 		DepthBuffering depthBuffering( GetContext() );
-#endif
 
 		// Now, write color on render targets and the depth stencil buffer here.
 		for ( size_t i = 0; i < inputStreamSize; ++i )
 		{
-			const auto& fragment = inputStream->GetData( i );
+			const auto& fragment = inputStream->GetDataConst( i );
 
-#ifdef EARLY_Z_CULLING
-			// do nothing
-#else
-			// depth buffering
+			// late depth buffering
 			if ( depthBuffering.IsValid() )
 			{
 				if ( !depthBuffering.Execute( fragment.PX, fragment.PY, fragment.Depth ) )
@@ -726,7 +775,6 @@ namespace kih
 					continue;
 				}
 			}
-#endif
 
 			Color32 color = fragment.Color;
 

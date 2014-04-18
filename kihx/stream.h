@@ -14,19 +14,16 @@ namespace kih
 	struct VertexShaderData
 	{		
 		Vector3 Position;		// object-space position
-		//Color32 Color;		// vertex color
 
 		VertexShaderData() = default;
 
-		VertexShaderData( const float position[3]/*, const Color32& color*/ ) :
-			Position( position )/*,
-			Color( color )*/
+		VertexShaderData( const float position[3] ) :
+			Position( position )
 		{
 		}
 
-		VertexShaderData( const Vector3& position/*, const Color32& color*/ ) :
-			Position( position )/*,
-			Color( color )*/
+		VertexShaderData( const Vector3& position ) :
+			Position( position )
 		{
 		}
 
@@ -38,13 +35,11 @@ namespace kih
 	struct RasterizerData
 	{		
 		Vector4 Position;	// wvp transformed position		
-		//Color32 Color;		// vertex color
 
 		RasterizerData() = default;
 
-		RasterizerData( const Vector3& position/*, const Color32& color*/ ) :
-			Position( position )/*,
-			Color( color )*/
+		RasterizerData( const Vector3& position ) :
+			Position( position )
 		{
 		}
 
@@ -334,7 +329,7 @@ namespace kih
 		{
 			Assert( m_inputStream );
 
-			LockGuard<Mutex> lockGuard( m_mergeMutex );
+			LockGuard<Mutex> lockGuard( m_mergeLock );
 			m_inputStream->Reserve( capacity );
 		}
 
@@ -342,7 +337,7 @@ namespace kih
 		{
 			Assert( m_inputStream );
 
-			LockGuard<Mutex> lockGuard( m_mergeMutex );
+			LockGuard<Mutex> lockGuard( m_mergeLock );
 			m_inputStream->Clear();
 		}
 
@@ -355,13 +350,13 @@ namespace kih
 				return;
 			}
 
-			LockGuard<Mutex> lockGuard( m_mergeMutex );
+			LockGuard<Mutex> lockGuard( m_mergeLock );
 			m_inputStream->Merge( *src.get() );
 		}
 
 	private:
 		std::shared_ptr<InputStream> m_inputStream;
-		Mutex m_mergeMutex;
+		Mutex m_mergeLock;
 	};
 };
 

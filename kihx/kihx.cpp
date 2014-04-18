@@ -19,7 +19,7 @@
 static ConsoleVariable grid_scene( "grid_scene", "0" );
 static ConsoleVariable grid_size( "grid_size", "5" );
 
-static ConsoleVariable model_scale( "model_scale", "0.3" );
+static ConsoleVariable model_scale( "model_scale", "0.4" );
 
 static ConsoleVariable concurrency( "concurrency", "1" );
 
@@ -140,7 +140,7 @@ KIHX_API void kiRenderToBuffer( void* buffer, int width, int height, int bpp )
 	ColorFormat colorFormat = kih::GetSuitableColorFormatFromBpp( bpp );
 	static std::shared_ptr<Texture> renderTarget = Texture::Create( width, height, colorFormat, buffer );
 	static std::shared_ptr<Texture> depthStencil = Texture::Create( width, height, ColorFormat::D32F, NULL );
-	static std::shared_ptr<UnorderedAccessView<OutputMergerInputStream>> omUAV = std::make_shared<UnorderedAccessView<OutputMergerInputStream>>( width * height );
+	static std::shared_ptr<UnorderedAccessView<OutputMergerInputStream>> omUAV = std::make_shared<UnorderedAccessView<OutputMergerInputStream>>( width * height * 2 );
 
 	// Create rendering contexts as many of Thread::HardwareConcurrency.
 	const int Concurrency = 8;	// HACK
@@ -153,6 +153,7 @@ KIHX_API void kiRenderToBuffer( void* buffer, int width, int height, int bpp )
 			{ 
 				auto context = RenderingDevice::GetInstance()->CreateRenderingContext(); 
 				context->SetViewport( 0, 0, static_cast<unsigned short>( renderTarget->Width() ), static_cast<unsigned short>( renderTarget->Height() ) );
+				context->SetFixedPipelineMode( true );
 				contexts[index++] = context;
 			} 
 		);
@@ -165,11 +166,10 @@ KIHX_API void kiRenderToBuffer( void* buffer, int width, int height, int bpp )
 	auto context = contexts[0];
 
 	context->Clear( 0, 0, 0, 255 );
+	context->SetUnorderedAccessView( nullptr );
 
 	// Draw the world.
 	const Matrix4& matWorld = RenderingDevice::GetInstance()->GetWorldMatrix();
-
-	ScopeProfile profile;
 
 	// Grid arragement
 	if ( grid_scene.Bool() )
@@ -177,7 +177,6 @@ KIHX_API void kiRenderToBuffer( void* buffer, int width, int height, int bpp )
 		// threading or not
 		if ( concurrency.Int() <= 1 )
 		{
-			context->SetUnorderedAccessView( nullptr );
 			DrawGridScene( context, matWorld );
 		}
 		else
@@ -187,8 +186,8 @@ KIHX_API void kiRenderToBuffer( void* buffer, int width, int height, int bpp )
 			concurrencyContexts.reserve( concurrency.Int() );			
 			for ( int i = 0; i < concurrency.Int(); ++i )
 			{
-				concurrencyContexts.emplace_back( contexts[i] );
 				contexts[i]->SetUnorderedAccessView( omUAV );
+				concurrencyContexts.emplace_back( contexts[i] );
 			}
 
 			DrawGridSceneInParallel( concurrencyContexts, matWorld );
@@ -196,7 +195,6 @@ KIHX_API void kiRenderToBuffer( void* buffer, int width, int height, int bpp )
 	}
 	else
 	{
-		context->SetUnorderedAccessView( nullptr );
 		context->GetSharedConstantBuffer().SetMatrix4( ConstantBuffer::WorldMatrix, matWorld );
 		context->GetSharedConstantBuffer().SetVector4( ConstantBuffer::DiffuseColor, Vector4( 1.0f, 1.0f, 1.0f, 1.0f ) );
 		context->Draw( g_meshes[0] );
