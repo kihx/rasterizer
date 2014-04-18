@@ -1,11 +1,10 @@
 #pragma once
 
 #include "base.h"
-#include "stream.h"
 #include "buffer.h"
+#include "stream.h"
 
 #include <vector>
-#include <list>
 
 
 namespace kih

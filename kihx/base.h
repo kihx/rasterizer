@@ -1,12 +1,12 @@
 #pragma once
 
-#include "type.h"
 #include "assertion.h"
+#include "type.h"
 
-#include <utility>
-#include <memory>
-#include <type_traits>
 #include <functional>
+#include <type_traits>
+#include <memory>
+#include <utility>
 
 
 #pragma warning( disable: 4127 )	// warning C4127: conditional expression is constant

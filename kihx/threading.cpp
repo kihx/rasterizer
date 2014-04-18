@@ -2,8 +2,10 @@
 #include "threading.h"
 #include "concommand.h"
 
-#include <windows.h>
 #include <process.h>
+
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 
 
 namespace kih

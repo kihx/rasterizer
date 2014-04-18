@@ -1,8 +1,8 @@
 #pragma once
 
 #include "base.h"
-#include "vector.h"
 #include "matrix.h"
+#include "vector.h"
 
 
 namespace kih

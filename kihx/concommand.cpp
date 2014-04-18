@@ -2,8 +2,8 @@
 #include "concommand.h"
 #include "mathlib.h"
 
-#include <vector>
 #include <iostream>
+#include <vector>
 
 namespace kih
 {

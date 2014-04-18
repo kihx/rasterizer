@@ -3,13 +3,13 @@
 
 #include "stdafx.h"
 #include "base.h"
+#include "concommand.h"
 #include "kihx.h"
 #include "mesh.h"
-#include "texture.h"
-#include "render.h"
-#include "concommand.h"
 #include "profiler.h"
+#include "render.h"
 #include "stream.h"
+#include "texture.h"
 
 #include <array>
 

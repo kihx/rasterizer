@@ -1,18 +1,16 @@
 #include "stdafx.h"
-#include "render.h"
-#include "mesh.h"
-#include "texture.h"
-#include "vector.h"
-#include "matrix.h"
 #include "buffer.h"
-#include "stage.h"
 #include "concommand.h"
-#include "threading.h"
+#include "matrix.h"
+#include "mesh.h"
 #include "profiler.h"
+#include "stage.h"
 #include "stream.h"
+#include "render.h"
+#include "texture.h"
+#include "threading.h"
+#include "vector.h"
 
-#include <list>
-#include <map>
 #include <thread>
 
 

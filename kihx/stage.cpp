@@ -1,13 +1,13 @@
 #include "stdafx.h"
-#include "stage.h"
-#include "mesh.h"
-#include "texture.h"
-#include "vector.h"
-#include "matrix.h"
-#include "render.h"
-#include "threading.h"
-#include "random.h"
 #include "concommand.h"
+#include "matrix.h"
+#include "mesh.h"
+#include "random.h"
+#include "render.h"
+#include "stage.h"
+#include "texture.h"
+#include "threading.h"
+#include "vector.h"
 
 
 #define USE_SSE_OPTIMZATION

@@ -1,9 +1,11 @@
 #include "stdafx.h"
-#include "profiler.h"
 #include "concommand.h"
+#include "profiler.h"
 
-#include <windows.h>
 #include <iostream>
+
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 
 
 static ConsoleVariable perf( "perf", "0" );

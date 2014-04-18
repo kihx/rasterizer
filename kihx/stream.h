@@ -1,8 +1,8 @@
 #pragma once
 
 #include "base.h"
-#include "vector.h"
 #include "threading.h"
+#include "vector.h"
 
 #include <vector>
 
