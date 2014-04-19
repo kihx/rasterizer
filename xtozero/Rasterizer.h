@@ -62,17 +62,15 @@ namespace xtozero
 
 		float GetIntersectXpos( int minY, int maxY, int scanlineY, float minX, float gradient ) const;
 	public:
-		CRITICAL_SECTION m_cs;
+		CriticalSection m_cs;
 		std::vector<CPsElementDesc> m_outputRS;
 		Rect m_viewport;
 
 		CRasterizer( void ) 
 		{
-			InitializeCriticalSection( &m_cs );
 		}
 		~CRasterizer( void ) 
 		{
-			DeleteCriticalSection( &m_cs );
 		}
 		const std::vector<CPsElementDesc>& Process( CRsElementDesc& rsInput );
 		const std::vector<CPsElementDesc>& ProcessParallel( CRsElementDesc& rsInput, std::shared_ptr<xtozero::CXtzThreadPool> threadPool );
@@ -130,12 +128,13 @@ namespace xtozero
 			++scanline;
 		}
 
-		EnterCriticalSection( &rasterizer->m_cs );
-		for ( std::vector<CPsElementDesc>::iterator& iter = outputRS.begin(); iter != outputRS.end(); ++iter )
 		{
-			rasterizer->m_outputRS.emplace_back( *iter );
+			Lock<CriticalSection> lock( rasterizer->m_cs );
+			for ( std::vector<CPsElementDesc>::iterator& iter = outputRS.begin(); iter != outputRS.end(); ++iter )
+			{
+				rasterizer->m_outputRS.emplace_back( *iter );
+			}
 		}
-		LeaveCriticalSection( &rasterizer->m_cs );
 
 		delete pRsArg;
 	}

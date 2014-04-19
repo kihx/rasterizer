@@ -331,7 +331,7 @@ namespace xtozero
 			threadPool->AddWork( RsThreadWork, (LPVOID)pRsArg );
 		}
 
-		threadPool->Run();
+		threadPool->WaitThread();
 
 		return m_outputRS;
 	}

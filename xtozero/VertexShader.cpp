@@ -60,7 +60,6 @@ namespace xtozero
 
 			threadPool->AddWork( VsThreadWork, (LPVOID)pArg );
 		}
-		threadPool->Run();
 
 		int key = 0;
 		m_vsOutput.m_faces.clear();
@@ -79,6 +78,8 @@ namespace xtozero
 		}
 
 		m_vsOutput.m_coodinate = pMesh->m_coordinate;
+
+		threadPool->WaitThread( );
 
 		return m_vsOutput;
 	}

@@ -27,8 +27,8 @@ XTZ_API void XtzRenderToBuffer( void* buffer, int width, int height, int dpp )
 		gOutputMerger->CreateDepthBuffer( width, height );
 		gOutputMerger->ClearDepthBuffer();
 		gOutputMerger->SetFrameBuffer( buffer, dpp, width, height );
-		//CRsElementDesc& vsOut = gVertexShader->Process( gMeshManager->LoadRecentMesh() );
-		CRsElementDesc& vsOut = gVertexShader->ProcessParallel( gMeshManager->LoadRecentMesh( ), gThreadPool );
+		CRsElementDesc& vsOut = gVertexShader->Process( gMeshManager->LoadRecentMesh() );
+		//CRsElementDesc& vsOut = gVertexShader->ProcessParallel( gMeshManager->LoadRecentMesh( ), gThreadPool );
 		//const std::vector<CPsElementDesc>& rsOut = gRasterizer->Process( vsOut );
 		const std::vector<CPsElementDesc>& rsOut = gRasterizer->ProcessParallel( vsOut, gThreadPool );
 		const std::vector<COmElementDesc>& psOut = gPixelShader->Process( rsOut );
