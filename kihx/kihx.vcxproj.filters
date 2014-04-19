@@ -120,5 +120,8 @@
     <ClCompile Include="profiler.cpp">
       <Filter>Framework</Filter>
     </ClCompile>
+    <ClCompile Include="mathlib.cpp">
+      <Filter>Math</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

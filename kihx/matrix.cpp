@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "mathlib.h"
 #include "matrix.h"
 #include "vector.h"
 
@@ -405,7 +406,7 @@ namespace kih
 		v2 = SSE::XXM128_Add( v2, r3 );
 		v0 = SSE::XXM128_Add( v0, v2 );
 
-		SSE::XXM128_ToFloatArray_Unaligned( result.Value, v0 );
+		SSE::XXM128_StoreUnaligned( result.Value, v0 );
 	}
 
 	void Vector4_TransformSSE( const Vector4& vec, const Matrix4& mat, Vector4& result )
@@ -429,6 +430,6 @@ namespace kih
 		v2 = SSE::XXM128_Add( v2, v3 );
 		v0 = SSE::XXM128_Add( v0, v2 );
 
-		SSE::XXM128_ToFloatArray_Unaligned( result.Value, v0 );
+		SSE::XXM128_StoreUnaligned( result.Value, v0 );
 	}
 }

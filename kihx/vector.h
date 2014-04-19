@@ -1,7 +1,6 @@
 #pragma once
 
 #include "base.h"
-#include "mathlib.h"
 
 
 namespace kih
@@ -62,62 +61,62 @@ namespace kih
 			return normalized;
 		}
 
-		void NormalizeInPlace()
+		FORCEINLINE void NormalizeInPlace()
 		{
 			*this /= Length();
 		}
 
-		float DotProduct( const Vector3& rhs )
+		FORCEINLINE float DotProduct( const Vector3& rhs ) const
 		{
 			return X * rhs.X + Y * rhs.Y + Z * rhs.Z;
 		}
 
-		Vector3 CrossProduct( const Vector3& rhs )
+		FORCEINLINE Vector3 CrossProduct( const Vector3& rhs ) const
 		{
 			return Vector3( Y * rhs.Z - Z * rhs.Y, Z * rhs.X - X * rhs.Z, X * rhs.Y - Y * rhs.X );
 		}
 
-		Vector3 operator+( const Vector3& rhs ) const
+		FORCEINLINE Vector3 operator+( const Vector3& rhs ) const
 		{
 			return Vector3( X + rhs.X, Y + rhs.Y, Z + rhs.Z );
 		}
 
-		Vector3 operator+( float rhs ) const
+		FORCEINLINE Vector3 operator+( float rhs ) const
 		{
 			return Vector3( X + rhs, Y + rhs, Z + rhs );
 		}
 
-		Vector3 operator-( const Vector3& rhs ) const
+		FORCEINLINE Vector3 operator-( const Vector3& rhs ) const
 		{
 			return Vector3( X - rhs.X, Y - rhs.Y, Z - rhs.Z );
 		}
 
-		Vector3 operator-( float rhs ) const
+		FORCEINLINE Vector3 operator-( float rhs ) const
 		{
 			return Vector3( X - rhs, Y - rhs, Z - rhs );
 		}
 
-		Vector3 operator*( const Vector3& rhs ) const
+		FORCEINLINE Vector3 operator*( const Vector3& rhs ) const
 		{
 			return Vector3( X * rhs.X, Y * rhs.Y, Z * rhs.Z );
 		}
 
-		Vector3 operator*( float rhs ) const
+		FORCEINLINE Vector3 operator*( float rhs ) const
 		{
 			return Vector3( X * rhs, Y * rhs, Z * rhs );
 		}
 
-		Vector3 operator/( const Vector3& rhs ) const
+		FORCEINLINE Vector3 operator/( const Vector3& rhs ) const
 		{
 			return Vector3( X / rhs.X, Y / rhs.Y, Z / rhs.Z );
 		}
 
-		Vector3 operator/( float rhs ) const
+		FORCEINLINE Vector3 operator/( float rhs ) const
 		{
 			return Vector3( X / rhs, Y / rhs, Z / rhs );
 		}
 
-		Vector3& operator+=( const Vector3 &rhs )
+		FORCEINLINE Vector3& operator+=( const Vector3 &rhs )
 		{
 			X += rhs.X;
 			Y += rhs.Y;
@@ -125,7 +124,7 @@ namespace kih
 			return *this;
 		}
 
-		Vector3& operator-=( const Vector3 &rhs )
+		FORCEINLINE Vector3& operator-=( const Vector3 &rhs )
 		{
 			X -= rhs.X;
 			Y -= rhs.Y;
@@ -133,7 +132,7 @@ namespace kih
 			return *this;
 		}
 
-		Vector3& operator/=( float value )
+		FORCEINLINE Vector3& operator/=( float value )
 		{
 			X /= value;
 			Y /= value;
@@ -141,7 +140,7 @@ namespace kih
 			return *this;
 		}
 
-		Vector3& operator*=( float value )
+		FORCEINLINE Vector3& operator*=( float value )
 		{
 			X *= value;
 			Y *= value;
@@ -149,7 +148,7 @@ namespace kih
 			return *this;
 		}
 
-		Vector3& operator=( const Vector3& rhs )
+		FORCEINLINE Vector3& operator=( const Vector3& rhs )
 		{
 			if ( this == &rhs )
 			{
@@ -162,23 +161,23 @@ namespace kih
 			return *this;
 		}
 
-		bool operator==( const Vector3& rhs ) const
+		FORCEINLINE bool operator==( const Vector3& rhs ) const
 		{
 			return X == rhs.X && Y == rhs.Y && Z == rhs.Z;
 		}
 
-		bool operator!=( const Vector3& rhs ) const
+		FORCEINLINE bool operator!=( const Vector3& rhs ) const
 		{
 			return X != rhs.X || Y != rhs.Y || Z != rhs.Z;
 		}
 
-		float operator[]( int index ) const
+		FORCEINLINE float operator[]( int index ) const
 		{
 			Assert( index >= 0 && index < 3 );
 			return Value[index];
 		}
 
-		float& operator[]( int index )
+		FORCEINLINE float& operator[]( int index )
 		{
 			Assert( index >= 0 && index < 3 );
 			return Value[index];
@@ -239,7 +238,27 @@ namespace kih
 
 		Vector4& operator=( const Vector4& rhs ) = default;
 
-		Vector4& operator+=( const Vector4 &rhs )
+		FORCEINLINE Vector4 operator+( const Vector4& rhs ) const
+		{
+			return Vector4( X + rhs.X, Y + rhs.Y, Z + rhs.Z, W + rhs.W );
+		}
+
+		FORCEINLINE Vector4 operator+( float rhs ) const
+		{
+			return Vector4( X + rhs, Y + rhs, Z + rhs, W + rhs );
+		}
+
+		FORCEINLINE Vector4 operator-( const Vector4& rhs ) const
+		{
+			return Vector4( X - rhs.X, Y - rhs.Y, Z - rhs.Z );
+		}
+
+		FORCEINLINE Vector4 operator-( float rhs ) const
+		{
+			return Vector4( X - rhs, Y - rhs, Z - rhs );
+		}
+
+		FORCEINLINE Vector4& operator+=( const Vector4 &rhs )
 		{
 			X += rhs.X;
 			Y += rhs.Y;
@@ -248,7 +267,7 @@ namespace kih
 			return *this;
 		}
 
-		Vector4& operator-=( const Vector4 &rhs )
+		FORCEINLINE Vector4& operator-=( const Vector4 &rhs )
 		{
 			X -= rhs.X;
 			Y -= rhs.Y;
@@ -257,7 +276,7 @@ namespace kih
 			return *this;
 		}
 
-		Vector4& operator/=( float value )
+		FORCEINLINE Vector4& operator/=( float value )
 		{
 			X /= value;
 			Y /= value;
@@ -266,7 +285,7 @@ namespace kih
 			return *this;
 		}
 
-		Vector4& operator*=( float value )
+		FORCEINLINE Vector4& operator*=( float value )
 		{
 			X *= value;
 			Y *= value;
@@ -275,23 +294,23 @@ namespace kih
 			return *this;
 		}
 
-		bool operator==( const Vector4& rhs ) const
+		FORCEINLINE bool operator==( const Vector4& rhs ) const
 		{
 			return X == rhs.X && Y == rhs.Y && Z == rhs.Z && W == rhs.W;
 		}
 
-		bool operator!=( const Vector4& rhs ) const
+		FORCEINLINE bool operator!=( const Vector4& rhs ) const
 		{
 			return X != rhs.X || Y != rhs.Y || Z != rhs.Z || W != rhs.W;
 		}
 
-		float operator[]( int index ) const
+		FORCEINLINE float operator[]( int index ) const
 		{
 			Assert( index >= 0 && index < 4 );
 			return Value[index];
 		}
 
-		float& operator[]( int index )
+		FORCEINLINE float& operator[]( int index )
 		{
 			Assert( index >= 0 && index < 4 );
 			return Value[index];
@@ -349,12 +368,6 @@ namespace kih
 
 	typedef Color4<byte> Color32;
 	typedef Color4<float> Color128;
-
-	
-	inline Color32 Vector4_ToColor32( const Vector4& src )
-	{
-		return Color32( Float_ToByte( src.X ), Float_ToByte( src.Y ), Float_ToByte( src.Z ), Float_ToByte( src.W ) );
-	}
 }
 
 

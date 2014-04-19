@@ -120,6 +120,7 @@
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="kihx.cpp" />
+    <ClCompile Include="mathlib.cpp" />
     <ClCompile Include="matrix.cpp" />
     <ClCompile Include="mesh.cpp" />
     <ClCompile Include="profiler.cpp" />

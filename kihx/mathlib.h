@@ -1,6 +1,7 @@
 #pragma once
 
 #include "base.h"
+#include "vector.h"
 
 #include <intrin.h>
 
@@ -21,14 +22,14 @@ namespace kih
 	FORCEINLINE const T& Min( const T& lhs, const T& rhs )
 	{
 		static_assert( std::is_integral<T>::value || std::is_floating_point<T>::value, "base type must be integral or floating point" );
-		return ( lhs <= rhs ) ? lhs : rhs;
+		return ( lhs < rhs ) ? lhs : rhs;
 	}
 
 	template<class T>
 	FORCEINLINE const T& Max( const T& lhs, const T& rhs )
 	{
 		static_assert( std::is_integral<T>::value || std::is_floating_point<T>::value, "base type must be integral or floating point" );
-		return ( lhs >= rhs ) ? lhs : rhs;
+		return ( lhs > rhs ) ? lhs : rhs;
 	}
 
 	template<class T>
@@ -53,6 +54,16 @@ namespace kih
 	{
 		return a + ( b - a ) * ratio;
 	}
+	
+	FORCEINLINE Color32 Vector4_ToColor32( const Vector4& src )
+	{
+		return Color32( Float_ToByte( src.X ), Float_ToByte( src.Y ), Float_ToByte( src.Z ), Float_ToByte( src.W ) );
+	}
+
+	// Test whether if the specified triangle is toward back in View or ViewProj space.
+	bool IsBackFace( const Vector4& v0, const Vector4& v1, const Vector4& v2 );
+	bool IsBackFaceSSE( const Vector4& v0, const Vector4& v1, const Vector4& v2 );
+
 
 
 	/* SSE (Streaming SIMD Extensions) optimization
@@ -82,7 +93,7 @@ namespace kih
 
 		FORCEINLINE float Divide( float f, float divider )
 		{
-			__declspec( align(16) ) union V4SSE 
+			_CRT_ALIGN(16) union V4SSE			
 			{
 				__m128 m;
 				float vec[4];
@@ -96,18 +107,11 @@ namespace kih
 		*/
 		typedef __m128	XXM128;
 
+		#define SWIZZLE_MASK(fp3, fp2, fp1, fp0)	(((fp3) << 6) | ((fp2) << 4) | ((fp1) << 2) | ((fp0)))
+
+
 		// XXM128 operators
 		//
-		FORCEINLINE void XXM128_ToFloatArray_Aligned( float* dst, const XXM128& src )
-		{
-			_mm_store_ps( dst, src );
-		}
-
-		FORCEINLINE void XXM128_ToFloatArray_Unaligned( float* dst, const XXM128& src )
-		{
-			_mm_storeu_ps( dst, src );
-		}
-
 		FORCEINLINE XXM128 XXM128_Load( float x )
 		{
 			return _mm_set_ps( x, x, x, x );
@@ -118,6 +122,11 @@ namespace kih
 			return _mm_set_ps( w, z, y, x );	// little-endian
 		}
 
+		FORCEINLINE XXM128 XXM128_LoadReverse( float x, float y, float z, float w )
+		{
+			return _mm_set_ps( x, y, z, w );	// big-endian
+		}
+
 		FORCEINLINE XXM128 XXM128_LoadAligned( const float* value )
 		{
 			return _mm_load_ps( value );
@@ -126,6 +135,21 @@ namespace kih
 		FORCEINLINE XXM128 XXM128_LoadUnaligned( const float* value )
 		{
 			return _mm_loadu_ps( value );
+		}
+
+		FORCEINLINE void XXM128_Store( float& dst, const XXM128& src )
+		{
+			_mm_store_ss( &dst, src );
+		}
+
+		FORCEINLINE void XXM128_StoreAligned( float* dst, const XXM128& src )
+		{
+			_mm_store_ps( dst, src );
+		}
+
+		FORCEINLINE void XXM128_StoreUnaligned( float* dst, const XXM128& src )
+		{
+			_mm_storeu_ps( dst, src );
 		}
 
 		FORCEINLINE XXM128 XXM128_Negate( const XXM128& v )
@@ -163,6 +187,11 @@ namespace kih
 			return _mm_rcp_ps( v );
 		}
 
+		FORCEINLINE XXM128 XXM128_Sqrt( const XXM128& v )
+		{
+			return _mm_sqrt_ps( v );
+		}
+
 		FORCEINLINE XXM128 XXM128_ReciprocalSqrt( const XXM128& v )
 		{
 			return _mm_rsqrt_ps( v );
@@ -177,5 +206,52 @@ namespace kih
 		{
 			return _mm_max_ps( v1, v2 );
 		}
+
+		// avoiding "error C2057: expected constant expression"
+		#define XXM128_Swizzle( /*const XXM128&*/ v, /*unsigned int*/ mask ) \
+			_mm_shuffle_ps( v, v, mask );			
+
+		FORCEINLINE XXM128 XXM128_DotProduct( const XXM128& v1, const XXM128& v2 )
+		{
+			// dot product 4 values (1111) 
+			// and store them at all (1111) 
+			// 11111111 = 0xFF 
+			const int Mask = 0xFF;
+			return _mm_dp_ps( v1, v2, Mask );
+		}
+
+		FORCEINLINE XXM128 XXM128_Length( const XXM128& v )
+		{
+			XXM128 dot = XXM128_DotProduct( v, v );
+			return XXM128_Sqrt( dot );
+		}
+
+		FORCEINLINE XXM128 XXM128_ReciprocalLength( const XXM128& v )
+		{
+			XXM128 dot = XXM128_DotProduct( v, v );
+			return XXM128_ReciprocalSqrt( dot );
+		}
+
+		FORCEINLINE XXM128 XXM128_Normalize( const XXM128& v )
+		{
+			XXM128 recipLen = XXM128_ReciprocalLength( v );
+			return XXM128_Multiply( v, recipLen );
+		}
+
+		FORCEINLINE XXM128 XXM128_CrossProduct( const XXM128& v1, const XXM128& v2 )
+		{
+			XXM128 v1YZXW = XXM128_Swizzle( v1, SWIZZLE_MASK( 1, 2, 0, 3 ) );
+			XXM128 v1ZXYW = XXM128_Swizzle( v1, SWIZZLE_MASK( 2, 0, 1, 3 ) );			
+			
+			XXM128 v2YZXW = XXM128_Swizzle( v2, SWIZZLE_MASK( 1, 2, 0, 3 ) );
+			XXM128 v2ZXYW = XXM128_Swizzle( v2, SWIZZLE_MASK( 2, 0, 1, 3 ) );
+
+			return XXM128_Subtract( XXM128_Multiply( v1YZXW, v2ZXYW ), XXM128_Multiply( v1ZXYW, v2YZXW ) );
+		}
+
+
+		// Vector constants
+		const static SSE::XXM128 XXM128_Zero = SSE::XXM128_Load( 0.0f );
+		const static SSE::XXM128 XXM128_One = SSE::XXM128_Load( 1.0f );
 	};
 };

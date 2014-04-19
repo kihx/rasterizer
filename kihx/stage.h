@@ -2,6 +2,7 @@
 
 #include "base.h"
 #include "buffer.h"
+#include "mathlib.h"
 #include "stream.h"
 
 #include <vector>

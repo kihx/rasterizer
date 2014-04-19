@@ -12,13 +12,13 @@
 
 #define USE_SSE_OPTIMZATION
 
-#define EARLY_Z_CULLING
+//#define EARLY_Z_CULLING
 
 //#define BYPASS_PIXEL_SHADING
 
 
 namespace kih
-{	
+{
 	/* class DepthBuffering
 	*/
 	DepthBuffering::DepthBuffering( RenderingContext* context ) :
@@ -45,7 +45,7 @@ namespace kih
 			// This is NOT an error. We accept this case.
 			return;
 		}
-		
+
 		// Get raw memory from the depth stencil.
 		if ( !m_ds->Lock( reinterpret_cast< void** >( &m_ptr ) ) )
 		{
@@ -71,7 +71,7 @@ namespace kih
 	bool DepthBuffering::ExecuteInternal( unsigned short x, unsigned short y, T depth )
 	{
 		VerifyReentry();
-		
+
 		Assert( IsValid() );
 		Assert( x >= 0 && x < m_width );
 		Assert( y >= 0 && y < m_ds->Height() );
@@ -82,7 +82,7 @@ namespace kih
 			throw std::range_error( "out of ranged x or y coordinates to access the depth-stencil buffer" );
 		}
 
-		T& dst = *( reinterpret_cast<T*>( addr ) );
+		T& dst = *( reinterpret_cast< T* >( addr ) );
 
 #ifdef DEPTHFUNC_LAMDA
 		// Call a functional object for depth test.
@@ -158,7 +158,7 @@ namespace kih
 		Assert( GetContext() );
 
 		m_outputStream->Clear();
-		
+
 		// Fill the output stream from the specified mesh.
 		if ( inputStream->GetPrimitiveType() == PrimitiveType::Undefined )
 		{
@@ -206,7 +206,7 @@ namespace kih
 			// per mesh rendering
 			size_t numIndices = indexBuffer.Size();
 			m_outputStream->Reserve( numIndices );
-			
+
 			if ( GetContext()->IsFixedPipelineMode() )
 			{
 				m_outputFixedPipeline->Clear();
@@ -219,7 +219,7 @@ namespace kih
 				{
 					unsigned short index = indexBuffer.GetIndexConst( i ) - 1;
 					const auto& vertex = vertexBuffer.GetVertexConst( index );
-					
+
 					Vector3 v( vertex.x, vertex.y, vertex.z );
 #ifdef USE_SSE_OPTIMZATION
 					Vector3_TransformSSE( v, wvp, hPos );
@@ -283,7 +283,7 @@ namespace kih
 				// WVP transformation
 				const Matrix4& wvp = GetSharedConstantBuffer().GetMatrix4( ConstantBuffer::WVPMatrix );
 				Vector4 hPos;
-				
+
 				for ( size_t i = 0; i < inputSize; ++i )
 				{
 					const auto& vertex = inputStream->GetData( i );
@@ -380,6 +380,16 @@ namespace kih
 		// for each primitive
 		for ( size_t p = 0; p < numPrimitives; ++p )
 		{
+			// This enables code to skip uncovered scanelines of the primitive.
+			// We only interest scanlines from min to max.
+			unsigned short startY = 0;
+			unsigned short minScanline = 0xFFFF;
+			unsigned short endY = 0;
+			unsigned short maxScanline = 0;
+			unsigned short maxY = height - 1;
+			
+			bool isCulled = false;
+
 			// edge: v0 -> v1
 			// v0 = i th vertex
 			// v1 = (i + 1) th vertex
@@ -390,16 +400,27 @@ namespace kih
 			size_t v1Index = p * numVerticesPerPrimitive;
 			size_t v0Index = v1Index + ( numVerticesPerPrimitive - 1 );
 
-			// This enables code to skip uncovered scanelines of the primitive.
-			// We only interest scanlines from min to max.
-			unsigned short minScanline = 0xFFFF;
-			unsigned short maxScanline = 0;
-
 			// for each vertex
 			for ( size_t v = 0; v < numVerticesPerPrimitive; ++v )
 			{
 				const auto& v0 = inputStream->GetData( v0Index );
 				const auto& v1 = inputStream->GetData( v1Index );
+
+				// backface culling
+				if ( v == 0 )
+				{
+					const auto& v2 = inputStream->GetData( v1Index + 1 );
+
+#ifdef USE_SSE_OPTIMZATION
+					if ( IsBackFaceSSE( v0.Position, v1.Position, v2.Position ) )
+#else
+					if ( IsBackFace( v0.Position, v1.Position, v2.Position ) )
+#endif
+					{
+						isCulled = true;
+						break;
+					}
+				}
 
 				// Make an ET element.
 				float xMax = v0.Position.X;
@@ -419,18 +440,23 @@ namespace kih
 					Swap( yMax, yMin );
 				}
 
-				float dx = v0.Position.X - v1.Position.X;
-				float dy = v0.Position.Y - v1.Position.Y;
-				float slope = ( dy == 0.0f ) ? 0.0f : ( dx / dy );
-
 				// Select start and end scanlines with Y-axis clipping.
-				unsigned short startY = static_cast<unsigned short>( SSE::Ceil( yMin ) );
-				startY = Clamp<unsigned short>( startY, 0, height - 1 );
+				startY = static_cast< unsigned short >( SSE::Ceil( yMin ) );
+				startY = Clamp<unsigned short>( startY, 0, maxY );
 				minScanline = Min( minScanline, startY );
 
-				unsigned short endY = static_cast<unsigned short>( SSE::Ceil( yMax ) );
-				endY = Clamp<unsigned short>( endY, startY, height - 1 );
+				endY = static_cast< unsigned short >( SSE::Ceil( yMax ) );
+				endY = Clamp<unsigned short>( endY, startY, maxY );
 				maxScanline = Max( maxScanline, endY );
+
+				// dx and dy for an incremental approach
+				float dx = v0.Position.X - v1.Position.X;
+				float dy = v0.Position.Y - v1.Position.Y;
+#ifdef USE_SSE_OPTIMZATION
+				float slope = ( dy == 0.0f ) ? 0.0f : SSE::Divide( dx, dy );
+#else
+				float slope = ( dy == 0.0f ) ? 0.0f : dx / dy;
+#endif				
 
 				// Push this element at the selected scanline.
 				m_edgeTable[startY].emplace_back( yMax, xMin, xMax, slope, zStart, zEnd );
@@ -441,6 +467,13 @@ namespace kih
 				++v1Index;
 			}
 
+			// Pass if the primitive is culled out.
+			if ( isCulled )
+			{
+				continue;
+			}
+
+			// Draw pixels
 			GatherPixelsBeingDrawnFromScanlines( outputStream, aet, minScanline, maxScanline, width, depthBuffering );			
 
 			// Clear the current edge table.
@@ -505,8 +538,18 @@ namespace kih
 					if ( xLeft != xRight )
 					{
 						// Compute lerp ratio for the left-end pixel and the right-end pixel.
-						float lerpRatioLeft = ( aetLeft.CurrentX - etLeft.XMin ) / max( etLeft.XMax - etLeft.XMin, FLT_EPSILON );
-						float lerpRatioRight = ( aetRight.CurrentX - etRight.XMin ) / max( etRight.XMax - etRight.XMin, FLT_EPSILON );
+						float diffX0Left = aetLeft.CurrentX - etLeft.XMin;
+						float diffX1Left = etLeft.XMax - etLeft.XMin;
+						float diffX0Right = aetRight.CurrentX - etRight.XMin;
+						float diffX1Right = etRight.XMax - etRight.XMin;
+#ifdef USE_SSE_OPTIMZATION
+						float lerpRatioLeft = ( diffX1Left == 0.0f ) ? 0.0f : SSE::Divide( diffX0Left, diffX1Left );
+						float lerpRatioRight = ( diffX1Right == 0.0f ) ? 0.0f : SSE::Divide( diffX0Right, diffX1Right );
+#else
+						float lerpRatioLeft = ( diffX1Left == 0.0f ) ? 0.0f : ( diffX0Left / diffX1Left );
+						float lerpRatioRight = ( diffX1Right == 0.0f ) ? 0.0f : ( diffX0Right / diffX1Right );
+#endif
+
 
 						// Lerp depth values of L and R between their own edges.
 						float depthLeft = Lerp( etLeft.ZStart, etLeft.ZEnd, lerpRatioLeft );
@@ -649,7 +692,7 @@ namespace kih
 			// NDC -> viewport
 			position = SSE::XXM128_Multiply( position, toViewportMul );
 			position = SSE::XXM128_Add( position, toViewportAdd );
-			SSE::XXM128_ToFloatArray_Unaligned( data.Position.Value, position );
+			SSE::XXM128_StoreUnaligned( data.Position.Value, position );
 #else
 			// perspective division
 			data.Position /= data.Position.W;
