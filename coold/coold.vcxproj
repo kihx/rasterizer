@@ -57,6 +57,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;COOLD_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -95,9 +96,7 @@
     <ClInclude Include="Math\CoolD_Math.h" />
     <ClInclude Include="Math\CoolD_Matrix33.h" />
     <ClInclude Include="Math\CoolD_Matrix44.h" />
-    <ClInclude Include="Math\CoolD_Quat.h" />
     <ClInclude Include="Data\CoolD_Struct.h" />
-    <ClInclude Include="Render\CoolD_SubFunction.h" />
     <ClInclude Include="Render\CoolD_CustomMesh.h" />
     <ClInclude Include="Data\CoolD_Singleton.h" />
     <ClInclude Include="Render\CoolD_Transform.h" />
@@ -114,7 +113,6 @@
     <ClCompile Include="Math\CoolD_Math.cpp" />
     <ClCompile Include="Math\CoolD_Matrix33.cpp" />
     <ClCompile Include="Math\CoolD_Matrix44.cpp" />
-    <ClCompile Include="Math\CoolD_Quat.cpp" />
     <ClCompile Include="Render\CoolD_Transform.cpp" />
     <ClCompile Include="Math\CoolD_Vector2.cpp" />
     <ClCompile Include="Math\CoolD_Vector3.cpp" />

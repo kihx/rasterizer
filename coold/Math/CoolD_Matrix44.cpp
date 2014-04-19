@@ -1,13 +1,6 @@
 #include "CoolD_Matrix33.h"
 #include "CoolD_Matrix44.h"
-#include "CoolD_Quat.h"
 #include "CoolD_Vector3.h"
-
-Matrix44::Matrix44( const Quat& quat )
-{
-    (Dvoid) Rotation( quat );
-
-}
 
 Matrix44::Matrix44(const Matrix44& other)
 {
@@ -254,50 +247,6 @@ Matrix44& Matrix44::Translation( const Vector3& xlate )
     return *this;
 
 }   
-
-Matrix44& Matrix44::Rotation( const Quat& rotate )
-{
-    assert( rotate.IsUnit() );
-
-    Dfloat xs, ys, zs, wx, wy, wz, xx, xy, xz, yy, yz, zz;
-
-    xs = rotate.x+rotate.x;   
-    ys = rotate.y+rotate.y;
-    zs = rotate.z+rotate.z;
-    wx = rotate.w*xs;
-    wy = rotate.w*ys;
-    wz = rotate.w*zs;
-    xx = rotate.x*xs;
-    xy = rotate.x*ys;
-    xz = rotate.x*zs;
-    yy = rotate.y*ys;
-    yz = rotate.y*zs;
-    zz = rotate.z*zs;
-
-    mV[0] = 1.0f - (yy + zz);
-    mV[4] = xy - wz;
-    mV[8] = xz + wy;
-    mV[12] = 0.0f;
-    
-    mV[1] = xy + wz;
-    mV[5] = 1.0f - (xx + zz);
-    mV[9] = yz - wx;
-    mV[13] = 0.0f;
-    
-    mV[2] = xz - wy;
-    mV[6] = yz + wx;
-    mV[10] = 1.0f - (xx + yy);
-    mV[14] = 0.0f;
-
-    mV[3] = 0.0f;
-    mV[7] = 0.0f;
-    mV[11] = 0.0f;
-    mV[15] = 1.0f;
-
-    return *this;
-
-}   
-
 Matrix44& Matrix44::Rotation(const Matrix33& other)
 {
     mV[0] = other.mV[0];

@@ -4,7 +4,6 @@
 #include "CoolD_Vector3.h"
 #include "CoolD_Vector4.h"
 
-class Quat;
 class Matrix33;
 class Vector3;
 
@@ -14,7 +13,6 @@ public:
     // constructor/destructor
     inline Matrix44() { Identity(); }
     inline ~Matrix44() {}
-    explicit Matrix44( const Quat& quat );
     explicit Matrix44( const Matrix33& matrix );
 	explicit Matrix44( const Dfloat* matrix);
     
@@ -53,7 +51,6 @@ public:
     // transformations
     Matrix44& Translation( const Vector3& xlate );
     Matrix44& Rotation( const Matrix33& matrix );
-    Matrix44& Rotation( const Quat& rotate );
     Matrix44& Rotation( Dfloat zRotation, Dfloat yRotation, Dfloat xRotation );
     Matrix44& Rotation( const Vector3& axis, Dfloat angle );
 

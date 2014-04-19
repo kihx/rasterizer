@@ -207,14 +207,3 @@ Vector3 Vec4ToVec3(const Vector4& vector, Vector4::W_MODE value)
 	//if( value == W_IGNORE )
 	return Vector3(vector.x, vector.y, vector.z);
 }
-
-Vector4& Vector4::Ceil()
-{
-	x = ceilf(x);
-	y = ceilf(y);
-	z = ceilf(z);
-	w = ceilf(w);
-
-	return *this;
-
-}

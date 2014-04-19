@@ -18,19 +18,19 @@ namespace CoolD
 	public:		
 		Dbool LoadMesh( string PathName );
 		CustomMesh* GetMesh( string PathName );
-		const map<string, CustomMesh*>& GetMeshMap();
-		tuple_meshInfo AdjustTransform(CustomMesh* pMesh, const array<Matrix44, TRANSFORM_END>& arrayTransform);
-		Duint GetMeshNum() const;
-		Dvoid Clear();
-
 		
-			
+		const map<string, CustomMesh*>& GetMapMesh();
+		const vector<Vector3>* GetVecTransformVertex();
+		Dvoid AdjustTransform(CustomMesh* pMesh, const array<Matrix44, TRANSFORM_END>& arrayTransform);
+		Duint GetMeshNum() const;
+		Dvoid Clear();				
 
 	private:
 		CustomMesh* CreateMeshFromFile(const Dchar* filename);		
 		
 	private:
 		map<string, CustomMesh*>	m_mapMesh;		
+		vector<Vector3>		m_trasnformVertex;		
 	};
 	
 	

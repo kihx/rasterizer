@@ -8,12 +8,13 @@ struct BaseColor
 	Duchar		r, g, b, a;
 };
 
-struct BaseFace
+class BaseFace
 {
+public:
 	BaseColor		color;
 	vector<Dint>	vecIndex;
 
-	BaseFace() = default;
+	BaseFace(){};
 	BaseFace(const BaseFace& baseFace)
 		:color(baseFace.color), vecIndex(baseFace.vecIndex)
 	{}
@@ -34,7 +35,7 @@ struct EdgeNode
 		:x_min(_x_min), y_min(_y_min), y_max(_y_max), min_depth(_min_depth), max_depth(_max_depth), reverseSlope(_reverseSlope)	{}
 
 	EdgeNode(const EdgeNode& edgeNode)
-		:x_min(edgeNode.x_min), y_min(edgeNode.y_min), y_max(edgeNode.y_max), min_depth(edgeNode.min_depth), max_depth(edgeNode.max_depth), reverseSlope(edgeNode.reverseSlope)	{}
+		:x_min(edgeNode.x_min), y_min(edgeNode.y_min), y_max(edgeNode.y_max), min_depth(edgeNode.min_depth), max_depth(edgeNode.max_depth), reverseSlope(edgeNode.reverseSlope)	{}	
 };
 
 struct LineKey
@@ -67,6 +68,8 @@ struct LineEdge
 {
 	LineKey	lineKey;
 	EdgeNode edgeNode;
+
+	LineEdge() = default;
 
 	LineEdge(const LineKey& _lineKey, const EdgeNode& _edgeNode)
 		:lineKey(_lineKey), edgeNode(_edgeNode){}
@@ -109,10 +112,10 @@ struct Line
 struct ActiveLine
 {
 	Dint height;
-	list<Line> currentLine;
+	vector<Line> currentLine;
 
 	ActiveLine() = default;
-	ActiveLine(const Dint& _height, const list<Line> _currentLine)
+	ActiveLine(const Dint& _height, const vector<Line> _currentLine)
 		:height(_height), currentLine(_currentLine)	{}
 };
 
@@ -139,7 +142,7 @@ private:
 	std::uniform_int_distribution<T> uniform_dist;
 };
 
-typedef tuple< vector<Vector3>, vector<BaseFace> > tuple_meshInfo;
+typedef tuple< const vector<Vector3>*, const vector<BaseFace>* > tuple_meshInfo;
 
 //0 : MinY, 1 : MaxY
 typedef tuple< Dfloat, Dfloat > tuple_OptimizeY;

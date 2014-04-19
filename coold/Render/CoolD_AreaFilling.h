@@ -17,45 +17,49 @@ namespace CoolD
 		Dint m_Width;
 		Dint m_Height;		
 							
-		//병렬 루프에서는 스레드 세이프 컨테이너를 사용해야 함 다만 병렬 컨터이너는 emplace_back을 사용할수 없다. 
-		//또한 erase멤버 함수가 없기 때문에...이는 추후에 알아보고 적용하자
-		vector<Line> m_VecLine;	
-		vector<ActiveLine> m_ActiveTable;
-		concurrent_vector<LineEdge> m_EdgeTable;	 	
-
-		array<Matrix44, TRANSFORM_END> m_arrayTransform;		
+		array<Matrix44, TRANSFORM_END> m_arrayTransform;	
 
 	public:
 		AreaFilling();
 		~AreaFilling();
 				
 	public:
-		Dvoid Render(tuple_meshInfo& meshInfo);
-		void SetTransform(TransType type, const Matrix44 matrix);
+		Dvoid ClearColorBuffer(Dulong clearColor);
+		Dvoid Render(const vector<Vector3>* pvecVertex,const vector<BaseFace>* pvecFace);
 		void SetScreenInfo(Dvoid* buffer, const int width, const int height);
-		const array<Matrix44, TRANSFORM_END>& GetArrayTransform();
+
+		inline void SetTransform(const TransType& type, const Matrix44& matrix)	{ m_arrayTransform[ type ] = matrix; }
+		inline const array<Matrix44, TRANSFORM_END>& GetArrayTransform()		{ return m_arrayTransform; }
 
 	private:	//렌더 관련 데이터 생성부			
-		tuple_OptimizeY CreatePointsToLines(tuple_meshInfo& meshInfo, Duint faceNum);
-		Dvoid CreateEdgeTable();
-		Dvoid CreateChainTable(tuple_OptimizeY opY);
+		Dvoid CreatePointsToLines(const vector<Vector3>* pvecVertex, const vector<BaseFace>* pvecFace, Duint faceNum, vector<Line>& vecLine);
+		Dvoid CreateEdgeTable(vector<Line>& vecLine, vector<LineEdge>& edgeTable);
+		Dvoid CreateChainTable(vector<Line>& vecLine, vector<ActiveLine>& activeTable);
 
 	private:
 		Dbool DepthTest(const Duint x, const Duint y, Dfloat depth);
 
 	private:	//그려지는 단계
-		Dvoid DrawDot(const Duint x, const Duint y, const Dulong DotColor);
+		Dvoid DrawDot(const Duint& x, const Duint& y, const Dulong& DotColor);
 		Dvoid DrawLine(vector<EdgeNode>& renderLine, const Dint currentHeight, const Dulong dotColor);
-		Dvoid DrawFace(const Dulong dotColor);
+		Dvoid DrawFace(vector<ActiveLine>& activeTable, vector<LineEdge>& edgeTable, const Dulong dotColor);
+		
+	private:	//그 외 보조 함수				
+		Dvoid InsertPointToLine(vector<Line>& vecLine, LineKey& lineKey, Vector3& beginVertex, Vector3& endVertex);
 
-	private:	//그 외 보조 함수
-		Dulong MixDotColor( const BaseColor& color );
-		Dbool CheckContinueLine( const LineKey& lhs, const LineKey& rhs ) const;	
-		Dbool CheckYStandInLine(  ) const;
-		Dfloat GetBigYValue(const Vector3& begin, const Vector3& end) const ;
-		Dfloat GetSmallYValue(const Vector3& begin, const Vector3& end) const;
-	
-	private:
-		Dvoid Clear();
+		inline Dulong MixDotColor(const BaseColor& color){ return (color.r << 24) + (color.g << 16) + (color.b << 8) + (color.a); }
+		inline Dbool CheckContinueLine(const LineKey& lhs, const LineKey& rhs) const { return (lhs.beginIndex == rhs.endIndex || lhs.endIndex == rhs.beginIndex); }
+		inline Dfloat GetDepthInterpolation(const Dfloat& max, const Dfloat& min, const Dfloat& maxDepth, const Dfloat& minDepth, const Dint& height)
+		{
+			//	/*
+			//	Dfloat dy = dotNode.y_max - dotNode.y_min;
+			//	Dfloat dz = dotNode.max_depth - dotNode.min_depth;
+			//	Dfloat rate = (currentHeight - dotNode.y_min ) / dy;
+			//	DepthLeft = dotNode.min_depth + ( dz * rate );
+			//	*/
+			return minDepth + ((maxDepth - minDepth) * ((height - min) / (max - min)));
+		}
 	};
 }
+
+		

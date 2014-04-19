@@ -71,9 +71,6 @@ public:
 
     // member variables
     Dfloat x, y, z;
-
-public:
-	Vector3& Ceil();
 };
 
 inline Dvoid Vector3::Set( Dfloat _x, Dfloat _y, Dfloat _z )

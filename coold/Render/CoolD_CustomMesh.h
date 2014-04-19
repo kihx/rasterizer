@@ -18,8 +18,8 @@ namespace CoolD
 		BaseFace&	GetFace(Duint index);
 		Duint GetVertexSize() const;
 		Duint GetFaceSize() const;		
-		const vector<Vector3>& GetVectorVertex() const;
-		const vector<BaseFace>& GetVectorFace() const;
+		vector<Vector3>* GetVectorVertex() ;
+		vector<BaseFace>* GetVectorFace();
 		Dvoid SetVectorVertex(vector<Vector3>& vecVertex);
 		Dvoid SetVectorFace(vector<BaseFace>& vecFace );				
 

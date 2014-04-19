@@ -223,15 +223,6 @@ Vector3 Vector3::Cross( const Vector3& vector ) const
 
 }  
 
-Vector3& Vector3::Ceil()
-{
-	x = ceilf(x);
-	y = ceilf(y);
-	z = ceilf(z);	
-
-	return *this;
-}
-
 Vector3 Cross( const Vector3& vector1, const Vector3& vector2 )
 {
     return Vector3( vector1.y*vector2.z - vector1.z*vector2.y,

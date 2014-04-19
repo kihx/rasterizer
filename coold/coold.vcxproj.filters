@@ -29,9 +29,6 @@
     <ClInclude Include="Math\CoolD_Matrix44.h">
       <Filter>Math</Filter>
     </ClInclude>
-    <ClInclude Include="Math\CoolD_Quat.h">
-      <Filter>Math</Filter>
-    </ClInclude>
     <ClInclude Include="Math\CoolD_Vector2.h">
       <Filter>Math</Filter>
     </ClInclude>
@@ -62,9 +59,6 @@
     <ClInclude Include="Render\CoolD_Transform.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Render\CoolD_SubFunction.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Data\CoolD_Singleton.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -83,9 +77,6 @@
       <Filter>Math</Filter>
     </ClCompile>
     <ClCompile Include="Math\CoolD_Matrix44.cpp">
-      <Filter>Math</Filter>
-    </ClCompile>
-    <ClCompile Include="Math\CoolD_Quat.cpp">
       <Filter>Math</Filter>
     </ClCompile>
     <ClCompile Include="Math\CoolD_Vector2.cpp">

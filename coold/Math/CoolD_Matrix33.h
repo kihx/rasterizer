@@ -2,7 +2,6 @@
 
 #include "CoolD_Math.h"
 
-class Quat;
 class Vector3;
 
 class Matrix33
@@ -11,7 +10,6 @@ public:
     // constructor/destructor
     inline Matrix33() {}
     inline ~Matrix33() {}
-    explicit Matrix33( const Quat& quat );
     
     // copy operations
     Matrix33(const Matrix33& other);
@@ -51,7 +49,6 @@ public:
     Dfloat Trace() const;
         
     // transformations
-    Matrix33& Rotation( const Quat& rotate );
     Matrix33& Rotation( Dfloat zRotation, Dfloat yRotation, Dfloat xRotation );
     Matrix33& Rotation( const Vector3& axis, Dfloat angle );
 

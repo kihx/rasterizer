@@ -1,19 +1,15 @@
 #pragma once
 
-#include <vector>
 #include <array>
-#include <list>
 #include <vector>
 #include <map>
 #include <algorithm>
-#include <string>
 #include <cmath>
 #include <cassert>
 #include <chrono>
 #include <tuple>
 #include <ppl.h>
 #include <mutex>
-#include <atomic>
 #include <iostream>
 
 typedef void	Dvoid;
@@ -46,5 +42,3 @@ enum MeshType
 	PLY,
 	MESHTYPE_END
 };
-
-//#define assertm(_Expression, _Msg) (void)( (!!(_Expression)) || (_wassert(_CRT_WIDE(#_Msg), _CRT_WIDE(__FILE__), __LINE__), 0) )

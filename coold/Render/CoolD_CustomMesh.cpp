@@ -34,14 +34,14 @@ namespace CoolD
 		return m_vecFace.size();
 	}
 	
-	const vector<Vector3>& CustomMesh::GetVectorVertex() const
+	vector<Vector3>* CustomMesh::GetVectorVertex()
 	{
-		return m_vecVertex;
+		return &m_vecVertex;
 	}
 
-	const vector<BaseFace>& CustomMesh::GetVectorFace() const
+	vector<BaseFace>* CustomMesh::GetVectorFace()
 	{
-		return m_vecFace;
+		return &m_vecFace;
 	}		
 
 	void CustomMesh::SetVectorVertex(vector<Vector3>& vecVertex)
@@ -177,11 +177,11 @@ namespace CoolD
 			{
 				Dint vertexNum;
 				sstream >> vertexNum;
-
+				
 				assert(0 < vertexNum && vertexNum <= vectexCount);	//지정된 형식과 다를경우 kill
 
 				Vector3 v;
-				sstream >> v.x >> v.y >> v.z;
+				sstream >> v.x >> v.y >> v.z;			
 
 				m_vecVertex.emplace_back(v);
 			}
@@ -191,13 +191,10 @@ namespace CoolD
 				sstream >> faceNum;
 
 				assert(0 < faceNum && faceNum <= faceCount);
-
-				/*
-				FixLater(정점 구별하기 위해서 랜덤으로)
 				RandomGenerator<int> rand(0, 255);
-				*/
+				
 				BaseFace f;
-				f.color = { 0, 0, 0, 0 };
+				f.color = { rand.GetRand(), rand.GetRand(), rand.GetRand(), 255 };
 				
 				for( Dint i = 0; i < 3; ++i )
 				{

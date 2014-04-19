@@ -1,12 +1,6 @@
 
 #include "CoolD_Matrix33.h"
-#include "CoolD_Quat.h"
 #include "CoolD_Vector3.h"
-
-Matrix33::Matrix33( const Quat& quat )
-{
-    Rotation( quat );
-} 
 
 Matrix33::Matrix33(const Matrix33& other)
 {
@@ -300,41 +294,6 @@ Dfloat Matrix33::Trace() const
     return mV[0] + mV[4] + mV[8];
 
 }   
-
-Matrix33& Matrix33::Rotation( const Quat& rotate )
-{
-    assert( rotate.IsUnit() );
-
-    Dfloat xs, ys, zs, wx, wy, wz, xx, xy, xz, yy, yz, zz;
-
-    xs = rotate.x+rotate.x;   
-    ys = rotate.y+rotate.y;
-    zs = rotate.z+rotate.z;
-    wx = rotate.w*xs;
-    wy = rotate.w*ys;
-    wz = rotate.w*zs;
-    xx = rotate.x*xs;
-    xy = rotate.x*ys;
-    xz = rotate.x*zs;
-    yy = rotate.y*ys;
-    yz = rotate.y*zs;
-    zz = rotate.z*zs;
-
-    mV[0] = 1.0f - (yy + zz);
-    mV[3] = xy - wz;
-    mV[6] = xz + wy;
-    
-    mV[1] = xy + wz;
-    mV[4] = 1.0f - (xx + zz);
-    mV[7] = yz - wx;
-    
-    mV[2] = xz - wy;
-    mV[5] = yz + wx;
-    mV[8] = 1.0f - (xx + yy);
-
-    return *this;
-
-}  
 
 Matrix33& Matrix33::Rotation( Dfloat zRotation, Dfloat yRotation, Dfloat xRotation )
 {

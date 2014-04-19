@@ -73,7 +73,6 @@ public:
 public:
 	enum W_MODE { W_IGNORE, W_DIVIDE };
 	friend Vector3 Vec4ToVec3( const Vector4& vector, W_MODE value );
-	Vector4& Ceil();
 };
 
 inline Dvoid Vector4::Set( Dfloat _x, Dfloat _y, Dfloat _z, Dfloat _w )

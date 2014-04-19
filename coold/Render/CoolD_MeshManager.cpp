@@ -29,27 +29,26 @@ namespace CoolD
 		return m_mapMesh.size();
 	}
 	
-	tuple_meshInfo MeshManager::AdjustTransform(CustomMesh* mesh, const array<Matrix44, TRANSFORM_END>& arrayTransform)
+	Dvoid MeshManager::AdjustTransform(CustomMesh* pMesh, const array<Matrix44, TRANSFORM_END>& arrayTransform)
 	{
-		vector<Vector3> listVertex;
-		if( mesh->GetType() == MSH )
+		m_trasnformVertex.clear();
+
+		if( pMesh->GetType() == MSH )
 		{
-			listVertex = mesh->GetVectorVertex();			
+			m_trasnformVertex = (*pMesh->GetVectorVertex());
 		}
-		else if( mesh->GetType() == PLY )
-		{			
-			for( Duint i = 1; i <= mesh->GetVertexSize(); ++i )
-			{					
-				listVertex.emplace_back( TransformHelper::TransformVertex(arrayTransform, mesh->GetVertex(i) ));
-			}	
+		else if( pMesh->GetType() == PLY )
+		{
+			for( Duint i = 1; i <= pMesh->GetVertexSize(); ++i )
+			{
+				m_trasnformVertex.emplace_back(TransformHelper::TransformVertex(arrayTransform, pMesh->GetVertex(i)));
+			}			
 		}
 		else
 		{	//타입지정이 안 되어있음 무조건 실패
 			assert(false);
-		}
-		
-		return make_tuple(listVertex, mesh->GetVectorFace() );
-	}	 	
+		}				
+	}
 
 	MeshManager::MeshManager()
 	{
@@ -74,6 +73,8 @@ namespace CoolD
 			pMesh->Load(filename);
 		}
 
+		m_trasnformVertex.resize(pMesh->GetVertexSize());
+
 		return pMesh;
 	}
 
@@ -82,9 +83,15 @@ namespace CoolD
 		Safe_Delete_Map(m_mapMesh);		
 	}
 
-	const map<string, CustomMesh*>& MeshManager::GetMeshMap()
+	const map<string, CustomMesh*>& MeshManager::GetMapMesh()
 	{
 		return m_mapMesh;
 	}	
+
+	const vector<Vector3>* MeshManager::GetVecTransformVertex()
+	{
+		return &m_trasnformVertex;
+	}
+
 };
 
