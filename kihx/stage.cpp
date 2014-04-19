@@ -68,7 +68,7 @@ namespace kih
 	}
 
 	template<class T>
-	bool DepthBuffering::ExecuteInternal( unsigned short x, unsigned short y, T depth )
+	bool DepthBuffering::Execute( unsigned short x, unsigned short y, T depth )
 	{
 		VerifyReentry();
 
@@ -76,13 +76,7 @@ namespace kih
 		Assert( x >= 0 && x < m_width );
 		Assert( y >= 0 && y < m_ds->Height() );
 
-		byte* addr = GetAddress( x, y );
-		if ( addr == nullptr )
-		{
-			throw std::range_error( "out of ranged x or y coordinates to access the depth-stencil buffer" );
-		}
-
-		T& dst = *( reinterpret_cast< T* >( addr ) );
+		T& dst = GetValueRef<T>( x, y );
 
 #ifdef DEPTHFUNC_LAMDA
 		// Call a functional object for depth test.

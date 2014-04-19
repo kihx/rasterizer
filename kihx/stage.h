@@ -47,16 +47,10 @@ namespace kih
 			return ( m_ptr + ( ( ( m_width * y ) + x ) * m_stride ) );
 		}
 
-		FORCEINLINE bool Execute( unsigned short x, unsigned short y, float depth )
+		template<class T>
+		FORCEINLINE T& GetValueRef( unsigned short x, unsigned short y )
 		{
-			if ( m_format == ColorFormat::D8S24 )
-			{
-				return ExecuteInternal( x, y, Float_ToByte( depth ) );
-			}
-			else
-			{
-				return ExecuteInternal( x, y, depth );
-			}
+			return *( reinterpret_cast< T* >( m_ptr ) + ( ( m_width * y ) + x ) );
 		}
 
 		FORCEINLINE void SetWritable( bool writable )
@@ -64,9 +58,8 @@ namespace kih
 			m_depthWritable = writable;
 		}
 
-	private:
 		template<class T>
-		bool ExecuteInternal( unsigned short x, unsigned short y, T depth );
+		bool Execute( unsigned short x, unsigned short y, T depth );
 
 	private:
 		std::shared_ptr<Texture> m_ds;
