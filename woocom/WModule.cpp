@@ -310,7 +310,8 @@ void WRender(void* buffer, int width, int height, int colorDepth)
 	if (g_pDrawObj)
 	{
 		//g_pDrawObj->DrawOutline( g_pPainter.get() );
-		g_pDrawObj->DrawSolid(g_pPainter.get());
+		//g_pDrawObj->DrawSolid(g_pPainter.get());
+		g_pDrawObj->DrawSolidParallel(g_pPainter.get());
 	}
 	
 }

@@ -26,17 +26,21 @@ class WWorker
 {
 public:
 	WWorker(WThreadPool& pool, HANDLE event)
-		:m_pool(pool), m_event(event), m_thread(nullptr), m_threadID(0){}
+		:m_pool(pool), m_event(event), m_thread(nullptr), m_stop(0), m_threadID(0){}
 	~WWorker();
 
 	// 스레드 생성 핸들 반환
 	HANDLE Init();
 	void Run();
+	void Stop();
+	void Signal();
 private:
 
 	WThreadPool& m_pool;
 	HANDLE m_event;
 	HANDLE m_thread;
+	HANDLE m_exitEvent;
+	volatile unsigned int m_stop;
 	unsigned int m_threadID;
 };
 
@@ -57,6 +61,5 @@ private:
 	std::vector< HANDLE > m_threads;
 	std::vector< WWorker* > m_workers;
 	HANDLE m_event;
-	bool m_stop;
 	volatile unsigned int m_numActiveThread;
 };

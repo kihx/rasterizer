@@ -30,7 +30,7 @@ struct PixelInfo
 
 struct EdgeInfo
 {
-	EdgeInfo(){}
+	EdgeInfo(){ m_edgeData.reserve(3); }
 	EdgeInfo(int x, const unsigned char* rgb)
 	{
 		m_edgeData.emplace_back(x, rgb);

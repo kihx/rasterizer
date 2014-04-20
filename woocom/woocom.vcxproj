@@ -92,7 +92,7 @@
     <ClInclude Include="WMesh.h" />
     <ClInclude Include="WModule.h" />
     <ClInclude Include="woocom.h" />
-    <ClInclude Include="WPainter.h" />
+    <ClInclude Include="WContext.h" />
     <ClInclude Include="WPolyData.h" />
     <ClInclude Include="WPolygon.h" />
     <ClInclude Include="Thread.h" />
@@ -104,7 +104,7 @@
     <ClCompile Include="WFileLoader.cpp" />
     <ClCompile Include="WMesh.cpp" />
     <ClCompile Include="WModule.cpp" />
-    <ClCompile Include="WPainter.cpp" />
+    <ClCompile Include="WContext.cpp" />
     <ClCompile Include="WPolygon.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

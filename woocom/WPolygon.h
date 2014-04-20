@@ -16,6 +16,7 @@ public:
 
 	virtual void DrawOutline(WModule* pPainter);
 	virtual void DrawSolid(WModule* pPainter);
+	virtual void DrawSolidParallel(WModule* pModule);
 private:
 	void DrawLine(WModule* pPainter, const Vector3* v1, const Vector3* v2, const unsigned char* color);
 	void InsertLineInfo(WModule* pPainter, const Vector3* v1, const Vector3* v2, const unsigned char* color);

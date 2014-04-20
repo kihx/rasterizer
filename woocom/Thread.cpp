@@ -18,6 +18,7 @@ HANDLE WWorker::Init()
 		if (worker)
 		{
 			worker->Run();
+			worker->Signal();
 		}
 		return 0;
 	},
@@ -32,12 +33,14 @@ HANDLE WWorker::Init()
 		return nullptr;
 	}
 
-	return m_thread;
+	m_exitEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+
+	return m_exitEvent;
 }
 
 void WWorker::Run()
 {
-	while (true)
+	while ( m_stop == 0 )
 	{
 		std::function<void()> task = nullptr;
 		{
@@ -45,30 +48,39 @@ void WWorker::Run()
 
 			if (!m_pool.m_tasks.empty())
 			{
+				_InterlockedIncrement(&m_pool.m_numActiveThread);
+
 				task = m_pool.m_tasks.front();
 				m_pool.m_tasks.pop();
-				_InterlockedIncrement(&m_pool.m_numActiveThread);
+
 			}
 		}
 
 		if (task)
 		{
 			task();
+
+			_InterlockedDecrement(&m_pool.m_numActiveThread);
 		}
 		else
 		{
-			if (m_pool.m_stop)
-			{
-				return;
-			}
-
-			_InterlockedDecrement(&m_pool.m_numActiveThread);
 			WaitForSingleObject(m_event, INFINITE);
 		}
 	}
 }
 
-WThreadPool::WThreadPool(size_t threadNum) : m_stop(false)
+void WWorker::Stop()
+{
+	InterlockedExchange(&m_stop, 1);
+	SetEvent(m_event);
+}
+
+void WWorker::Signal()
+{
+	SetEvent(m_exitEvent);
+}
+
+WThreadPool::WThreadPool(size_t threadNum) : m_numActiveThread(0)
 {
 	InitializeCriticalSection(&m_queue_mutex);
 
@@ -87,13 +99,11 @@ WThreadPool::WThreadPool(size_t threadNum) : m_stop(false)
 
 WThreadPool::~WThreadPool()
 {
-	{
-		WMutex mutex(&m_queue_mutex);
-		m_stop = true;
-	}
 
 	for (size_t i = 0; i < m_threads.size(); ++i)
 	{
+		m_workers[i]->Stop();
+		WaitForSingleObject(m_threads[i], INFINITE);
 		delete m_workers[i];
 	}
 
@@ -113,8 +123,7 @@ void WThreadPool::AddTask(std::function<void()> task)
 
 void WThreadPool::Join()
 {
-	while ( m_numActiveThread == 0)
+	while ( m_numActiveThread != 0)
 	{
-		Sleep(1);
 	}
 }
