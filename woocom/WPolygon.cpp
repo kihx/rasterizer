@@ -139,8 +139,12 @@ void WPolygon::InsertLineInfo(WModule* pPainter, const Vector3* v1, const Vector
 	}
 	else if ( dy == 0.0f )
 	{
-		pPainter->InsertLineDepthInfo(Float2Int(v1->Y), Float2Int(v1->X), v1->Z, color);
-		pPainter->InsertLineDepthInfo(Float2Int(v2->Y), Float2Int(v2->X), v2->Z, color);
+		if (v1->Y < pPainter->GetHeight() && v1->Y > 0)
+		{
+			pPainter->InsertLineDepthInfo(Float2Int(v1->Y), Float2Int(v1->X), v1->Z, color);
+			pPainter->InsertLineDepthInfo(Float2Int(v2->Y), Float2Int(v2->X), v2->Z, color);
+		}
+		
 		return;
 	}
 	else
@@ -169,10 +173,28 @@ void WPolygon::InsertLineInfo(WModule* pPainter, const Vector3* v1, const Vector
 	float lengthZ = v2->Z - v1->Z;
 	float lerpZ = start.Z;
 	
-	// 처음 시작이 부정확해서 시작점은 버텍스 좌표를 찍어준다.
-	pPainter->InsertLineDepthInfo(Float2Int(start.Y), Float2Int(start.X), lerpZ, color);
+	float y = roundf(start.Y);
+	if (y >= pPainter->GetHeight())
+	{
+		return;
+	}
+	else if (y >= 0)
+	{
+		// 처음 시작이 부정확해서 시작점은 버텍스 좌표를 찍어준다.
+		pPainter->InsertLineDepthInfo(Float2Int(start.Y), Float2Int(start.X), lerpZ, color);
+		y = roundf(start.Y) + 1.0f;
+	}
+	else
+	{
+		y = 0.0f;
+	}
 
-	float y = roundf(start.Y) +1.0f;
+	if (endY < 0)
+	{
+		return;
+	}
+
+	endY = min(endY, (float)(pPainter->GetHeight() - 1));
 	while (y < endY)
 	{
 		// Z 보간
