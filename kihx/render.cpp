@@ -30,7 +30,9 @@ namespace kih
 		m_pixelShader( std::make_shared<PixelShader>( this ) ),
 		m_outputMerger( std::make_shared<OutputMerger>( this ) ),
 		m_depthFunc( DepthFunc::None ),
-		m_depthWritable( false )
+		m_depthWritable( false ),
+		m_cullMode( CullMode::None ),
+		m_fixedPipelineMode( false )
 	{
 		m_renderTargets.resize( numRenderTargets );
 	}
@@ -161,13 +163,15 @@ namespace kih
 																				static_cast<byte>( color[2] / 255.0f ), 
 																				static_cast<byte>( color[3] / 255.0f ) ) );
 
-					m_inputAssembler->SetFaceIndex( face );					
+					m_inputAssembler->SetFaceIndex( face );
+					SetCullMode( CullMode::None );
 					DrawInternal( mesh, GetPrimitiveTypeFromNumberOfVertices( pMesh->NumVerticesInFace( face ) ) );
 				}
 			}
 		}
 		else
 		{
+			SetCullMode( CullMode::CCW );
 			DrawInternal( mesh );
 		}
 	}
@@ -397,6 +401,7 @@ namespace kih
 
 		// rasterizer stage
 		raInput->SetPrimitiveType( primitiveType );
+		m_rasterizer->SetCullMode( GetCullMode() );
 		std::shared_ptr<PixelShaderInputStream> ppInput = m_rasterizer->Process( raInput );
 		//printf( "PixelShaderInputStream Size: %d\n", ppInput->Size() );
 

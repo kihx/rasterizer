@@ -194,7 +194,8 @@ namespace kih
 
 	public:
 		explicit Rasterizer( RenderingContext* pRenderingContext ) :
-			BaseGraphicsStage( pRenderingContext )
+			BaseGraphicsStage( pRenderingContext ),
+			m_cullMode( CullMode::None )
 		{
 		}
 
@@ -203,6 +204,11 @@ namespace kih
 		}
 
 		virtual std::shared_ptr<RasterizerOutputStream> Process( const std::shared_ptr<RasterizerInputStream>& inputStream );
+
+		FORCEINLINE void SetCullMode( CullMode mode )
+		{
+			m_cullMode = mode;
+		}
 
 	private:
 		struct EdgeTableElement
@@ -216,7 +222,7 @@ namespace kih
 
 			EdgeTableElement() = delete;
 
-			explicit EdgeTableElement( float yMax, float xMin, float xMax, float slope, float zStart, float zEnd ) :
+			FORCEINLINE explicit EdgeTableElement( float yMax, float xMin, float xMax, float slope, float zStart, float zEnd ) :
 				YMax( yMax ),
 				XMin( xMin ),
 				XMax( xMax ),
@@ -234,14 +240,14 @@ namespace kih
 
 			ActiveEdgeTableElement() = delete;
 
-			explicit ActiveEdgeTableElement( const EdgeTableElement& etElem ) :
+			FORCEINLINE explicit ActiveEdgeTableElement( const EdgeTableElement& etElem ) :
 				ET( &etElem ),
 				CurrentX( etElem.Slope > 0.0f ? etElem.XMin : etElem.XMax )
 			{
 			}
 
 			// sort by x-less
-			bool operator<( const ActiveEdgeTableElement& rhs )
+			FORCEINLINE bool operator<( const ActiveEdgeTableElement& rhs )
 			{
 				return CurrentX < rhs.CurrentX;
 			}
@@ -249,7 +255,7 @@ namespace kih
 
 		// scanline conversion
 		void DoScanlineConversion( const std::shared_ptr<RasterizerInputStream>& inputStream, std::shared_ptr<RasterizerOutputStream> outputStream, unsigned short width, unsigned short height );
-		void GatherPixelsBeingDrawnFromScanlines( std::shared_ptr<RasterizerOutputStream> outputStream, std::vector<ActiveEdgeTableElement>& aet, unsigned short minScanline, unsigned short maxScanline, unsigned short width, DepthBuffering& depthBufferingParam );
+		void GatherPixelsBeingDrawnFromScanlines( std::shared_ptr<RasterizerOutputStream> outputStream, std::vector<ActiveEdgeTableElement>& aet, unsigned short minScanline, unsigned short maxScanline, unsigned short width, DepthBuffering& depthBufferingParam ) const;
 		bool UpdateActiveEdgeTable( std::vector<ActiveEdgeTableElement>& aet, unsigned short scanline ) const;
 
 		// transform
@@ -257,6 +263,7 @@ namespace kih
 
 	private:
 		std::vector<std::vector<EdgeTableElement>> m_edgeTable;
+		CullMode m_cullMode;
 	};
 
 

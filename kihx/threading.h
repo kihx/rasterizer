@@ -577,6 +577,19 @@ namespace kih
 		std::vector<std::shared_ptr<TaskThread>> m_allThreads;	// all of threads
 		Mutex m_mutex;
 	};
+
+	
+	/* Concurrency iteration
+	*/
+	FORCEINLINE void ForEachTaskInParallel( size_t begin, size_t end, ThreadFunc task )
+	{
+		ThreadPool* threadPool = ThreadPool::GetInstance();
+		for ( size_t i = begin; i < end; ++i )
+		{
+			threadPool->Queue( task );
+		}
+		threadPool->WaitForAllTasks();
+	}
 };
 
 using kih::Atomic;

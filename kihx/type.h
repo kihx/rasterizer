@@ -88,6 +88,16 @@ namespace kih
 	};
 	
 
+	/* enum class CullMode
+	*/
+	enum class CullMode
+	{
+		None = 0,
+		CW,
+		CCW,
+	};
+
+
 	// known constants
 	//
 	const float PI = 3.141592654f;

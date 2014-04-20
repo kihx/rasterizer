@@ -401,10 +401,11 @@ namespace kih
 				const auto& v1 = inputStream->GetData( v1Index );
 
 				// backface culling
-				if ( v == 0 )
+				if ( v == 0 && m_cullMode != CullMode::None )
 				{
 					const auto& v2 = inputStream->GetData( v1Index + 1 );
 
+					// FIXME: CW/CCW
 #ifdef USE_SSE_OPTIMZATION
 					if ( IsBackFaceSSE( v0.Position, v1.Position, v2.Position ) )
 #else
@@ -435,11 +436,19 @@ namespace kih
 				}
 
 				// Select start and end scanlines with Y-axis clipping.
+#ifdef USE_SSE_OPTIMZATION
 				startY = static_cast< unsigned short >( SSE::Ceil( yMin ) );
+#else
+				startY = static_cast< unsigned short >( std::ceil( yMin ) );
+#endif
 				startY = Clamp<unsigned short>( startY, 0, maxY );
 				minScanline = Min( minScanline, startY );
 
+#ifdef USE_SSE_OPTIMZATION
 				endY = static_cast< unsigned short >( SSE::Ceil( yMax ) );
+#else
+				endY = static_cast< unsigned short >( std::ceil( yMax ) );
+#endif
 				endY = Clamp<unsigned short>( endY, startY, maxY );
 				maxScanline = Max( maxScanline, endY );
 
@@ -484,10 +493,9 @@ namespace kih
 		}
 	}
 
-	void Rasterizer::GatherPixelsBeingDrawnFromScanlines( std::shared_ptr<RasterizerOutputStream> outputStream, std::vector<ActiveEdgeTableElement>& aet, unsigned short minScanline, unsigned short maxScanline, unsigned short width, DepthBuffering& depthBuffering )
+	void Rasterizer::GatherPixelsBeingDrawnFromScanlines( std::shared_ptr<RasterizerOutputStream> outputStream, std::vector<ActiveEdgeTableElement>& aet, unsigned short minScanline, unsigned short maxScanline, unsigned short width, DepthBuffering& depthBuffering ) const
 	{
 		Assert( outputStream );
-		Assert( GetContext() );
 		Assert( minScanline >= 0 && minScanline <= maxScanline );
 		Assert( maxScanline < m_edgeTable.size() );
 
@@ -522,8 +530,13 @@ namespace kih
 				// Approximate intersection pixels betweeen edges on the scanline.
 				if ( aetLeft.CurrentX != aetRight.CurrentX )
 				{
+#ifdef USE_SSE_OPTIMZATION
 					unsigned short xLeft = static_cast<unsigned short>( SSE::Round( aetLeft.CurrentX ) );
 					unsigned short xRight = static_cast<unsigned short>( SSE::Round( aetRight.CurrentX ) );
+#else
+					unsigned short xLeft = static_cast< unsigned short >( std::round( aetLeft.CurrentX ) );
+					unsigned short xRight = static_cast< unsigned short >( std::round( aetRight.CurrentX ) );
+#endif
 
 					// clipping on RT
 					xLeft = Max<unsigned short>( xLeft, 0 );
@@ -544,7 +557,6 @@ namespace kih
 						float lerpRatioRight = ( diffX1Right == 0.0f ) ? 0.0f : ( diffX0Right / diffX1Right );
 #endif
 
-
 						// Lerp depth values of L and R between their own edges.
 						float depthLeft = Lerp( etLeft.ZStart, etLeft.ZEnd, lerpRatioLeft );
 						float depthRight = Lerp( etRight.ZStart, etRight.ZEnd, lerpRatioRight );
@@ -559,11 +571,6 @@ namespace kih
 						// Push inside pixels between intersections into the output stream.
 						for ( unsigned short x = xLeft; x < xRight; ++x )
 						{
-#if 0	// directly compute lerp depth (not used)
-							// Lerp a depth value at the point.
-							float interpolatedDepth = Lerp( depthLeft, depthRight, ( x - xLeft ) * depthRatioFactor );
-#endif
-
 #ifdef EARLY_Z_CULLING
 							// depth buffering
 							if ( depthBuffering.IsValid() )

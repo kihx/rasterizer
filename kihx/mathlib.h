@@ -54,6 +54,11 @@ namespace kih
 	{
 		return a + ( b - a ) * ratio;
 	}
+
+	FORCEINLINE Vector3 Lerp( const Vector3& a, const Vector3& b, float ratio )
+	{
+		return a + ( b - a ) * ratio;
+	}
 	
 	FORCEINLINE Color32 Vector4_ToColor32( const Vector4& src )
 	{
@@ -209,7 +214,7 @@ namespace kih
 
 		// avoiding "error C2057: expected constant expression"
 		#define XXM128_Swizzle( /*const XXM128&*/ v, /*unsigned int*/ mask ) \
-			_mm_shuffle_ps( v, v, mask );			
+			_mm_shuffle_ps( v, v, mask )
 
 		FORCEINLINE XXM128 XXM128_DotProduct( const XXM128& v1, const XXM128& v2 )
 		{
@@ -247,6 +252,11 @@ namespace kih
 			XXM128 v2ZXYW = XXM128_Swizzle( v2, SWIZZLE_MASK( 2, 0, 1, 3 ) );
 
 			return XXM128_Subtract( XXM128_Multiply( v1YZXW, v2ZXYW ), XXM128_Multiply( v1ZXYW, v2YZXW ) );
+		}
+
+		FORCEINLINE XXM128 Lerp( const XXM128& a, const XXM128& b, const XXM128& ratio )
+		{	
+			return XXM128_Add( a, XXM128_Multiply( XXM128_Subtract( b, a ), ratio ) );
 		}
 
 

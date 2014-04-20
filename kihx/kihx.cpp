@@ -5,6 +5,7 @@
 #include "base.h"
 #include "concommand.h"
 #include "kihx.h"
+#include "mathlib.h"
 #include "mesh.h"
 #include "profiler.h"
 #include "render.h"
@@ -19,9 +20,9 @@
 static ConsoleVariable grid_scene( "grid_scene", "0" );
 static ConsoleVariable grid_size( "grid_size", "5" );
 
-static ConsoleVariable model_scale( "model_scale", "0.4" );
+static ConsoleVariable model_scale( "model_scale", "0.3" );
 
-static ConsoleVariable concurrency( "concurrency", "1" );
+static ConsoleVariable concurrency( "concurrency", "4" );
 
 
 // Resources
@@ -153,14 +154,14 @@ KIHX_API void kiRenderToBuffer( void* buffer, int width, int height, int bpp )
 			{ 
 				auto context = RenderingDevice::GetInstance()->CreateRenderingContext(); 
 				context->SetViewport( 0, 0, static_cast<unsigned short>( renderTarget->Width() ), static_cast<unsigned short>( renderTarget->Height() ) );
-				context->SetFixedPipelineMode( true );
+				context->SetFixedPipelineMode( false );
+				context->SetDepthStencil( depthStencil );
 				contexts[index++] = context;
 			} 
 		);
 
 		// only for the first context
 		contexts[0]->SetRenderTarget( renderTarget, 0 );		// Assume that we have only one RT.
-		contexts[0]->SetDepthStencil( depthStencil );
 	}
 	
 	auto context = contexts[0];

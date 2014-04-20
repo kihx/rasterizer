@@ -149,6 +149,15 @@ namespace kih
 		bool CallDepthFunc( byte src, byte dst );
 #endif
 
+		FORCEINLINE CullMode GetCullMode() const
+		{
+			return m_cullMode;
+		}
+		void SetCullMode( CullMode mode )
+		{
+			m_cullMode = mode;
+		}
+
 	private:
 		void DrawInternal( const std::shared_ptr<IMesh>& mesh, PrimitiveType primitiveType = PrimitiveType::Triangles );
 
@@ -180,6 +189,8 @@ namespace kih
 #endif
 		DepthFunc m_depthFunc;
 		bool m_depthWritable;
+
+		CullMode m_cullMode;
 
 		bool m_fixedPipelineMode;
 	};
