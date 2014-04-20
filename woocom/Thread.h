@@ -1,25 +1,11 @@
 #pragma once
 
+#include "common.h"
 #include <vector>
 #include <queue>
 #include <functional>
 #include <process.h>
 #include <windows.h>
-
-class WMutex
-{
-public:
-	WMutex(CRITICAL_SECTION* cs) : m_cs(cs)
-	{
-		EnterCriticalSection(m_cs);
-	}
-	~WMutex()
-	{
-		LeaveCriticalSection(m_cs);
-	}
-private:
-	CRITICAL_SECTION*	m_cs;
-};
 
 class WThreadPool;
 class WWorker

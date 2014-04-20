@@ -87,6 +87,7 @@
   <ItemGroup>
     <ClInclude Include="common.h" />
     <ClInclude Include="Utility.h" />
+    <ClInclude Include="WContextPool.h" />
     <ClInclude Include="WFileLoader.h" />
     <ClInclude Include="WIDrawable.h" />
     <ClInclude Include="WMesh.h" />
@@ -101,6 +102,7 @@
   <ItemGroup>
     <ClCompile Include="Thread.cpp" />
     <ClCompile Include="Utility.cpp" />
+    <ClCompile Include="WContextPool.cpp" />
     <ClCompile Include="WFileLoader.cpp" />
     <ClCompile Include="WMesh.cpp" />
     <ClCompile Include="WModule.cpp" />

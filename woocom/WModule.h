@@ -6,6 +6,8 @@
 #include <mutex>
 #include <vector>
 
+class WContext;
+class WContextPool;
 class WModule
 {
 	enum class TransformType : int
@@ -29,6 +31,8 @@ public:
 	void PaintPixel( int x, int y, const unsigned char* rgb);
 	void ZBufferPaintPixel(int x, int y, float z, const unsigned char* rgb);
 	bool DepthTest(int x, int y, float z);
+	WContext* GetContext();
+	void ReturnContext(WContext* pContext);
 
 	void ResetFillInfo();
 	void InsertLineInfo(int lineIndex, int posX, const unsigned char* rgb);
@@ -53,7 +57,7 @@ private:
 	int m_screenWidth;
 	int m_screenHeight;
 	int m_colorDepth;
-	std::vector<float> m_depthBuffer;
+	float* m_depthBuffer;
 
 	bool m_isSorted;
 	std::vector< EdgeInfo >	m_fillInfo;
@@ -66,4 +70,6 @@ private:
 	Matrix4 m_view;
 	Matrix4 m_proj;
 	Matrix4 m_wvp;
+
+	WContextPool* m_contextPool;
 };

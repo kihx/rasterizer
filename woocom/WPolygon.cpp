@@ -75,39 +75,40 @@ void WPolygon::DrawSolidParallel(WModule* pModule)
 	const Matrix4& view = pModule->GetView();
 	const Matrix4& proj = pModule->GetProj();
 
-	Matrix4 wvp = world * view * proj;
-
-	int width = pModule->GetWidth();
-	int height = pModule->GetHeight();
+	//Matrix4 wvp = world * view * proj;
 
 	int numFace = m_data->GetFaceNum();
 	for (int i = 0; i < numFace; ++i)
 	{
-		g_pool->AddTask( [=,&wvp]()
+		g_pool->AddTask( [=]()
 		{
-			//WContext painter(height, pModule);
+			WContext* pContext = pModule->GetContext();
 
-			//unsigned char color[3] = { rand() % 255, rand() % 255, rand() % 255 };
-			//int numVert = m_data->GetVertexNum(i);
+			Matrix4 wvp = world * view * proj;
 
-			//if (numVert == 0)
-			//{
-			//	return;
-			//}
+			unsigned char color[3] = { rand() % 255, rand() % 255, rand() % 255 };
+			int numVert = m_data->GetVertexNum(i);
 
-			//Vector3 p1 = *m_data->GetVertex(i, numVert - 1);
-			//pModule->VertexProcess(wvp, p1);
-			//for (int vertexIndex = 0; vertexIndex < numVert; ++vertexIndex)
-			//{
-			//	Vector3 p2 = *m_data->GetVertex(i, vertexIndex);
-			//	pModule->VertexProcess(wvp, p2);
-			//	painter.MakeLineInfo(&p1, &p2, color);
-			//	p1 = p2;
-			//}
+			if (numVert == 0)
+			{
+				return;
+			}
 
-			//// 여러번 겹치는 픽셀을 한번만 칠하도록 하는 것이 필요
-			//painter.SortFillInfo();
-			//painter.DrawFillInfo();
+			Vector3 p1 = *m_data->GetVertex(i, numVert - 1);
+			pModule->VertexProcess(wvp, p1);
+			for (int vertexIndex = 0; vertexIndex < numVert; ++vertexIndex)
+			{
+				Vector3 p2 = *m_data->GetVertex(i, vertexIndex);
+				pModule->VertexProcess(wvp, p2);
+				pContext->MakeLineInfo(&p1, &p2, color);
+				p1 = p2;
+			}
+
+			// 여러번 겹치는 픽셀을 한번만 칠하도록 하는 것이 필요
+			pContext->SortFillInfo();
+			pContext->DrawFillInfo();
+			pContext->ResetFillInfo();
+			pModule->ReturnContext(pContext);
 		});
 	}
 

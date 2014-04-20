@@ -3,6 +3,8 @@
 #include <vector>
 #include <algorithm>
 
+#include <Windows.h>
+
 struct PixelInfo
 {
 	PixelInfo(int x, const unsigned char* rgb) :m_x(x), m_z(0.0f)
@@ -50,6 +52,11 @@ struct EdgeInfo
 	}
 	void Sort()
 	{
+		if (m_edgeData.size() == 0)
+		{
+			return;
+		}
+
 		std::sort(m_edgeData.begin(), m_edgeData.end());
 
 		if (m_edgeData.size() & 1)
@@ -74,4 +81,19 @@ struct EdgeInfo
 	}
 
 	std::vector<PixelInfo> m_edgeData;
+};
+
+class WMutex
+{
+public:
+	WMutex(CRITICAL_SECTION* cs) : m_cs(cs)
+	{
+		EnterCriticalSection(m_cs);
+	}
+	~WMutex()
+	{
+		LeaveCriticalSection(m_cs);
+	}
+private:
+	CRITICAL_SECTION*	m_cs;
 };

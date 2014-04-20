@@ -12,7 +12,7 @@ class WContext
 {
 public:
 	explicit WContext(int width, int height, WModule* pModule) 
-		: m_width(width), m_height(height), m_module(pModule)
+		: m_width(width), m_height(height), m_module(pModule), m_scanOffset(height), m_scanCount(0)
 	{
 		m_fillInfo.resize(height);
 	}
@@ -35,4 +35,6 @@ private:
 	std::vector< EdgeInfo >	m_fillInfo;
 	int m_width;
 	int m_height;
+	int m_scanOffset;
+	int m_scanCount;
 };

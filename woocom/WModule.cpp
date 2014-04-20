@@ -7,9 +7,11 @@
 #include "WPolygon.h"
 #include "Utility.h"
 #include "Thread.h"
+#include "WContextPool.h"
 
 #include <assert.h>
 #include <memory>
+#include <thread>
 
 #include <Windows.h>
 
@@ -18,13 +20,16 @@ std::shared_ptr<WIDrawable> g_pDrawObj;
 
 std::shared_ptr<WThreadPool> g_pool;
 
-WModule::WModule() : m_isInit(false)
+WModule::WModule() : m_isInit(false), m_depthBuffer(nullptr)
 {
-	g_pool = std::make_shared<WThreadPool>(4);
 }
 
 WModule::~WModule()
 {
+	if (m_depthBuffer != nullptr)
+	{
+		delete[] m_depthBuffer;
+	}
 }
 
 void WModule::Init(void* buffer, int width, int height, int bpp)
@@ -38,8 +43,18 @@ void WModule::Init(void* buffer, int width, int height, int bpp)
 	m_scanOffset = height;
 	m_scanCount = 0;
 
-	m_depthBuffer.resize(width * height, 1.0f);
+	int pixelNum = width * height;
+	m_depthBuffer = new float[pixelNum];
+	for (int i = 0; i < pixelNum; ++i)
+	{
+		m_depthBuffer[i] = 1.0f;
+	}
+
 	m_fillInfo.resize(height);
+
+	const unsigned threadNum = std::thread::hardware_concurrency();
+	g_pool = std::make_shared<WThreadPool>(threadNum);
+	m_contextPool = new WContextPool(threadNum * 2, this);
 }
 
 bool WModule::IsInitialized()
@@ -63,8 +78,12 @@ void WModule::Clear(void* pImage, int width, int height, unsigned int clearColor
 		buffer[i+1] = clearColor >> 8 & 0xff;
 		buffer[i+2] = clearColor & 0xff;
 	}
-	m_depthBuffer.clear();
-	m_depthBuffer.resize(width * height, 1.0f);
+
+	int pixelNum = width * height;
+	for (int i = 0; i < pixelNum; ++i)
+	{
+		m_depthBuffer[i] = 1.0f;
+	}
 }
 
 void WModule::PaintPixel(int x, int y, const unsigned char* rgb)
@@ -113,7 +132,7 @@ bool WModule::DepthTest(int x, int y, float z)
 	{
 		return false;
 	}
-
+	
 	// depth test
 	int depthIndex = m_screenWidth * y + x;
 	if (m_depthBuffer[depthIndex] < z)
@@ -125,6 +144,21 @@ bool WModule::DepthTest(int x, int y, float z)
 		m_depthBuffer[depthIndex] = z;
 		return true;
 	}
+}
+
+WContext* WModule::GetContext()
+{
+	if (m_contextPool == nullptr)
+	{
+		return nullptr;
+	}
+
+	return m_contextPool->GetContext();
+}
+
+void WModule::ReturnContext(WContext* pContext)
+{
+	m_contextPool->Return(pContext);
 }
 
 void WModule::ResetFillInfo()

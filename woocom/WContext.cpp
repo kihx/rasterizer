@@ -14,6 +14,9 @@ void WContext::ResetFillInfo()
 	{
 		m_fillInfo[i].m_edgeData.clear();
 	}
+
+	m_scanOffset = m_height;
+	m_scanCount = 0;
 }
 
 void WContext::MakeLineInfo(const Vector3* v1, const Vector3* v2, const unsigned char* color)
@@ -87,6 +90,17 @@ void WContext::InsertLineInfo(int lineIndex, int posX, const unsigned char* rgb)
 {
 	assert((lineIndex >= 0 && lineIndex < m_height) && "fillInfo Index out of range");
 
+	// 엣지 정보가 들어있는 공간을 저장
+	// offset 부터 count 갯수만큼 그리도록
+	if (m_scanOffset > lineIndex)
+	{
+		m_scanOffset = lineIndex;
+	}
+	else if (m_scanCount < lineIndex)
+	{
+		m_scanCount = lineIndex;
+	}
+
 	m_fillInfo[lineIndex].Insert(posX, rgb);
 }
 
@@ -94,13 +108,23 @@ void WContext::InsertLineDepthInfo(int lineIndex, int posX, float depth, const u
 {
 	assert((lineIndex >= 0 && lineIndex < m_height) && "fillInfo Index out of range");
 
+	// 엣지 정보가 들어있는 공간을 저장
+	// offset 부터 count 갯수만큼 그리도록
+	if (m_scanOffset > lineIndex)
+	{
+		m_scanOffset = lineIndex;
+	}
+	else if (m_scanCount < lineIndex)
+	{
+		m_scanCount = lineIndex;
+	}
+
 	m_fillInfo[lineIndex].Insert(posX, depth, rgb);
 }
 
 void WContext::SortFillInfo()
 {
-	size_t num = m_fillInfo.size();
-	for (size_t i = 0; i < num; ++i)
+	for (size_t i = m_scanOffset; i < m_scanCount; ++i)
 	{
 		m_fillInfo[i].Sort();
 	}
@@ -108,8 +132,7 @@ void WContext::SortFillInfo()
 
 void WContext::DrawFillInfo()
 {
-	size_t num = m_fillInfo.size();
-	for (size_t i = 0; i < num; ++i)
+	for (size_t i = m_scanOffset; i < m_scanCount; ++i)
 	{
 		DrawScanline(i, m_fillInfo[i]);
 	}
