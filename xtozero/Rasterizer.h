@@ -73,7 +73,7 @@ namespace xtozero
 		{
 		}
 		const std::vector<CPsElementDesc>& Process( CRsElementDesc& rsInput );
-		const std::vector<CPsElementDesc>& ProcessParallel( CRsElementDesc& rsInput, std::shared_ptr<xtozero::CXtzThreadPool> threadPool );
+		const std::vector<CPsElementDesc>& ProcessParallel( CRsElementDesc& rsInput, CXtzThreadPool* threadPool );
 
 		void CreateEdgeTableParallel( const CRsElementDesc& rsInput, unsigned int faceNumber, 
 			std::vector<Edge>& edgeTable );
@@ -91,52 +91,16 @@ namespace xtozero
 		int index;
 	};
 
-	static void RsThreadWork( LPVOID arg )
+	static void RsThreadWork( LPVOID arg );
+
+	inline bool CompareEdgeY( const Edge& lhs, const Edge& rhs )
 	{
-		RsThreadArg* pRsArg = (RsThreadArg*)arg;
+		return lhs.m_minY < rhs.m_minY;
+	}
 
-		CRasterizer* rasterizer = pRsArg->pRs;
-
-		std::vector<Edge> edgeTable;
-		std::vector<Edge> activeEdgeTable;
-		std::vector<CPsElementDesc> outputRS;
-		std::vector<std::pair<int, float>> horizontalLine;
-
-		Rect& viewport = rasterizer->m_viewport;
-
-		outputRS.reserve( (viewport.m_right - viewport.m_left) );
-
-		rasterizer->CreateEdgeTableParallel( *pRsArg->pRsElementDesc, pRsArg->index, edgeTable );
-
-		activeEdgeTable.reserve( edgeTable.size() );
-		horizontalLine.reserve( edgeTable.size( ) );
-
-		int scanline = edgeTable.begin( )->m_minY;
-
-		unsigned int facecolor = RAND_COLOR( );
-
-		while ( !(edgeTable.empty( ) && activeEdgeTable.empty( )) )
-		{
-			rasterizer->UpdateActiveEdgeTableParallel( scanline , edgeTable, activeEdgeTable );
-
-			rasterizer->ProcessScanlineParallel( scanline, 
-				facecolor, 
-				activeEdgeTable, 
-				outputRS, 
-				horizontalLine );
-
-			++scanline;
-		}
-
-		{
-			Lock<CriticalSection> lock( rasterizer->m_cs );
-			for ( std::vector<CPsElementDesc>::iterator& iter = outputRS.begin(); iter != outputRS.end(); ++iter )
-			{
-				rasterizer->m_outputRS.emplace_back( *iter );
-			}
-		}
-
-		delete pRsArg;
+	inline bool CompareEdgeX( const Edge& lhs, const Edge& rhs )
+	{
+		return lhs.m_minX < rhs.m_minX;
 	}
 }
 

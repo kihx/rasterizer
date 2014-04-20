@@ -21,7 +21,7 @@ namespace xtozero
 			m_vsOutput.m_vertices.emplace_back( position.X, position.Y, position.Z );
 		}
 		
-		int key = 0;
+		unsigned int key = 0;
 		m_vsOutput.m_faces.clear();
 		for ( std::vector<Face>::iterator& faceiter = pMesh->m_faces.begin( ); faceiter != pMesh->m_faces.end( ); ++faceiter )
 		{
@@ -42,7 +42,7 @@ namespace xtozero
 		return m_vsOutput;
 	}
 
-	CRsElementDesc& CVertexShader::ProcessParallel( const std::shared_ptr<CMesh> pMesh, std::shared_ptr<xtozero::CXtzThreadPool> threadPool )
+	CRsElementDesc& CVertexShader::ProcessParallel( const std::shared_ptr<CMesh> pMesh, CXtzThreadPool* threadPool )
 	{
 		m_vsOutput.m_vertices.clear( );
 		m_vsOutput.m_vertices.resize( pMesh->m_nVerties );
@@ -61,7 +61,7 @@ namespace xtozero
 			threadPool->AddWork( VsThreadWork, (LPVOID)pArg );
 		}
 
-		int key = 0;
+		unsigned int key = 0;
 		m_vsOutput.m_faces.clear();
 		for ( std::vector<Face>::iterator& faceiter = pMesh->m_faces.begin( ); faceiter != pMesh->m_faces.end( ); ++faceiter )
 		{
@@ -89,5 +89,20 @@ namespace xtozero
 		m_vsOutput.m_vertices[index].X = pos.X;
 		m_vsOutput.m_vertices[index].Y = pos.Y;
 		m_vsOutput.m_vertices[index].Z = pos.Z;
+	}
+
+	void VsThreadWork( LPVOID arg )
+	{
+		VsThreadArg* pVsarg = (VsThreadArg*)arg;
+
+		Vector3 position = pVsarg->pMesh->m_vertices[pVsarg->index];
+		if ( pVsarg->pMesh->m_coordinate == COORDINATE::OBJECT_COORDINATE )
+		{
+			position.Transform( pVsarg->matrix );
+		}
+
+		pVsarg->pVs->InsertTransformedVertex( position, pVsarg->index );
+
+		delete pVsarg;
 	}
 }

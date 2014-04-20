@@ -56,13 +56,12 @@ namespace xtozero
 
 		while ( true )
 		{
+			thread->WaitEvent();
 			if ( thread->IsEnd( ) )
 			{
 				break;
 			}
 
-			thread->WaitEvent();
-			
 			thread->Work( );
 			thread->GetOwner()->AddThraed( thread );
 		}
@@ -92,6 +91,7 @@ namespace xtozero
 
 	CXtzThreadPool::~CXtzThreadPool( )
 	{
+		DestroyThreadPool();
 	}
 
 	void CXtzThreadPool::CreateThreadPool( int maxThread )
@@ -110,14 +110,14 @@ namespace xtozero
 
 	void CXtzThreadPool::DestroyThreadPool( )
 	{
-		for ( int i = 0; i < MAX_THREAD; ++i )
+		WaitThread( );
+
+		for ( int i = 0; i < m_nThread; ++i )
 		{
 			CXtzThread* thread = m_threads[i].get();
 			thread->SetEnd( true );
 			thread->WakeUp( );
 		}
-
-		WaitThread();
 	}
 
 	void CXtzThreadPool::AddWork( WorkerFuntion worker, void* arg )

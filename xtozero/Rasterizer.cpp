@@ -304,7 +304,7 @@ namespace xtozero
 		return m_outputRS;
 	}
 
-	const std::vector<CPsElementDesc>& CRasterizer::ProcessParallel( CRsElementDesc& rsInput, std::shared_ptr<xtozero::CXtzThreadPool> threadPool )
+	const std::vector<CPsElementDesc>& CRasterizer::ProcessParallel( CRsElementDesc& rsInput, CXtzThreadPool* threadPool )
 	{
 		m_outputRS.clear( );
 
@@ -414,11 +414,7 @@ namespace xtozero
 			}
 		}
 		//edgeTable을 minY로 정렬
-		std::sort( edgeTable.begin( ), edgeTable.end( ),
-			[]( const Edge& lhs, const Edge& rhs ) -> bool
-		{
-			return lhs.m_minY < rhs.m_minY;
-		} );
+		std::sort( edgeTable.begin( ), edgeTable.end( ), CompareEdgeY );
 	}
 
 	void CRasterizer::UpdateActiveEdgeTableParallel( const int scanline, std::vector<Edge>& edgeTable, std::vector<Edge>& activeEdgeTable )
@@ -460,11 +456,7 @@ namespace xtozero
 		//minX로 정렬
 		if ( activeEdgeTable.size( ) > 1 )
 		{
-			std::sort( activeEdgeTable.begin( ), activeEdgeTable.end( ),
-				[]( const Edge& lhs, const Edge& rhs )->bool
-			{
-				return lhs.m_minX < rhs.m_minX;
-			} );
+			std::sort( activeEdgeTable.begin( ), activeEdgeTable.end( ), CompareEdgeX );
 		}
 	}
 
@@ -480,9 +472,9 @@ namespace xtozero
 
 		float intersectX = 0;
 
-		for ( std::vector<Edge>::iterator& iter = activeEdgeTable.begin( ); iter != activeEdgeTable.end( ); ++iter )
+		for ( int i = 0; i < activeEdgeTable.size(); ++i )
 		{
-			Edge& edge = *iter;
+			Edge& edge = activeEdgeTable[i];
 			if ( edge.m_maxY == edge.m_minY ) // 수평한 선분은 제외
 			{
 
@@ -512,7 +504,7 @@ namespace xtozero
 
 				float z = Lerp( edge.m_startZ, edge.m_endZ, lerpRatio );
 
-				horizontalLine.emplace_back( ceilf( intersectX ), z );
+				horizontalLine.emplace_back( intersectX, z );
 			}
 		}
 
@@ -520,17 +512,17 @@ namespace xtozero
 		int endX;
 		float startZ;
 		float endZ;
-		for ( std::vector<std::pair<int, float>>::iterator& iter = horizontalLine.begin( ); iter != horizontalLine.end( ); iter += 2 )
+		for ( int i = 0; i < horizontalLine.size(); i += 2 )
 		{
-			std::pair<int, float>& posXZ = *iter;
+			std::pair<int, float>& posXZ = horizontalLine[i];
 
-			if ( (iter + 1) == horizontalLine.end( ) )
+			if ( (i + 1) == horizontalLine.size( ) )
 			{
 				outputRS.emplace_back( posXZ.first, scanline, posXZ.second, facecolor );
 				break;
 			}
 
-			std::pair<int, float>& posNextXZ = *(iter + 1);
+			std::pair<int, float>& posNextXZ = horizontalLine[i + 1];
 
 			startX = posXZ.first;
 			endX = posNextXZ.first;
@@ -592,5 +584,53 @@ namespace xtozero
 		m_viewport.m_bottom = bottom;
 
 		m_outputRS.reserve( (right - left) * (bottom - top) );
+	}
+
+	void RsThreadWork( LPVOID arg )
+	{
+		RsThreadArg* pRsArg = (RsThreadArg*)arg;
+
+		CRasterizer* rasterizer = pRsArg->pRs;
+
+		std::vector<Edge> edgeTable;
+		std::vector<Edge> activeEdgeTable;
+		std::vector<CPsElementDesc> outputRS;
+		std::vector<std::pair<int, float>> horizontalLine;
+
+		Rect& viewport = rasterizer->m_viewport;
+
+		outputRS.reserve( (viewport.m_right - viewport.m_left) );
+
+		rasterizer->CreateEdgeTableParallel( *pRsArg->pRsElementDesc, pRsArg->index, edgeTable );
+
+		activeEdgeTable.reserve( edgeTable.size( ) );
+		horizontalLine.reserve( edgeTable.size( ) );
+
+		int scanline = edgeTable.begin( )->m_minY;
+
+		unsigned int facecolor = RAND_COLOR( );
+
+		while ( !(edgeTable.empty( ) && activeEdgeTable.empty( )) )
+		{
+			rasterizer->UpdateActiveEdgeTableParallel( scanline, edgeTable, activeEdgeTable );
+
+			rasterizer->ProcessScanlineParallel( scanline,
+				facecolor,
+				activeEdgeTable,
+				outputRS,
+				horizontalLine );
+
+			++scanline;
+		}
+
+		{
+			Lock<CriticalSection> lock( rasterizer->m_cs );
+			for ( std::vector<CPsElementDesc>::iterator& iter = outputRS.begin( ); iter != outputRS.end( ); ++iter )
+			{
+				rasterizer->m_outputRS.emplace_back( *iter );
+			}
+		}
+
+		delete pRsArg;
 	}
 }
