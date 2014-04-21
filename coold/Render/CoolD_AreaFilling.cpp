@@ -255,6 +255,10 @@ namespace CoolD
 						
 			for( Dint i = (Dint)beginX; i < (Dint)endX; ++i )				
 			{
+				if (i < 0 || i >= m_Width || currentHeight < 0 || currentHeight >= m_Height)
+				{
+					continue;
+				}
 				//좌, 우 사이의 깊이값 보간					
 				Dfloat resultDepth = GetDepthInterpolation(endX, beginX, DepthRight, DepthLeft, i);
 
