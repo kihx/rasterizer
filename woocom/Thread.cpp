@@ -111,12 +111,10 @@ WThreadPool::~WThreadPool()
 	DeleteCriticalSection(&m_queue_mutex);
 }
 
-void WThreadPool::AddTask(std::function<void()> task)
+void WThreadPool::AddTask(const std::function<void()>& task)
 {
-	{
-		WMutex mutex(&m_queue_mutex);
-		m_tasks.push(task);
-	}
+	WMutex mutex(&m_queue_mutex);
+	m_tasks.push(task);
 
 	SetEvent(m_event);
 }
@@ -125,5 +123,6 @@ void WThreadPool::Join()
 {
 	while ( m_numActiveThread != 0)
 	{
+		Sleep(1);
 	}
 }

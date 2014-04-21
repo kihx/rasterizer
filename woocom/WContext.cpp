@@ -10,7 +10,7 @@ void WContext::ResetFillInfo()
 {
 	// 라인정보 비우기
 	size_t num = m_fillInfo.size();
-	for (size_t i = 0; i < num; ++i)
+	for (size_t i = m_scanOffset; i <= m_scanCount; ++i)
 	{
 		m_fillInfo[i].m_edgeData.clear();
 	}
@@ -145,7 +145,7 @@ void WContext::InsertLineDepthInfo(int lineIndex, int posX, float depth, const u
 
 void WContext::SortFillInfo()
 {
-	for (size_t i = m_scanOffset; i < m_scanCount; ++i)
+	for (size_t i = m_scanOffset; i <= m_scanCount; ++i)
 	{
 		m_fillInfo[i].Sort();
 	}
@@ -153,7 +153,7 @@ void WContext::SortFillInfo()
 
 void WContext::DrawFillInfo()
 {
-	for (size_t i = m_scanOffset; i < m_scanCount; ++i)
+	for (size_t i = m_scanOffset; i <= m_scanCount; ++i)
 	{
 		DrawScanline(i, m_fillInfo[i]);
 	}

@@ -36,7 +36,7 @@ public:
 	WThreadPool(size_t threadNum);
 	~WThreadPool();
 
-	void AddTask(std::function<void()>);
+	void AddTask(const std::function<void()>& );
 	void Join();
 private:
 	friend class WWorker;
