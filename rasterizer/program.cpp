@@ -32,6 +32,7 @@ byte g_pppScreenImage[SCREEN_HEIGHT][SCREEN_WIDTH][COLOR_DEPTH];
 // Static variables
 //
 static bool g_bFrameUpdate = true;
+static bool g_bNoRetransform = false;
 static GLdouble g_dZoomFactor = 4.0;
 static GLint g_iHeight;
 std::string g_meshFileName = "cube.ply";
@@ -537,6 +538,11 @@ void keyboard( unsigned char key, int x, int y)
 		g_bFrameUpdate = !g_bFrameUpdate;
 		break;
 
+	case 's':
+	case 'S':
+		g_bNoRetransform = !g_bNoRetransform;
+		break;
+
 	case 'z':
 		g_dZoomFactor += 0.5;
 		if ( g_dZoomFactor >= 8.0) 
@@ -569,7 +575,10 @@ void update( void )
 		return;
 	}
 
-	SetupTransform();
+	if ( !g_bNoRetransform )
+	{
+		SetupTransform();
+	}
 	
 	glutPostRedisplay();
 }
