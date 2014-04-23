@@ -69,6 +69,20 @@ namespace kih
 	bool IsBackFace( const Vector4& v0, const Vector4& v1, const Vector4& v2 );
 	bool IsBackFaceSSE( const Vector4& v0, const Vector4& v1, const Vector4& v2 );
 
+	template<class T>
+	FORCEINLINE T ComputeBarycentric( const Vector2Base<T>& p, const Vector2Base<T>& v0, const Vector2Base<T>& v1 )
+	{
+		return ( v1.X - v0.X ) * ( p.Y - v0.Y ) - ( v1.Y - v0.Y ) * ( p.X - v0.X );
+	}
+
+	template<class T>
+	FORCEINLINE bool IsPointInTriangle( const Vector2Base<T>& p, const Vector2Base<T>& v0, const Vector2Base<T>& v1, const Vector2Base<T>& v2 )
+	{
+		T o0 = ComputeBarycentric( p, v0, v1 );
+		T o1 = ComputeBarycentric( p, v1, v2 );
+		T o2 = ComputeBarycentric( p, v2, v0 );
+		return o0 >= 0 && o1 >= 0 && o2 >= 0;
+	}
 
 
 	/* SSE (Streaming SIMD Extensions) optimization
@@ -111,12 +125,23 @@ namespace kih
 		/* typedef XXM128
 		*/
 		typedef __m128	XXM128;
+		typedef __m128i	XXM128i;
 
 		#define SWIZZLE_MASK(fp3, fp2, fp1, fp0)	(((fp3) << 6) | ((fp2) << 4) | ((fp1) << 2) | ((fp0)))
-
+		
 
 		// XXM128 operators
 		//
+		FORCEINLINE XXM128i XXM128_ReinterpretCast_XXM128i( const XXM128& v )
+		{
+			return _mm_castps_si128( v );
+		}
+
+		FORCEINLINE XXM128 XXM128i_ReinterpretCast_XXM128( const XXM128i& v )
+		{
+			return _mm_castsi128_ps( v );
+		}
+
 		FORCEINLINE XXM128 XXM128_Load( float x )
 		{
 			return _mm_set_ps( x, x, x, x );
@@ -254,9 +279,14 @@ namespace kih
 			return XXM128_Subtract( XXM128_Multiply( v1YZXW, v2ZXYW ), XXM128_Multiply( v1ZXYW, v2YZXW ) );
 		}
 
-		FORCEINLINE XXM128 Lerp( const XXM128& a, const XXM128& b, const XXM128& ratio )
+		FORCEINLINE XXM128 XXM128_Lerp( const XXM128& a, const XXM128& b, const XXM128& ratio )
 		{	
 			return XXM128_Add( a, XXM128_Multiply( XXM128_Subtract( b, a ), ratio ) );
+		}
+
+		FORCEINLINE XXM128 XXM128_Less( const XXM128& v1, const XXM128& v2 )
+		{
+			return _mm_cmplt_ps( v1, v2 );
 		}
 
 

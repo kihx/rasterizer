@@ -5,6 +5,64 @@
 
 namespace kih
 {
+	/* struct Vector2Base
+	*/
+	template<class T>
+	struct Vector2Base
+	{
+		static_assert( std::is_integral<T>::value || std::is_floating_point<T>::value, "invalid type of Vector2Base" );
+
+		union
+		{
+			struct
+			{
+				T X;
+				T Y;
+			};
+
+			T Value[2];
+		};
+
+		Vector2Base() :
+			X( T() ),
+			Y( T() )
+		{
+		}
+
+		Vector2Base( T x, T y ) :
+			X( x ),
+			Y( y )
+		{
+		}
+
+		Vector2Base( const T* rhs ) :
+			X( rhs[0] ),
+			Y( rhs[1] )
+		{
+		}
+
+		Vector2Base( const Vector2Base& rhs ) :
+			X( rhs.X ),
+			Y( rhs.Y )
+		{
+		}
+
+		FORCEINLINE Vector2Base& operator=( const Vector2Base& rhs )
+		{
+			if ( this == &rhs )
+			{
+				return *this;
+			}
+
+			X = rhs.X;
+			Y = rhs.Y;
+			return *this;
+		}
+	};
+	typedef Vector2Base<float> Vector2;
+	typedef Vector2Base<int> Vector2i;
+
+
 	/* struct Vector3
 	*/
 	struct Vector3

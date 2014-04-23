@@ -255,8 +255,14 @@ namespace kih
 
 		// scanline conversion
 		void DoScanlineConversion( const std::shared_ptr<RasterizerInputStream>& inputStream, std::shared_ptr<RasterizerOutputStream> outputStream, unsigned short width, unsigned short height );
+
+		// rasterization using an edge table
+		void RasterizeUsingEdgeTable( const std::shared_ptr<RasterizerInputStream>& inputStream, std::shared_ptr<RasterizerOutputStream> outputStream, unsigned short width, unsigned short height, size_t numVerticesPerPrimitive, size_t numVertices, DepthBuffering& depthBuffering );
 		void GatherPixelsBeingDrawnFromScanlines( std::shared_ptr<RasterizerOutputStream> outputStream, std::vector<ActiveEdgeTableElement>& aet, unsigned short minScanline, unsigned short maxScanline, unsigned short width, DepthBuffering& depthBufferingParam ) const;
 		bool UpdateActiveEdgeTable( std::vector<ActiveEdgeTableElement>& aet, unsigned short scanline ) const;
+
+		// rasterization using barycentric coordinates
+		void RasterizeUsingBarycentricCoordinates( const std::shared_ptr<RasterizerInputStream>& inputStream, std::shared_ptr<RasterizerOutputStream> outputStream, unsigned short width, unsigned short height, size_t numVertices, DepthBuffering& depthBuffering );
 
 		// transform
 		void TransformViewport( const std::shared_ptr<RasterizerInputStream>& inputStream, unsigned short width, unsigned short height ) const;
