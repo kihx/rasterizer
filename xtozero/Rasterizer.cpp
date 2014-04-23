@@ -176,7 +176,7 @@ namespace xtozero
 
 				float z = Lerp( edge.m_startZ, edge.m_endZ, lerpRatio );
 
-				horizontalLine.emplace_back( ceilf( intersectX ), z );
+				horizontalLine.emplace_back( static_cast<int>( intersectX ), z );
 			}
 		}
 
@@ -472,7 +472,7 @@ namespace xtozero
 
 		float intersectX = 0;
 
-		for ( int i = 0; i < activeEdgeTable.size(); ++i )
+		for ( unsigned int i = 0; i < activeEdgeTable.size(); ++i )
 		{
 			Edge& edge = activeEdgeTable[i];
 			if ( edge.m_maxY == edge.m_minY ) // 수평한 선분은 제외
@@ -504,7 +504,7 @@ namespace xtozero
 
 				float z = Lerp( edge.m_startZ, edge.m_endZ, lerpRatio );
 
-				horizontalLine.emplace_back( intersectX, z );
+				horizontalLine.emplace_back( static_cast<int>(intersectX), z );
 			}
 		}
 
@@ -512,7 +512,7 @@ namespace xtozero
 		int endX;
 		float startZ;
 		float endZ;
-		for ( int i = 0; i < horizontalLine.size(); i += 2 )
+		for ( unsigned int i = 0; i < horizontalLine.size(); i += 2 )
 		{
 			std::pair<int, float>& posXZ = horizontalLine[i];
 

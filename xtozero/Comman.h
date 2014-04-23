@@ -1,6 +1,8 @@
 #ifndef _COMMAN_H_
 #define _COMMAN_H_
 
+#include <memory>
+
 namespace xtozero
 {
 	template< typename T >
@@ -10,6 +12,36 @@ namespace xtozero
 		lhs = rhs;
 		rhs = temp;
 	}
+
+	template< typename T >
+	class CSingletonBase
+	{
+	private:
+		static T* m_instance;
+		CSingletonBase( const CSingletonBase<T>& );
+		CSingletonBase<T>& operator=(const CSingletonBase<T>&);
+	public:
+		static T* GetInstance( )
+		{
+			if ( m_instance == nullptr )
+			{
+				m_instance = new T();
+			}
+
+			return m_instance;
+		}
+		void ReleaseInstance()
+		{
+			delete m_instance;
+			m_instance = nullptr;
+		}
+		~CSingletonBase(){}
+	protected:
+		CSingletonBase(){}
+	};
+
+	template< typename T >
+	T* CSingletonBase<T>::m_instance = nullptr;
 }
 
 #endif

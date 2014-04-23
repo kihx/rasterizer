@@ -63,6 +63,9 @@
     <ClInclude Include="XtzThreadPool.h">
       <Filter>Thread</Filter>
     </ClInclude>
+    <ClInclude Include="Concommand.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -97,6 +100,9 @@
     </ClCompile>
     <ClCompile Include="XtzThreadPool.cpp">
       <Filter>Thread</Filter>
+    </ClCompile>
+    <ClCompile Include="Concommand.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

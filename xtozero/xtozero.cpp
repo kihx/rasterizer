@@ -61,3 +61,8 @@ XTZ_API void XtzSetTransform(int transformType, const float* matrix4x4)
 		break;
 	}
 }
+
+XTZ_API void XtzExecuteCommand( const char* cmd )
+{
+	cmd::CConcommandExecutor::GetInstance()->ExcuteConcommand( cmd );
+}
