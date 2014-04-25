@@ -389,47 +389,47 @@ namespace kih
 
 	void Vector3_TransformSSE( const Vector3& vec, const Matrix4& mat, Vector4& result )
 	{
-		SSE::XXM128 v0 = SSE::XXM128_Load( vec.X );
-		SSE::XXM128 v1 = SSE::XXM128_Load( vec.Y );
-		SSE::XXM128 v2 = SSE::XXM128_Load( vec.Z );
+		xxm128 v0 = SSE::Load( vec.X );
+		xxm128 v1 = SSE::Load( vec.Y );
+		xxm128 v2 = SSE::Load( vec.Z );
 
-		SSE::XXM128 r0 = SSE::XXM128_LoadUnaligned( mat.A[0] );
-		SSE::XXM128 r1 = SSE::XXM128_LoadUnaligned( mat.A[1] );
-		SSE::XXM128 r2 = SSE::XXM128_LoadUnaligned( mat.A[2] );
-		SSE::XXM128 r3 = SSE::XXM128_LoadUnaligned( mat.A[3] );
+		xxm128 r0 = SSE::LoadUnaligned( mat.A[0] );
+		xxm128 r1 = SSE::LoadUnaligned( mat.A[1] );
+		xxm128 r2 = SSE::LoadUnaligned( mat.A[2] );
+		xxm128 r3 = SSE::LoadUnaligned( mat.A[3] );
 
-		v0 = SSE::XXM128_Multiply( v0, r0 );
-		v1 = SSE::XXM128_Multiply( v1, r1 );
-		v2 = SSE::XXM128_Multiply( v2, r2 );
+		v0 = SSE::Multiply( v0, r0 );
+		v1 = SSE::Multiply( v1, r1 );
+		v2 = SSE::Multiply( v2, r2 );
 
-		v0 = SSE::XXM128_Add( v0, v1 );
-		v2 = SSE::XXM128_Add( v2, r3 );
-		v0 = SSE::XXM128_Add( v0, v2 );
+		v0 = SSE::Add( v0, v1 );
+		v2 = SSE::Add( v2, r3 );
+		v0 = SSE::Add( v0, v2 );
 
-		SSE::XXM128_StoreUnaligned( result.Value, v0 );
+		SSE::StoreUnaligned( result.Value, v0 );
 	}
 
 	void Vector4_TransformSSE( const Vector4& vec, const Matrix4& mat, Vector4& result )
 	{
-		SSE::XXM128 v0 = SSE::XXM128_Load( vec.X );
-		SSE::XXM128 v1 = SSE::XXM128_Load( vec.Y );
-		SSE::XXM128 v2 = SSE::XXM128_Load( vec.Z );
-		SSE::XXM128 v3 = SSE::XXM128_Load( 1.0f );
+		xxm128 v0 = SSE::Load( vec.X );
+		xxm128 v1 = SSE::Load( vec.Y );
+		xxm128 v2 = SSE::Load( vec.Z );
+		xxm128 v3 = SSE::Load( 1.0f );
 
-		SSE::XXM128 r0 = SSE::XXM128_LoadUnaligned( mat.A[0] );
-		SSE::XXM128 r1 = SSE::XXM128_LoadUnaligned( mat.A[1] );
-		SSE::XXM128 r2 = SSE::XXM128_LoadUnaligned( mat.A[2] );
-		SSE::XXM128 r3 = SSE::XXM128_LoadUnaligned( mat.A[3] );
+		xxm128 r0 = SSE::LoadUnaligned( mat.A[0] );
+		xxm128 r1 = SSE::LoadUnaligned( mat.A[1] );
+		xxm128 r2 = SSE::LoadUnaligned( mat.A[2] );
+		xxm128 r3 = SSE::LoadUnaligned( mat.A[3] );
 
-		v0 = SSE::XXM128_Multiply( v0, r0 );
-		v1 = SSE::XXM128_Multiply( v1, r1 );
-		v2 = SSE::XXM128_Multiply( v2, r2 );
-		v3 = SSE::XXM128_Multiply( v3, r3 );
+		v0 = SSE::Multiply( v0, r0 );
+		v1 = SSE::Multiply( v1, r1 );
+		v2 = SSE::Multiply( v2, r2 );
+		v3 = SSE::Multiply( v3, r3 );
 
-		v0 = SSE::XXM128_Add( v0, v1 );
-		v2 = SSE::XXM128_Add( v2, v3 );
-		v0 = SSE::XXM128_Add( v0, v2 );
+		v0 = SSE::Add( v0, v1 );
+		v2 = SSE::Add( v2, v3 );
+		v0 = SSE::Add( v0, v2 );
 
-		SSE::XXM128_StoreUnaligned( result.Value, v0 );
+		SSE::StoreUnaligned( result.Value, v0 );
 	}
 }

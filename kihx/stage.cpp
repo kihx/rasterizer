@@ -321,15 +321,15 @@ namespace kih
 		TransformViewport( inputStream, width, height );
 
 		// rasterization
-		DoScanlineConversion( inputStream, m_outputStream, width, height );
+		DoScanlineConversion( inputStream, width, height );
 
 		return m_outputStream;
 	}
 
-	void Rasterizer::DoScanlineConversion( const std::shared_ptr<RasterizerInputStream>& inputStream, std::shared_ptr<RasterizerOutputStream> outputStream, unsigned short width, unsigned short height )
+	void Rasterizer::DoScanlineConversion( const std::shared_ptr<RasterizerInputStream>& inputStream, unsigned short width, unsigned short height )
 	{
 		Assert( inputStream );
-		Assert( outputStream );
+		Assert( m_outputStream );
 		
 		PrimitiveType primitiveType = inputStream->GetPrimitiveType();
 		size_t numVerticesPerPrimitive = GetNumberOfVerticesPerPrimitive( primitiveType );
@@ -346,8 +346,27 @@ namespace kih
 			return;
 		}
 				
-		// FIXME: is this ok??
+		// Reserve predictible sized memory.
 		m_outputStream->Reserve( width * height );
+
+		// Rasterize primitives
+		if ( numVerticesPerPrimitive == 3 )
+		{
+#ifdef USE_SSE_OPTIMZATION
+			RasterizeUsingBarycentricCoordinatesSSE( inputStream, width, height );
+#else
+			RasterizeUsingBarycentricCoordinates( inputStream, width, height );
+#endif
+		}
+		else
+		{
+			RasterizeUsingEdgeTable( inputStream, numVerticesPerPrimitive, width, height );
+		}
+	}
+
+	void Rasterizer::RasterizeUsingEdgeTable( const std::shared_ptr<RasterizerInputStream>& inputStream, size_t numVerticesPerPrimitive, unsigned short width, unsigned short height )
+	{
+		Assert( inputStream );
 
 #ifdef EARLY_Z_CULLING
 		DepthBuffering depthBuffering( GetContext() );
@@ -356,19 +375,6 @@ namespace kih
 		DepthBuffering depthBuffering( nullptr );
 #endif
 
-		// Rasterize primitives
-		if ( numVerticesPerPrimitive == 3 )
-		{
-			RasterizeUsingBarycentricCoordinates( inputStream, outputStream, width, height, numVertices, depthBuffering );
-		}
-		else
-		{
-			RasterizeUsingEdgeTable( inputStream, outputStream, width, height, numVerticesPerPrimitive, numVertices, depthBuffering );
-		}
-	}
-
-	void Rasterizer::RasterizeUsingEdgeTable( const std::shared_ptr<RasterizerInputStream>& inputStream, std::shared_ptr<RasterizerOutputStream> outputStream, unsigned short width, unsigned short height, size_t numVerticesPerPrimitive, size_t numVertices, DepthBuffering& depthBuffering )
-	{
 		// Reserve ET space based on scanlines.
 		m_edgeTable.clear();
 		m_edgeTable.resize( height );
@@ -383,6 +389,7 @@ namespace kih
 
 		// Build an edge table by traversing each primitive in vertices,
 		// and draw each primitive.
+		size_t numVertices = inputStream->Size();
 		size_t numPrimitives = numVertices / numVerticesPerPrimitive;
 
 		// for each primitive
@@ -408,75 +415,6 @@ namespace kih
 			size_t v1Index = p * numVerticesPerPrimitive;
 			size_t v0Index = v1Index + ( numVerticesPerPrimitive - 1 );
 
-#if 0
-			const auto& v0 = inputStream->GetData( v0Index );
-			const auto& v1 = inputStream->GetData( v1Index );
-			const auto& v2 = inputStream->GetData( v1Index + 1 );
-
-			// face culling
-			if ( m_cullMode != CullMode::None )
-			{
-				// FIXME: CW/CCW
-				if ( IsBackFaceSSE( v0.Position, v1.Position, v2.Position ) )
-				{
-					continue;
-				}
-			}
-
-			const auto& v3 = inputStream->GetData( v1Index + 2 );
-			const auto& v4 = inputStream->GetData( v1Index + 3 );
-			const auto& v5 = inputStream->GetData( v1Index + 4 );	// quad???
-
-			// Make an ET element.
-
-			//float xMax = Max( v0.Position.X, v1.Position.X );
-			//float xMin = Min( v0.Position.X, v1.Position.X );
-			SSE::XXM128 xMaxCandidate4 = SSE::XXM128_Load( v0.Position.X, v1.Position.X, v2.Position.X, v3.Position.X );
-			SSE::XXM128 xMinCandidate4 = SSE::XXM128_Load( v1.Position.X, v2.Position.X, v3.Position.X, v4.Position.X );
-			SSE::XXM128 xMin4 = SSE::XXM128_Min( xMinCandidate4, xMaxCandidate4 );
-			SSE::XXM128 xMax4 = SSE::XXM128_Max( xMinCandidate4, xMaxCandidate4 );
-
-			//float zStart = v1.Position.Z;	// Select xMin's Z.
-			//float zEnd = v0.Position.Z;
-			//if ( v0.Position.X < v1.Position.X )
-			//{
-			//	Swap( zStart, zEnd );
-			//}
-			SSE::XXM128 zStart4 = SSE::XXM128_Load( v1.Position.Z, v2.Position.Z, v3.Position.Z, v4.Position.Z );
-			SSE::XXM128 zEnd4 = SSE::XXM128_Load( v0.Position.Z, v1.Position.Z, v2.Position.Z, v3.Position.Z );
-
-			SSE::XXM128 less4 = SSE::XXM128_Less( xMaxCandidate4, xMinCandidate4 );
-
-			//float yMax = Max( v0.Position.Y, v1.Position.Y );
-			//float yMin = Min( v0.Position.Y, v1.Position.Y );
-			SSE::XM128 yMaxCandidate4 = SSE::XXM128_Load( v0.Position.Y, v1.Position.Y, v2.Position.Y, v3.Position.Y );
-			SSE::XXM128 yMinCandidate4 = SSE::XXM128_Load( v1.Position.Y, v2.Position.Y, v3.Position.Y, v4.Position.Y );
-			SSE::XXM128 yMin4 = SSE::XXM128_Min( yMinCandidate4, yMaxCandidate4 );
-			SSE::XXM128 yMax4 = SSE::XXM128_Max( yMinCandidate4, yMaxCandidate4 );
-
-			// Select start and end scanlines with Y-axis clipping.
-			startY = static_cast< unsigned short >( SSE::Ceil( yMin ) );
-			startY = Clamp<unsigned short>( startY, 0, maxY );
-			minScanline = Min( minScanline, startY );
-
-			endY = static_cast< unsigned short >( SSE::Ceil( yMax ) );
-			endY = Clamp<unsigned short>( endY, startY, maxY );
-			maxScanline = Max( maxScanline, endY );
-
-			// dx and dy for an incremental approach
-			float dx = v0.Position.X - v1.Position.X;
-			float dy = v0.Position.Y - v1.Position.Y;
-			float slope = ( dy == 0.0f ) ? 0.0f : SSE::Divide( dx, dy );
-
-			// Push this element at the selected scanline.
-			m_edgeTable[startY].emplace_back( yMax, xMin, xMax, slope, zStart, zEnd );
-			validEdgeIndices.push_back( startY );
-
-			// Update next indices.
-			v0Index = v1Index;
-			++v1Index;
-#else
-
 			// for each vertex
 			for ( size_t v = 0; v < numVerticesPerPrimitive; ++v )
 			{
@@ -490,7 +428,7 @@ namespace kih
 
 					// FIXME: CW/CCW
 #ifdef USE_SSE_OPTIMZATION
-					if ( IsBackFaceSSE( v0.Position, v1.Position, v2.Position ) )
+					if ( SSE::IsBackFace( v0.Position, v1.Position, v2.Position ) )
 #else
 					if ( IsBackFace( v0.Position, v1.Position, v2.Position ) )
 #endif
@@ -547,7 +485,6 @@ namespace kih
 				v0Index = v1Index;
 				++v1Index;
 			}
-#endif /// 1
 
 			// Pass if the primitive is culled out.
 			if ( isCulled )
@@ -556,7 +493,7 @@ namespace kih
 			}
 
 			// Draw pixels
-			GatherPixelsBeingDrawnFromScanlines( outputStream, aet, minScanline, maxScanline, width, depthBuffering );
+			GatherPixelsBeingDrawnFromScanlines( aet, minScanline, maxScanline, width, depthBuffering );
 
 			// Clear the current edge table.
 			aet.clear();
@@ -572,9 +509,9 @@ namespace kih
 		}
 	}
 
-	void Rasterizer::GatherPixelsBeingDrawnFromScanlines( std::shared_ptr<RasterizerOutputStream> outputStream, std::vector<ActiveEdgeTableElement>& aet, unsigned short minScanline, unsigned short maxScanline, unsigned short width, DepthBuffering& depthBuffering ) const
+	void Rasterizer::GatherPixelsBeingDrawnFromScanlines( std::vector<ActiveEdgeTableElement>& aet, unsigned short minScanline, unsigned short maxScanline, unsigned short width, DepthBuffering& depthBuffering ) const
 	{
-		Assert( outputStream );
+		Assert( m_outputStream );
 		Assert( minScanline >= 0 && minScanline <= maxScanline );
 		Assert( maxScanline < m_edgeTable.size() );
 
@@ -663,7 +600,7 @@ namespace kih
 							}
 #endif
 
-							outputStream->Push( x, y, interpolatedDepth );
+							m_outputStream->Push( x, y, interpolatedDepth );
 
 							// Update the next depth value incrementally.
 							interpolatedDepth += ddxDepth;
@@ -742,12 +679,18 @@ namespace kih
 		return true;
 	}
 
-	void Rasterizer::RasterizeUsingBarycentricCoordinates( const std::shared_ptr<RasterizerInputStream>& inputStream, std::shared_ptr<RasterizerOutputStream> outputStream, unsigned short width, unsigned short height, size_t numVertices, DepthBuffering& depthBuffering )
+	void Rasterizer::RasterizeUsingBarycentricCoordinates( const std::shared_ptr<RasterizerInputStream>& inputStream, unsigned short width, unsigned short height )
 	{
+		Assert( inputStream );
+
+#ifdef EARLY_Z_CULLING
+		DepthBuffering depthBuffering( GetContext() );
+		depthBuffering.SetWritable( false );	// depth-test only on the rasterizer
+#endif
+
 		const int NumVerticesPerPrimitive = 3;
 
-		// Build an edge table by traversing each primitive in vertices,
-		// and draw each primitive.
+		size_t numVertices = inputStream->Size();
 		size_t numPrimitives = numVertices / NumVerticesPerPrimitive;
 
 		// for each primitive
@@ -772,32 +715,22 @@ namespace kih
 			if ( m_cullMode != CullMode::None )
 			{
 				// FIXME: CW/CCW
-#ifdef USE_SSE_OPTIMZATION
-				if ( IsBackFaceSSE( v0NDC, v1NDC, v2NDC ) )
-#else
-				if ( IsBackFace( v0.Position, v1.Position, v2.Position ) )
-#endif
+				if ( IsBackFace( v0NDC, v1NDC, v2NDC ) )
 				{
 					continue;
 				}
 			}
 
-			// Round NDC X/Y coordinates to map to screen pixels.
-#ifdef USE_SSE_OPTIMZATION
-			Vector2i v0( SSE::Round( v0NDC.X ), SSE::Round( v0NDC.Y ) );
-			Vector2i v1( SSE::Round( v1NDC.X ), SSE::Round( v1NDC.Y ) );
-			Vector2i v2( SSE::Round( v2NDC.X ), SSE::Round( v2NDC.Y ) );
-#else
-			Vector2i v0( std::round( v0NDC.X ), std::round( v0NDC.Y ) );
-			Vector2i v1( std::round( v1NDC.X ), std::round( v1NDC.Y ) );
-			Vector2i v2( std::round( v2NDC.X ), std::round( v2NDC.Y ) );
-#endif
+			// Round NDC X/Y coordinates to map onto screen pixels.
+			Vector2i v0( SSE::Trunc( std::round( v0NDC.X ) ), SSE::Trunc( std::round( v0NDC.Y ) ) );
+			Vector2i v1( SSE::Trunc( std::round( v1NDC.X ) ), SSE::Trunc( std::round( v1NDC.Y ) ) );
+			Vector2i v2( SSE::Trunc( std::round( v2NDC.X ) ), SSE::Trunc( std::round( v2NDC.Y ) ) );
 
 			// Compute a bounding box of the triangle and clip against the screen.
 			int minX = Max( Min( v0.X, Min( v1.X, v2.X ) ), 0 );
 			int minY = Max( Min( v0.Y, Min( v1.Y, v2.Y ) ), 0 );
-			int maxX = Min( Max( v0.X, Max( v1.X, v2.X ) ), width - 1 );
-			int maxY = Min( Max( v0.Y, Max( v1.Y, v2.Y ) ), height - 1);
+			int maxX = Max( Min( Max( v0.X, Max( v1.X, v2.X ) ), width - 1 ), 0 );
+			int maxY = Max( Min( Max( v0.Y, Max( v1.Y, v2.Y ) ), height - 1), 0 );
 			
 			// Compute X/Y incremental moments
 			int x01Inc = v0.Y - v1.Y;
@@ -819,7 +752,7 @@ namespace kih
 			// DX rasterization rule: http://msdn.microsoft.com/en-us/library/windows/desktop/cc627092(v=vs.85).aspx#Triangle
 			// A top edge, is an edge that is exactly horizontal and is above the other edges.
 			// A left edge, is an edge that is not exactly horizontal and is on the left side of the triangle.
-#define IsTopOrLeft( p0, p1 )	( ( p0.Y == p1.Y && p0.Y == minY ) || ( p0.X == minX || p1.X == minX ) )
+			#define IsTopOrLeft( p0, p1 )	( ( p0.Y == p1.Y && p0.Y == minY ) || ( p0.X == minX || p1.X == minX ) )
 			int bias0 = IsTopOrLeft( v1, v2 ) ? -1 : 0;
 			int bias1 = IsTopOrLeft( v2, v0 ) ? -1 : 0;
 			int bias2 = IsTopOrLeft( v0, v1 ) ? -1 : 0;
@@ -831,13 +764,14 @@ namespace kih
 				int p_w1 = w1;
 				int p_w2 = w2;
 
+				float depth = lamdaZ3[0] * p_w0 + lamdaZ3[1] * p_w1 + lamdaZ3[2] * p_w2;
+				float depthInc = lamdaZ3[0] * x12Inc + lamdaZ3[1] * x20Inc + lamdaZ3[2] * x01Inc;
+
 				for ( int x = minX; x <= maxX; ++x )
 				{
 					// Is the pixel in the triangle?
 					if ( p_w0 >= bias0 && p_w1 >= bias1 && p_w2 >= bias2 )
 					{
-						float depth = lamdaZ3[0] * p_w0 + lamdaZ3[1] * p_w1 + lamdaZ3[2] * p_w2;
-
 #ifdef EARLY_Z_CULLING
 						// depth buffering
 						if ( depthBuffering.IsValid() )
@@ -847,17 +781,16 @@ namespace kih
 								continue;
 							}
 						}
-#else
-						Unused( depthBuffering );
 #endif
 
-						outputStream->Push( x, y, depth );
+						m_outputStream->Push( x, y, depth );
 					}
 
 					// Increment X-coordinates.
 					p_w0 += x12Inc;
 					p_w1 += x20Inc;
 					p_w2 += x01Inc;
+					depth += depthInc;
 				}
 
 				// Increment Y-coordinates.
@@ -865,8 +798,180 @@ namespace kih
 				w1 += y20Inc;
 				w2 += y01Inc;
 			}
+		}		
+	}
+
+	void Rasterizer::RasterizeUsingBarycentricCoordinatesSSE( const std::shared_ptr<RasterizerInputStream>& inputStream, unsigned short width, unsigned short height )
+	{
+		Assert( inputStream );
+
+#ifdef EARLY_Z_CULLING
+		DepthBuffering depthBuffering( GetContext() );
+		depthBuffering.SetWritable( false );	// depth-test only on the rasterizer
+#endif
+
+		const int NumVerticesPerPrimitive = 3;
+
+		size_t numVertices = inputStream->Size();
+		size_t numPrimitives = numVertices / NumVerticesPerPrimitive;
+
+		// for each primitive
+		for ( size_t n = 0; n < numPrimitives; ++n )
+		{
+			// edge: v0 -> v1
+			// v0 = i th vertex
+			// v1 = (i + 1) th vertex
+			//
+			// But if v1 is a vertex of the next primitive,
+			// we must hold the first vertex of the current primitive to v1.
+			// To keep in simple, we step last -> first -> second -> third ... and last - 1.
+			size_t v1Index = n * NumVerticesPerPrimitive;
+			size_t v0Index = v1Index + ( NumVerticesPerPrimitive - 1 );
+
+			// Make vertices of the triangle.
+			const Vector4& v0NDC = inputStream->GetData( v0Index ).Position;
+			const Vector4& v1NDC = inputStream->GetData( v1Index ).Position;
+			const Vector4& v2NDC = inputStream->GetData( v1Index + 1 ).Position;
+
+			xxm128 v0xxm = SSE::LoadUnaligned( v0NDC.Value );
+			xxm128 v1xxm = SSE::LoadUnaligned( v1NDC.Value );
+			xxm128 v2xxm = SSE::LoadUnaligned( v2NDC.Value );
+
+			// face culling
+			if ( m_cullMode != CullMode::None )
+			{
+				// FIXME: CW/CCW
+				if ( SSE::IsBackFace( v0xxm, v1xxm, v2xxm ) )
+				{
+					continue;
+				}
+			}
+
+			// Round NDC X/Y coordinates to map onto screen pixels.
+			xxm128i v0Rounded = SSE::ReinterpretCast_xxm128i( SSE::Round( v0xxm ) );
+			xxm128i v1Rounded = SSE::ReinterpretCast_xxm128i( SSE::Round( v1xxm ) );
+			xxm128i v2Rounded = SSE::ReinterpretCast_xxm128i( SSE::Round( v2xxm ) );
+
+			Vector2i v0( v0Rounded.m128i_i32[0], v0Rounded.m128i_i32[1] );
+			Vector2i v1( v1Rounded.m128i_i32[0], v1Rounded.m128i_i32[1] );
+			Vector2i v2( v2Rounded.m128i_i32[0], v2Rounded.m128i_i32[1] );
+
+			// Compute a bounding box of the triangle and clip against the screen.
+			xxm128i minXY = SSE::Max( SSE::Min( v0Rounded, SSE::Min( v1Rounded, v2Rounded ) ), SSE::xxm128i_Zero );
+			xxm128i maxXY = SSE::Max( SSE::Max( v0Rounded, SSE::Max( v1Rounded, v2Rounded ) ), SSE::xxm128i_Zero );
+			unsigned short minX = static_cast< unsigned short >( minXY.m128i_i32[0] );
+			unsigned short minY = static_cast< unsigned short >( minXY.m128i_i32[1] );
+			unsigned short maxX = static_cast< unsigned short >( Min( maxXY.m128i_i32[0], width - 1 ) );
+			unsigned short maxY = static_cast< unsigned short >( Min( maxXY.m128i_i32[1], height - 1 ) );
+
+			// Compute barycentric coordinates at left-top corner as the start point.
+			Vector2i p( minX, minY );
+			int w0 = ComputeBarycentric( p, v1, v2 );
+			int w1 = ComputeBarycentric( p, v2, v0 );
+			int w2 = ComputeBarycentric( p, v0, v1 );
+
+			xxm128 normalizeBase = SSE::Divide( SSE::xxm128_One, SSE::Load( static_cast< float >( w0 + w1 + w2 ) ) );
+			xxm128 wZ = SSE::Load( v0xxm.m128_f32[2], v1xxm.m128_f32[2], v2xxm.m128_f32[2], 0.0f );
+			wZ = SSE::Multiply( wZ, normalizeBase );
+
+			// Compute X/Y incremental moments
+			int A0Inc = v1.Y - v2.Y;
+			int A1Inc = v2.Y - v0.Y;
+			int A2Inc = v0.Y - v1.Y;
+
+			// Loop vectorization using SSE (drawing four pixels at once).
+			// So we prepare 0th to 3rd coordinates in XXM registers.
+			xxm128i A0IncEnum = SSE::Load( 0, A0Inc, A0Inc * 2, A0Inc * 3 );
+			xxm128i A0Inc4Step4 = SSE::Load( A0Inc * 4 );
+			
+			xxm128i A1IncEnum = SSE::Load( 0, A1Inc, A1Inc * 2, A1Inc * 3 );
+			xxm128i A1Inc4Step4 = SSE::Load( A1Inc * 4 );
+			
+			xxm128i A2IncEnum = SSE::Load( 0, A2Inc, A2Inc * 2, A2Inc * 3 );
+			xxm128i A2Inc4Step4 = SSE::Load( A2Inc * 4 );
+
+			int B0Inc = v2.X - v1.X;
+			int B1Inc = v0.X - v2.X;
+			int B2Inc = v1.X - v0.X;
+			
+			// DX rasterization rule: http://msdn.microsoft.com/en-us/library/windows/desktop/cc627092(v=vs.85).aspx#Triangle
+			// A top edge, is an edge that is exactly horizontal and is above the other edges.
+			// A left edge, is an edge that is not exactly horizontal and is on the left side of the triangle.
+			#define IsTopOrLeft( p0, p1 )	( ( p0.Y == p1.Y && p0.Y == minY ) || ( p0.X == minX || p1.X == minX ) )
+			xxm128i bias0 = SSE::Load( IsTopOrLeft( v1, v2 ) ? -1 : 0 );
+			xxm128i bias1 = SSE::Load( IsTopOrLeft( v2, v0 ) ? -1 : 0 );
+			xxm128i bias2 = SSE::Load( IsTopOrLeft( v0, v1 ) ? -1 : 0 );
+
+			// Rasterze inside pixels of the triangle from the bounding box.
+			for ( unsigned short y = minY; y <= maxY; ++y )
+			{
+				xxm128i p4_w0 = SSE::Load( w0 );
+				p4_w0 = SSE::Add( p4_w0, A0IncEnum );
+
+				xxm128i p4_w1 = SSE::Load( w1 );
+				p4_w1 = SSE::Add( p4_w1, A1IncEnum );
+
+				xxm128i p4_w2 = SSE::Load( w2 );
+				p4_w2 = SSE::Add( p4_w2, A2IncEnum );
+
+				xxm128 z4 = SSE::Add( SSE::Multiply( SSE::Load( wZ.m128_f32[0] ), SSE::ReinterpretCast_xxm128( p4_w0 ) ),
+								SSE::Add( SSE::Multiply( SSE::Load( wZ.m128_f32[1] ), SSE::ReinterpretCast_xxm128( p4_w1 ) ),
+											SSE::Multiply( SSE::Load( wZ.m128_f32[2] ), SSE::ReinterpretCast_xxm128( p4_w2 ) ) ) );
+				xxm128 zInc4Step4 = SSE::Load( ( wZ.m128_f32[0] * A0Inc + wZ.m128_f32[1] * A1Inc + wZ.m128_f32[2] * A2Inc ) * 4.0f );
+
+				for ( unsigned short x = minX; x <= maxX; x += 4,
+												// Increment X-coordinates.
+												p4_w0 = SSE::Add( p4_w0, A0Inc4Step4 ),
+												p4_w1 = SSE::Add( p4_w1, A1Inc4Step4 ),
+												p4_w2 = SSE::Add( p4_w2, A2Inc4Step4 ),
+												z4 = SSE::Add( z4, zInc4Step4 ) )
+				{
+					// Is the pixel in the triangle?
+					xxm128i test0 = SSE::Less( bias0, p4_w0 );
+					xxm128i test1 = SSE::Less( bias1, p4_w1 );
+					xxm128i test2 = SSE::Less( bias2, p4_w2 );
+					xxm128i testAll = SSE::And( SSE::And( test0, test1 ), test2 );
+
+					// Early out this quad.
+					if ( SSE::IsAllZero( testAll ) )
+					{
+						continue;
+					}
+
+					// Push four pixels being shaded into the output stream.
+					for ( unsigned short p = 0; p < 4; ++p )
+					{
+						if ( testAll.m128i_i32[p] )
+						{
+#ifdef EARLY_Z_CULLING
+							// depth buffering
+							if ( depthBuffering.IsValid() )
+							{
+								if ( !depthBuffering.Execute( x, y, z4.m128_f32[p] ) )
+								{
+									continue;
+								}
+							}
+#endif
+
+							// Clip against the screen.
+							unsigned short px = x + p;
+							if ( px >= width )
+							{
+								break;
+							}
+
+							m_outputStream->Push( px, y, z4.m128_f32[p] );
+						}
+					}					
+				}
+
+				// Increment Y-coordinates.
+				w0 += B0Inc;
+				w1 += B1Inc;
+				w2 += B2Inc;
+			}
 		}
-		
 	}
 
 	void Rasterizer::TransformViewport( const std::shared_ptr<RasterizerInputStream>& inputStream, unsigned short width, unsigned short height ) const
@@ -881,8 +986,8 @@ namespace kih
 		float factorY = height * 0.5f;
 
 #ifdef USE_SSE_OPTIMZATION
-		SSE::XXM128 toViewportMul = SSE::XXM128_Load( factorX, -factorY, 0.5f, 1.0f );
-		SSE::XXM128 toViewportAdd = SSE::XXM128_Load( factorX, factorY, 0.5f, 0.0f );
+		xxm128 toViewportMul = SSE::Load( factorX, -factorY, 0.5f, 1.0f );
+		xxm128 toViewportAdd = SSE::Load( factorX, factorY, 0.5f, 0.0f );
 #endif
 
 		size_t numVertices = inputStream->Size();
@@ -892,14 +997,14 @@ namespace kih
 
 #ifdef USE_SSE_OPTIMZATION
 			// perspective division
-			SSE::XXM128 position = SSE::XXM128_LoadUnaligned( data.Position.Value );
-			SSE::XXM128 divider = SSE::XXM128_Load( data.Position.W );
-			position = SSE::XXM128_Divide( position, divider );
+			xxm128 position = SSE::LoadUnaligned( data.Position.Value );
+			xxm128 divider = SSE::Load( data.Position.W );
+			position = SSE::Divide( position, divider );
 
 			// NDC -> viewport
-			position = SSE::XXM128_Multiply( position, toViewportMul );
-			position = SSE::XXM128_Add( position, toViewportAdd );
-			SSE::XXM128_StoreUnaligned( data.Position.Value, position );
+			position = SSE::Multiply( position, toViewportMul );
+			position = SSE::Add( position, toViewportAdd );
+			SSE::StoreUnaligned( data.Position.Value, position );
 #else
 			// perspective division
 			data.Position /= data.Position.W;
@@ -953,7 +1058,6 @@ namespace kih
 			
 			// TODO: pixel shading
 			//
-
 			m_outputStream->Push( fragment, color );
 		}
 #endif
