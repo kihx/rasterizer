@@ -2,13 +2,48 @@
 
 #include "Comman.h"
 
-#include <map>
+#include <unordered_map>
 #include <string>
 #include <iostream>
+#include <vector>
 
 namespace cmd
 {
 	typedef void( *CommandFunc )(void);
+
+	class CTokenizer
+	{
+	private:
+		std::vector<std::string> m_argv;
+	public:
+		CTokenizer( ) {}
+		~CTokenizer( ) {}
+
+		const int ArgC() const;
+		const std::string& ArgV( int index ) const;
+
+		void DoTokenizing( const char* str, const char token );
+	};
+
+	class CConvar
+	{
+	private:
+		std::string m_name;
+		std::string m_value;
+		float m_float;
+		int m_int;
+		bool m_bool;
+	public:
+		explicit CConvar( const char* name , const char* value );
+		const std::string& GetName() const;
+
+		const int GetInt() const;
+		const float GetFloat( ) const;
+		const bool GetBool() const;
+		const char* GetChar() const;
+		void SetValue( const char* value );
+		void SetValue( const std::string& value );
+	};
 
 	class CConcommand
 	{
@@ -29,10 +64,14 @@ namespace cmd
 	class CConcommandExecutor : public xtozero::CSingletonBase<CConcommandExecutor>
 	{
 	private:
-		std::map<std::string, CConcommand> m_cmdMap;
+		std::unordered_map<std::string, CConcommand>	m_cmdMap;
+		std::unordered_map<std::string, CConvar>		m_cvarMap;
+		CTokenizer							m_tokenizer;
 	public:
 		void AddConcommad( const std::string& cmd, const CConcommand& cmdFuc );
-		void ExcuteConcommand( const char* cmd ) const;
+		void AddConvar( const std::string& var, const CConvar& cmdVar );
+		void ExcuteConcommand( const char* cmd );
+		void DoTokenizing( const char* cmd );
 
 		CConcommandExecutor( );
 		~CConcommandExecutor( );

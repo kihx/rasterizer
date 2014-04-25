@@ -5,6 +5,89 @@
 
 namespace cmd
 {
+	const int CTokenizer::ArgC( ) const
+	{
+		return m_argv.size( );
+	}
+
+	const std::string& CTokenizer::ArgV( int index ) const
+	{
+		if ( index >= ArgC() )
+		{
+			index = ArgC() - 1;
+		}
+
+		return m_argv[index];
+	}
+
+	void CTokenizer::DoTokenizing( const char* str, const char token )
+	{
+		m_argv.clear();
+
+		std::string string( str );
+
+		while ( true )
+		{
+			int pos = string.find( token );
+
+			if ( pos == std::string::npos ) // bad position
+			{
+				m_argv.emplace_back( string.substr( 0, string.length() ) );
+				return;
+			}
+			else
+			{
+				m_argv.emplace_back( string.substr( 0, pos ) );
+				string = string.substr( pos + 1, string.length() - pos );
+			}
+		}
+	}
+
+	CConvar::CConvar( const char* name, const char* value ) : m_name( name ), m_value(value)
+	{
+		CConcommandExecutor::GetInstance( )->AddConvar( m_name, *this );
+		m_float = static_cast<float>(atof( m_value.c_str( ) ) );
+		m_int = static_cast<int>(m_float);
+		m_bool = static_cast<bool>(m_int);
+	}
+
+	const std::string& CConvar::GetName( ) const
+	{
+		return m_name;
+	}
+	const int CConvar::GetInt() const
+	{
+		return m_int;
+	}
+	const float CConvar::GetFloat( ) const
+	{
+		return m_float;
+	}
+	const bool CConvar::GetBool() const
+	{
+		return m_bool;
+	}
+	const char* CConvar::GetChar() const
+	{
+		return m_value.c_str();
+	}
+
+	void CConvar::SetValue( const char* value )
+	{
+		m_value = std::string( value );
+		m_float = static_cast<float>( atof( m_value.c_str( ) ) );
+		m_int = static_cast<int>(m_float);
+		m_bool = static_cast<bool>(m_int);
+	}
+
+	void CConvar::SetValue( const std::string& value )
+	{
+		m_value = value;
+		m_float = static_cast<float>(atof( m_value.c_str( ) ));
+		m_int = static_cast<int>(m_float);
+		m_bool = static_cast<bool>(m_int);
+	}
+
 	CConcommand::CConcommand( const char* name, const CommandFunc func ) : m_name( name ), m_pFunc( func )
 	{
 		assert( name );
@@ -36,20 +119,51 @@ namespace cmd
 		m_cmdMap.insert( std::make_pair( cmd, cmdFuc ) );
 	}
 
-	void CConcommandExecutor::ExcuteConcommand( const char* cmd ) const
+	void CConcommandExecutor::AddConvar( const std::string& var, const CConvar& cmdVar )
 	{
-		std::string cmdStr( cmd );
+		m_cvarMap.insert( std::make_pair( var, cmdVar ) );
+	}
 
-		std::map<std::string, CConcommand>::const_iterator& iter = m_cmdMap.find( cmdStr );
+	void CConcommandExecutor::ExcuteConcommand( const char* cmd )
+	{
+		if ( m_tokenizer.ArgC() > 0 )
+		{
+			const std::string& cmdStr = m_tokenizer.ArgV( 0 );
+			std::unordered_map<std::string, CConcommand>::const_iterator& findedcmd = m_cmdMap.find( cmdStr );
 
-		if ( iter != m_cmdMap.end( ) )
-		{
-			iter->second.Execute();
+			if ( findedcmd != m_cmdMap.end( ) )
+			{
+				findedcmd->second.Execute( );
+			}
+			else
+			{
+				std::cout << "Invaild Concommand" << std::endl;
+			}
+
+			std::unordered_map<std::string, CConvar>::iterator& findedvar = m_cvarMap.find( cmdStr );
+
+			if ( findedvar != m_cvarMap.end( ) )
+			{
+				if ( m_tokenizer.ArgC() > 1 )
+				{
+					findedvar->second.SetValue( m_tokenizer.ArgV( 1 ) );
+				}
+				else
+				{
+					std::cout << "[Usage] " << findedvar->second.GetName()
+						<< " Arg" << std::endl;
+				}
+			}
+			else
+			{
+				std::cout << "Invaild Convar" << std::endl;
+			}
 		}
-		else
-		{
-			std::cout << "Invaild Concommand" << std::endl;
-		}
+	}
+
+	void CConcommandExecutor::DoTokenizing( const char* cmd )
+	{
+		m_tokenizer.DoTokenizing( cmd, ' ' );
 	}
 }
 
