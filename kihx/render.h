@@ -7,9 +7,6 @@
 #include <vector>
 
 
-//#define DEPTHFUNC_LAMDA
-
-
 namespace kih
 {	
 	class IMesh;
@@ -82,7 +79,7 @@ namespace kih
 		
 		// In FuncPreRender, the world matrix of the specified mesh should be set onto the constant buffer of the rendering context.
 		using FuncPreRender = std::function<void( std::shared_ptr<RenderingContext> context, size_t index )>;
-		static void DrawInParallel( const std::vector<std::shared_ptr<RenderingContext>>& contexts, const std::vector<std::shared_ptr<IMesh>>& meshes, FuncPreRender funcPreRender );
+		static void DrawInParallel( std::vector<std::shared_ptr<RenderingContext>>& contexts, const std::vector<std::shared_ptr<IMesh>>& meshes, int meshCount, FuncPreRender funcPreRender );
 
 		// render targets
 		FORCEINLINE size_t NumberOfRenderTargets() const
@@ -145,9 +142,6 @@ namespace kih
 			return m_depthFunc;
 		}
 		void SetDepthFunc( DepthFunc func );
-#ifdef DEPTHFUNC_LAMDA
-		bool CallDepthFunc( byte src, byte dst );
-#endif
 
 		FORCEINLINE CullMode GetCullMode() const
 		{
@@ -163,7 +157,7 @@ namespace kih
 
 		// Resolve the UAV to display. This function processes the traditional output merger stage using the UAC.
 		// Note that UAV and RT must be binded.
-		void ResolveUnorderedAccessView();
+		void ResolveUnorderedAccessViews( std::vector<std::shared_ptr<RenderingContext>>& contexts );
 
 	private:
 		// render stages
@@ -184,9 +178,6 @@ namespace kih
 		Viewport m_viewport;
 
 		// depth buffering
-#ifdef DEPTHFUNC_LAMDA
-		DepthTestFunc m_funcDepthTest;
-#endif
 		DepthFunc m_depthFunc;
 		bool m_depthWritable;
 

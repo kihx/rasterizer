@@ -8,9 +8,6 @@
 #include <windows.h>
 
 
-static ConsoleVariable perf( "perf", "0" );
-
-
 namespace kih
 {
 	/* class PlatformTime
@@ -39,10 +36,11 @@ namespace kih
 	*/
 	ScopeProfile::~ScopeProfile()
 	{
-		if ( perf.Bool() )
+		if ( m_name )
 		{
-			std::cout << ( PlatformTime::MicroSeconds() - m_beginTime ) / 1000.0 << std::endl;
+			std::cout << m_name << ": ";
 		}
-	}
 
+		std::cout << ( PlatformTime::MicroSeconds() - m_beginTime ) / 1000.0 << std::endl;
+	}
 }

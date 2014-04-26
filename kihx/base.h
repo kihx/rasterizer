@@ -96,8 +96,7 @@ namespace kih
 	struct LoopUnroll<1>
 	{
 		template<class Func>
-		static void
-		Work( Func func )
+		static void Work( Func func )
 		{
 			func();
 		}

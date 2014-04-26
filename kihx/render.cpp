@@ -14,11 +14,6 @@
 #include <thread>
 
 
-#define USE_THREAD_POOL
-
-#define Thread std::thread
-
-
 namespace kih
 {	
 	/* class RenderingContext
@@ -176,7 +171,7 @@ namespace kih
 		}
 	}
 
-	void RenderingContext::DrawInParallel( const std::vector<std::shared_ptr<RenderingContext>>& contexts, const std::vector<std::shared_ptr<IMesh>>& meshes, FuncPreRender funcPreRender )
+	void RenderingContext::DrawInParallel( std::vector<std::shared_ptr<RenderingContext>>& contexts, const std::vector<std::shared_ptr<IMesh>>& meshes, int meshCount, FuncPreRender funcPreRender )
 	{
 		if ( meshes.empty() )
 		{
@@ -199,9 +194,15 @@ namespace kih
 			}
 		}
 
+		if ( meshes.size() < static_cast<size_t>( meshCount ) )
+		{
+			LOG_WARNING( "invalid mesh count" );
+			return;
+		}
+
 		// If the number of meshes is less than 4, 
 		// draw all meshes on the first context without parallel processing.
-		if ( meshes.size() < 4 )
+		if ( meshCount < Thread::HardwareConcurrency() )
 		{
 			auto context = contexts[0];
 			for ( const auto& mesh : meshes )
@@ -214,23 +215,18 @@ namespace kih
 
 		RenderingDevice* pDevice = RenderingDevice::GetInstance();
 		Assert( pDevice );
-		
+
 		size_t numContexts = contexts.size();
 
 		// Note that the world matrix would be multiplied just before drawing a mesh
 		// because the world matrix of a mesh is different each other.
 		// So premultiply view-projection matrices only.
 		Matrix4 viewProj = pDevice->GetViewMatrix() * pDevice->GetProjectionMatrix();
-		
-#ifdef USE_THREAD_POOL
-		ThreadPool* threadPool = ThreadPool::GetInstance();
-#else
-		// thread container to join after working
-		std::vector<Thread> threads;
-		threads.resize( numContexts );
-#endif
 
+		// Thread objects.
+		ThreadPool* threadPool = ThreadPool::GetInstance();
 		Atomic<int> workIndex( 0 );
+
 		for ( size_t c = 0; c < numContexts; ++c )
 		{
 			auto context = contexts[c];
@@ -239,12 +235,9 @@ namespace kih
 			auto task = std::bind(
 				[=, &workIndex]( std::shared_ptr<RenderingContext> context, Matrix4 viewProj, FuncPreRender funcPreRender )
 				{
+					SCOPE_PROFILE_BEGIN( "RenderTask" );
+
 					ConstantBuffer& cbuffer = context->GetSharedConstantBuffer();
-
-					std::vector<std::shared_ptr<OutputMergerInputStream>> output;
-					output.reserve( meshes.size() );					
-
-					int meshCount = static_cast< int >( meshes.size() );
 
 					// Until the last index...
 					while ( workIndex.Value() < meshCount )
@@ -269,32 +262,28 @@ namespace kih
 						// Draw the mesh.
 						context->Draw( meshes[index] );
 					}
+
+					SCOPE_PROFILE_END();
 				},
 				context,
 				viewProj,
 				funcPreRender );
 
-#ifdef USE_THREAD_POOL
 			threadPool->Queue( task );
-#else
- 			Thread t { task };
-			t.swap( threads[c] );
-#endif
 		}
+
 
 		// Join all rendering threads.
-#ifdef USE_THREAD_POOL
+		SCOPE_PROFILE_BEGIN( "JoinRendering" );
 		threadPool->WaitForAllTasks();
-#else
-		for ( size_t i = 0; i < threads.size(); ++i )
-		{
-			threads[i].join();
-		}
-#endif
+		SCOPE_PROFILE_END();
 
-		// Resolve the UAV to display.
-		// We assume that rendering order is independent.
-		contexts[0]->ResolveUnorderedAccessView();
+			
+		//// Resolve the UAV to display using the main context.
+		//// We assume that rendering order is independent.
+		//SCOPE_PROFILE_BEGIN( "ResolveUnorderedAccessView " );
+		//contexts[0]->ResolveUnorderedAccessViews( contexts );
+		//SCOPE_PROFILE_END();
 	}
 
 	bool RenderingContext::SetRenderTarget( std::shared_ptr<Texture> texture, size_t index )
@@ -346,38 +335,8 @@ namespace kih
 
 	void RenderingContext::SetDepthFunc( DepthFunc func )
 	{
-#ifdef DEPTHFUNC_LAMDA
-		// depth functions in lamda expression
-		static DepthTestFunc DepthFunctions[] =
-		{
-			nullptr,											// None
-			[]( byte src, byte dst ) { return src != dst; },	// Not
-			[]( byte src, byte dst ) { return src == dst; },	// Equal
-			[]( byte src, byte dst ) { return src < dst; },		// Less
-			[]( byte src, byte dst ) { return src <= dst; },	// LessEqual
-			[]( byte src, byte dst ) { return src > dst; },		// Greater
-			[]( byte src, byte dst ) { return src >= dst; }		// GreaterEqual
-		};
-
-		static_assert( SIZEOF_ARRAY( DepthFunctions ) == static_cast< size_t >( DepthFunc::Size ), "incomplete depthfunc" );
-
-		m_funcDepthTest = DepthFunctions[static_cast< int >( func )];
-#endif
 		m_depthFunc = func;
 	}
-
-#ifdef DEPTHFUNC_LAMDA
-	bool RenderingContext::CallDepthFunc( byte src, byte dst )
-	{
-		if ( m_funcDepthTest )
-		{
-			return m_funcDepthTest( src, dst );
-		}
-
-		// This is correct because no depth func means that a depth test is always passed.
-		return true;
-	}
-#endif
 
 	void RenderingContext::DrawInternal( const std::shared_ptr<IMesh>& mesh, PrimitiveType primitiveType /*= PrimitiveType::Triangles */ )
 	{
@@ -415,18 +374,21 @@ namespace kih
 		// because the output merger directly write data on render targets and a depth-stencil buffer, or a unordered resource view.
 	}
 
-	void RenderingContext::ResolveUnorderedAccessView()
+	void RenderingContext::ResolveUnorderedAccessViews( std::vector<std::shared_ptr<RenderingContext>>& contexts )
 	{
 		Assert( m_outputMerger );
 
-		auto uav = m_outputMerger->GetUnorderedAccessView();
-		if ( uav == nullptr )
+		for ( const auto& context : contexts )
 		{
-			return;
-		}
+			auto uav = context->m_outputMerger->GetUnorderedAccessView();
+			if ( uav == nullptr )
+			{
+				continue;
+			}
 
-		m_outputMerger->Resolve( uav->GetStreamSource() );
-		uav->Clear();
+			m_outputMerger->Resolve( uav->GetStreamSource() );
+			uav->Clear();
+		}
 	}
 
 

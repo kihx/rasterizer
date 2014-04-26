@@ -22,9 +22,6 @@ namespace kih
 	/* class DepthBuffering
 	*/
 	DepthBuffering::DepthBuffering( RenderingContext* context ) :
-#ifdef DEPTHFUNC_LAMDA
-		m_context( context ),
-#endif
 		m_ds( nullptr ),
 		m_ptr( nullptr ),
 		m_format( ColorFormat::Unknown ),
@@ -65,82 +62,6 @@ namespace kih
 		{
 			m_ds->Unlock();
 		}
-	}
-
-	template<class T>
-	bool DepthBuffering::Execute( unsigned short x, unsigned short y, T depth )
-	{
-		VerifyReentry();
-
-		Assert( IsValid() );
-		Assert( x >= 0 && x < m_width );
-		Assert( y >= 0 && y < m_ds->Height() );
-
-		T& dst = GetValueRef<T>( x, y );
-
-#ifdef DEPTHFUNC_LAMDA
-		// Call a functional object for depth test.
-		if ( !m_context->CallDepthFunc( depth, dst ) )
-		{
-			return false;
-		}
-#else
-		switch ( m_depthFunc )
-		{
-		case DepthFunc::Not:
-			if ( !( depth != dst ) )
-			{
-				return false;
-			}
-			break;
-
-		case DepthFunc::Equal:
-			if ( !( depth == dst ) )
-			{
-				return false;
-			}
-			break;
-
-		case DepthFunc::Less:
-			if ( !( depth < dst ) )
-			{
-				return false;
-			}
-			break;
-
-		case DepthFunc::LessEqual:
-			if ( !( depth <= dst ) )
-			{
-				return false;
-			}
-			break;
-
-		case DepthFunc::Greater:
-			if ( !( depth > dst ) )
-			{
-				return false;
-			}
-			break;
-
-		case DepthFunc::GreaterEqual:
-			if ( !( depth >= dst ) )
-			{
-				return false;
-			}
-			break;
-
-		default:
-			break;
-		}
-#endif
-
-		// depth write
-		if ( m_depthWritable )
-		{
-			dst = depth;
-		}
-
-		return true;
 	}
 
 
@@ -591,7 +512,7 @@ namespace kih
 							// depth buffering
 							if ( depthBuffering.IsValid() )
 							{
-								if ( !depthBuffering.Execute( x, y, interpolatedDepth ) )
+								if ( !depthBuffering.Test( x, y, interpolatedDepth ) )
 								{
 									// Update the next depth value incrementally.
 									interpolatedDepth += ddxDepth;
@@ -776,7 +697,7 @@ namespace kih
 						// depth buffering
 						if ( depthBuffering.IsValid() )
 						{
-							if ( !depthBuffering.Execute( x, y, interpolatedDepth ) )
+							if ( !depthBuffering.Test( static_cast<unsigned short>( x ), static_cast<unsigned short>( y ), depth ) )
 							{
 								continue;
 							}
@@ -852,10 +773,6 @@ namespace kih
 			xxm128i v1Rounded = SSE::ReinterpretCast_xxm128i( SSE::Round( v1xxm ) );
 			xxm128i v2Rounded = SSE::ReinterpretCast_xxm128i( SSE::Round( v2xxm ) );
 
-			Vector2i v0( v0Rounded.m128i_i32[0], v0Rounded.m128i_i32[1] );
-			Vector2i v1( v1Rounded.m128i_i32[0], v1Rounded.m128i_i32[1] );
-			Vector2i v2( v2Rounded.m128i_i32[0], v2Rounded.m128i_i32[1] );
-
 			// Compute a bounding box of the triangle and clip against the screen.
 			xxm128i minXY = SSE::Max( SSE::Min( v0Rounded, SSE::Min( v1Rounded, v2Rounded ) ), SSE::xxm128i_Zero );
 			xxm128i maxXY = SSE::Max( SSE::Max( v0Rounded, SSE::Max( v1Rounded, v2Rounded ) ), SSE::xxm128i_Zero );
@@ -866,6 +783,9 @@ namespace kih
 
 			// Compute barycentric coordinates at left-top corner as the start point.
 			Vector2i p( minX, minY );
+			Vector2i v0( v0Rounded.m128i_i32[0], v0Rounded.m128i_i32[1] );
+			Vector2i v1( v1Rounded.m128i_i32[0], v1Rounded.m128i_i32[1] );
+			Vector2i v2( v2Rounded.m128i_i32[0], v2Rounded.m128i_i32[1] );
 			int w0 = ComputeBarycentric( p, v1, v2 );
 			int w1 = ComputeBarycentric( p, v2, v0 );
 			int w2 = ComputeBarycentric( p, v0, v1 );
@@ -947,7 +867,7 @@ namespace kih
 							// depth buffering
 							if ( depthBuffering.IsValid() )
 							{
-								if ( !depthBuffering.Execute( x, y, z4.m128_f32[p] ) )
+								if ( !depthBuffering.Test( x, y, z4.m128_f32[p] ) )
 								{
 									continue;
 								}
@@ -998,7 +918,7 @@ namespace kih
 #ifdef USE_SSE_OPTIMZATION
 			// perspective division
 			xxm128 position = SSE::LoadUnaligned( data.Position.Value );
-			xxm128 divider = SSE::Load( data.Position.W );
+			xxm128 divider = Swizzle( position, SWIZZLE_MASK( 3, 3, 3, 3 ) );
 			position = SSE::Divide( position, divider );
 
 			// NDC -> viewport
@@ -1072,10 +992,21 @@ namespace kih
 	{
 		Assert( inputStream );
 
-		// If the output merger has a UAV, just merge input stream into the UAV.
+		// If the output merger has a UAV, merge input stream into the UAV and queue a resolving task.
 		if ( m_uav )
 		{
 			m_uav->Merge( inputStream );
+
+			// Queue a resolving task.
+			auto task = std::bind( 
+				[=]()
+				{
+					LockGuard<Mutex> guard( m_uav->GetLock() );
+					Resolve( m_uav->GetStreamSource() );
+					m_uav->Clear();
+				} );
+			ThreadPool::GetInstance()->Queue( task );
+
 			return nullptr;
 		}
 
@@ -1094,7 +1025,7 @@ namespace kih
 		{
 			return;
 		}
-
+		
 		// UNDONE: Currently, we assume RTs is only one.
 		Assert( ( GetContext()->NumberOfRenderTargets() == 1 ) && "MRT is not implemented yet" );
 		std::shared_ptr<Texture> rt = GetContext()->GetRenderTaget( 0 );
@@ -1113,21 +1044,19 @@ namespace kih
 
 		int widthRT = rt->Width();
 		int strideRT = GetBytesPerPixel( rt->Format() );
-
-		DepthBuffering depthBuffering( GetContext() );
+		
 
 		// Now, write color on render targets and the depth stencil buffer here.
+		DepthBuffering depthBuffering( GetContext() );
 		for ( size_t i = 0; i < inputStreamSize; ++i )
 		{
 			const auto& fragment = inputStream->GetDataConst( i );
 
-			// late depth buffering
-			if ( depthBuffering.IsValid() )
+			// Late depth buffering.
+			if ( depthBuffering.IsValid() && 
+				!depthBuffering.Test( fragment ) )
 			{
-				if ( !depthBuffering.Execute( fragment.PX, fragment.PY, fragment.Depth ) )
-				{
-					continue;
-				}
+				continue;
 			}
 
 			Color32 color = fragment.Color;

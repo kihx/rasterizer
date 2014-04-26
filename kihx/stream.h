@@ -320,6 +320,11 @@ namespace kih
 		{
 		}
 
+		FORCEINLINE Mutex& GetLock()
+		{
+			return m_streamLock;
+		}
+
 		std::shared_ptr<InputStream> GetStreamSource()
 		{
 			return m_inputStream;
@@ -329,7 +334,7 @@ namespace kih
 		{
 			Assert( m_inputStream );
 
-			LockGuard<SpinLock> lockGuard( m_mergeLock );
+			LockGuard<Mutex> lockGuard( m_streamLock );
 			m_inputStream->Reserve( capacity );
 		}
 
@@ -337,7 +342,7 @@ namespace kih
 		{
 			Assert( m_inputStream );
 
-			LockGuard<SpinLock> lockGuard( m_mergeLock );
+			LockGuard<Mutex> lockGuard( m_streamLock );
 			m_inputStream->Clear();
 		}
 
@@ -350,13 +355,13 @@ namespace kih
 				return;
 			}
 
-			LockGuard<SpinLock> lockGuard( m_mergeLock );
+			LockGuard<Mutex> lockGuard( m_streamLock );
 			m_inputStream->Merge( *src.get() );
 		}
 
 	private:
 		std::shared_ptr<InputStream> m_inputStream;
-		SpinLock m_mergeLock;
+		Mutex m_streamLock;
 	};
 };
 

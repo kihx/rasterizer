@@ -8,6 +8,9 @@
 #include <vector>
 
 
+#define DEPTHTEST_FAST
+
+
 namespace kih
 {
 	class VertexShaderInputStream;
@@ -58,8 +61,82 @@ namespace kih
 			m_depthWritable = writable;
 		}
 
+		FORCEINLINE bool Test( const PixelData& fragment )
+		{
+			VerifyReentry();
+
+			float& dst = GetValueRef<float>( fragment.PX, fragment.PY );
+			dst = !( fragment.Depth <= dst ) ? dst : fragment.Depth;
+			return ( dst == fragment.Depth );
+		}
+
 		template<class T>
-		bool Execute( unsigned short x, unsigned short y, T depth );
+		bool Test( unsigned short x, unsigned short y, T depth )
+		{
+			Assert( IsValid() );
+			Assert( x >= 0 && x < m_width );
+			Assert( y >= 0 && y < m_ds->Height() );
+
+			T& dst = GetValueRef<T>( x, y );
+
+			switch ( m_depthFunc )
+			{
+			case DepthFunc::Not:
+				if ( !( depth != dst ) )
+				{
+					return false;
+				}
+				break;
+
+			case DepthFunc::Equal:
+				if ( !( depth == dst ) )
+				{
+					return false;
+				}
+				break;
+
+			case DepthFunc::Less:
+				if ( !( depth < dst ) )
+				{
+					return false;
+				}
+				break;
+
+			case DepthFunc::LessEqual:
+				if ( !( depth <= dst ) )
+				{
+					return false;
+				}
+				break;
+
+			case DepthFunc::Greater:
+				if ( !( depth > dst ) )
+				{
+					return false;
+				}
+				break;
+
+			case DepthFunc::GreaterEqual:
+				if ( !( depth >= dst ) )
+				{
+					return false;
+				}
+				break;
+
+			default:
+				break;
+			}
+
+			// depth write
+			if ( m_depthWritable )
+			{
+				VerifyReentry();
+
+				dst = depth;
+			}
+
+			return true;
+		}
 
 	private:
 		std::shared_ptr<Texture> m_ds;
@@ -67,9 +144,6 @@ namespace kih
 		int m_width;
 		int m_stride;
 		byte* m_ptr;
-#ifdef DEPTHFUNC_LAMDA
-		RenderingContext* m_context;
-#endif
 		DepthFunc m_depthFunc;
 		bool m_depthWritable;
 	};

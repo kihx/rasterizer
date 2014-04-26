@@ -125,7 +125,7 @@ void DrawGridSceneInParallel( std::vector<std::shared_ptr<RenderingContext>>& co
 		}
 	);
 
-	RenderingContext::DrawInParallel( contexts, g_meshes, funcPreRender );
+	RenderingContext::DrawInParallel( contexts, g_meshes, grid_size.Int() * grid_size.Int(), funcPreRender );
 }
 
 KIHX_API void kiRenderToBuffer( void* buffer, int width, int height, int bpp )
@@ -152,16 +152,16 @@ KIHX_API void kiRenderToBuffer( void* buffer, int width, int height, int bpp )
 		LoopUnroll<Concurrency>::Work( 
 			[&index]() 
 			{ 
-				auto context = RenderingDevice::GetInstance()->CreateRenderingContext(); 
+				auto context = RenderingDevice::GetInstance()->CreateRenderingContext();
 				context->SetViewport( 0, 0, static_cast<unsigned short>( renderTarget->Width() ), static_cast<unsigned short>( renderTarget->Height() ) );
 				context->SetFixedPipelineMode( false );
+				
+				context->SetRenderTarget( renderTarget, 0 );
 				context->SetDepthStencil( depthStencil );
+
 				contexts[index++] = context;
 			} 
 		);
-
-		// only for the first context
-		contexts[0]->SetRenderTarget( renderTarget, 0 );		// Assume that we have only one RT.
 	}
 	
 	auto context = contexts[0];
@@ -184,11 +184,11 @@ KIHX_API void kiRenderToBuffer( void* buffer, int width, int height, int bpp )
 		{
 			// Copy array contexts to vector one.
 			std::vector<std::shared_ptr<RenderingContext>> concurrencyContexts;
-			concurrencyContexts.reserve( concurrency.Int() );			
-			for ( int i = 0; i < concurrency.Int(); ++i )
+			concurrencyContexts.resize( concurrency.Int() - 1 );		// the other thread is for resolve.	
+			for ( size_t i = 0; i < concurrencyContexts.size(); ++i )
 			{
 				contexts[i]->SetUnorderedAccessView( omUAV );
-				concurrencyContexts.emplace_back( contexts[i] );
+				concurrencyContexts[i] = contexts[i];
 			}
 
 			DrawGridSceneInParallel( concurrencyContexts, matWorld );
