@@ -665,7 +665,7 @@ namespace xtozero
 		}
 
 		{
-			Lock<CriticalSection> lock( rasterizer->m_cs );
+			Lock<SpinLock> lock( rasterizer->m_lockobject );
 			for ( std::vector<CPsElementDesc>::iterator& iter = outputRS.begin( ); iter != outputRS.end( ); ++iter )
 			{
 				rasterizer->m_outputRS.emplace_back( *iter );

@@ -22,15 +22,15 @@ XTZ_API void XtzRenderToBuffer( void* buffer, int width, int height, int dpp )
 {
 	if ( buffer )
 	{
-		gThreadPool->CreateThreadPool( 2 );
+		gThreadPool->CreateThreadPool( 4 );
 		gRasterizer->SetViewPort( 0, 0, width, height );
 		gOutputMerger->CreateDepthBuffer( width, height );
 		gOutputMerger->ClearDepthBuffer();
 		gOutputMerger->SetFrameBuffer( buffer, dpp, width, height );
-		//CRsElementDesc& vsOut = gVertexShader->Process( gMeshManager->LoadRecentMesh() );
 		CRsElementDesc& vsOut = gVertexShader->ProcessParallel( gMeshManager->LoadRecentMesh( ), gThreadPool.get( ) );
-		//const std::vector<CPsElementDesc>& rsOut = gRasterizer->Process( vsOut );
 		const std::vector<CPsElementDesc>& rsOut = gRasterizer->ProcessParallel( vsOut, gThreadPool.get() );
+		//CRsElementDesc& vsOut = gVertexShader->Process( gMeshManager->LoadRecentMesh() );
+		//const std::vector<CPsElementDesc>& rsOut = gRasterizer->Process( vsOut );
 		const std::vector<COmElementDesc>& psOut = gPixelShader->Process( rsOut );
 		gOutputMerger->Process( psOut );
 	}

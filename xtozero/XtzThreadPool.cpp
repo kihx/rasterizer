@@ -3,7 +3,7 @@
 
 namespace xtozero
 {
-	CriticalSection CXtzThreadPool::m_cs;
+	SpinLock CXtzThreadPool::m_lockObject;
 
 	class CXtzThread
 	{
@@ -110,19 +110,22 @@ namespace xtozero
 
 	void CXtzThreadPool::DestroyThreadPool( )
 	{
-		WaitThread( );
-
 		for ( int i = 0; i < m_nThread; ++i )
 		{
 			CXtzThread* thread = m_threads[i].get();
-			thread->SetEnd( true );
-			thread->WakeUp( );
+			if ( thread != nullptr )
+			{
+				thread->SetEnd( true );
+				thread->WakeUp( );
+			}
 		}
+
+		WaitThread( );
 	}
 
 	void CXtzThreadPool::AddWork( WorkerFuntion worker, void* arg )
 	{
-		Lock<CriticalSection> lock( m_cs );
+		Lock<SpinLock> lock( m_lockObject );
 
 		if ( m_threadquere.empty() )
 		{
@@ -139,7 +142,7 @@ namespace xtozero
 
 	void CXtzThreadPool::AddThraed( CXtzThread* thread )
 	{
-		Lock<CriticalSection> lock( m_cs );
+		Lock<SpinLock> lock( m_lockObject );
 
 		if ( m_workquere.empty() )
 		{

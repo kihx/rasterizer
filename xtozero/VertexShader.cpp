@@ -18,7 +18,7 @@ namespace xtozero
 				position.Transform( wvpMatrix );
 			}
 
-			m_vsOutput.m_vertices.emplace_back( position.X, position.Y, position.Z );
+			m_vsOutput.m_vertices.emplace_back( position );
 		}
 		
 		unsigned int key = 0;

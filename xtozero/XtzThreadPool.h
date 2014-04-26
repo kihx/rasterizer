@@ -44,6 +44,41 @@ namespace xtozero
 		}
 	};
 
+	class SpinLock
+	{
+	private:
+		volatile unsigned int m_Islock;
+
+	public:
+		explicit SpinLock( ) : m_Islock( 0 )
+		{
+			
+		}
+
+		~SpinLock( )
+		{
+			
+		}
+
+		SpinLock( const SpinLock& spinlock )
+		{
+
+		}
+
+		void Lock( )
+		{
+			while ( InterlockedExchange( &m_Islock, 1 ) == 1 ) 
+			{
+				Sleep( 0 );
+			}
+		}
+
+		void Unlock( )
+		{
+			InterlockedExchange( &m_Islock, 0 );
+		}
+	};
+
 	template <typename T>
 	class Lock
 	{
@@ -82,7 +117,7 @@ namespace xtozero
 	private:
 		int m_nThread;
 
-		static CriticalSection m_cs;
+		static SpinLock m_lockObject;
 		std::list<WORK> m_workquere;
 		std::list<CXtzThread*> m_threadquere;
 		std::vector<std::unique_ptr<CXtzThread>> m_threads;

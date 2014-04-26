@@ -63,7 +63,7 @@ namespace xtozero
 
 		float GetIntersectXpos( int minY, int maxY, int scanlineY, float minX, float gradient ) const;
 	public:
-		CriticalSection m_cs;
+		SpinLock m_lockobject;
 		std::vector<CPsElementDesc> m_outputRS;
 		Rect m_viewport;
 
