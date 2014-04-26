@@ -52,7 +52,7 @@ namespace xtozero
 	class CMesh
 	{
 	public:
-		std::vector<Vector3> m_vertices;
+		std::vector<Vector4> m_vertices;
 		std::vector<Face> m_faces;
 
 		int m_nfaces;

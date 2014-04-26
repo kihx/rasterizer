@@ -17,6 +17,7 @@ namespace xtozero
 		Matrix4 m_worldMatrix;
 		Matrix4 m_viewMatrix;
 		Matrix4 m_projectionMatrix;
+		Matrix4 m_wvpMatrix;
 	public:
 		CVertexShader() {}
 		~CVertexShader() {}
@@ -24,7 +25,6 @@ namespace xtozero
 		CRsElementDesc& Process( const std::shared_ptr<CMesh> pMesh );
 		
 		CRsElementDesc& ProcessParallel( const std::shared_ptr<CMesh> pMesh, CXtzThreadPool* threadPool );
-		void InsertTransformedVertex( Vector3& pos, int index );
 
 		void SetWorldMatrix( const float* mmatrix4x4 )
 		{
@@ -37,6 +37,15 @@ namespace xtozero
 		void SetProjectionMatrix( const float* mmatrix4x4 )
 		{
 			memcpy( &m_projectionMatrix, mmatrix4x4, sizeof(Matrix4) );
+		}
+
+		const Matrix4& GetwvpMatrix()
+		{
+			return m_wvpMatrix;
+		}
+		Vector4& GetOutputVertex(int index)
+		{
+			return m_vsOutput.m_vertices[index];
 		}
 	};
 

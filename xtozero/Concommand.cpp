@@ -45,7 +45,7 @@ namespace cmd
 
 	CConvar::CConvar( const char* name, const char* value ) : m_name( name ), m_value(value)
 	{
-		CConcommandExecutor::GetInstance( )->AddConvar( m_name, *this );
+		CConcommandExecutor::GetInstance( )->AddConvar( m_name, this );
 		m_float = static_cast<float>(atof( m_value.c_str( ) ) );
 		m_int = static_cast<int>(m_float);
 		m_bool = static_cast<bool>(m_int);
@@ -116,12 +116,12 @@ namespace cmd
 
 	void CConcommandExecutor::AddConcommad( const std::string& cmd, const CConcommand& cmdFuc )
 	{
-		m_cmdMap.insert( std::make_pair( cmd, cmdFuc ) );
+		m_cmdMap.emplace(  cmd, cmdFuc );
 	}
 
-	void CConcommandExecutor::AddConvar( const std::string& var, const CConvar& cmdVar )
+	void CConcommandExecutor::AddConvar( const std::string& var, CConvar* cmdVar )
 	{
-		m_cvarMap.insert( std::make_pair( var, cmdVar ) );
+		m_cvarMap.emplace( var, cmdVar );
 	}
 
 	void CConcommandExecutor::ExcuteConcommand( const char* cmd )
@@ -134,29 +134,27 @@ namespace cmd
 			if ( findedcmd != m_cmdMap.end( ) )
 			{
 				findedcmd->second.Execute( );
-			}
-			else
-			{
-				std::cout << "Invaild Concommand" << std::endl;
+				return;
 			}
 
-			std::unordered_map<std::string, CConvar>::iterator& findedvar = m_cvarMap.find( cmdStr );
+			std::unordered_map<std::string, CConvar*>::iterator& findedvar = m_cvarMap.find( cmdStr );
 
 			if ( findedvar != m_cvarMap.end( ) )
 			{
 				if ( m_tokenizer.ArgC() > 1 )
 				{
-					findedvar->second.SetValue( m_tokenizer.ArgV( 1 ) );
+					findedvar->second->SetValue( m_tokenizer.ArgV( 1 ) );
+					return;
 				}
 				else
 				{
-					std::cout << "[Usage] " << findedvar->second.GetName()
+					std::cout << "[Usage] " << findedvar->second->GetName( )
 						<< " Arg" << std::endl;
 				}
 			}
 			else
 			{
-				std::cout << "Invaild Convar" << std::endl;
+				std::cout << "Invaild Convar/Concommad" << std::endl;
 			}
 		}
 	}

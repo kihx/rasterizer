@@ -18,6 +18,7 @@ namespace xtozero
 		std::vector<Vector4> m_vertices;
 		std::vector<Vector3> m_Color;
 		std::vector<std::vector<int>> m_faces;
+		Vector4 m_cameraPos;
 		COORDINATE m_coodinate;
 	};
 

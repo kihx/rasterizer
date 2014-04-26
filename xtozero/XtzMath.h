@@ -522,7 +522,7 @@ namespace xtozero
 
 		inline bool operator!=(const Vector4&) const;
 
-		Vector4& Transform(Matrix4& mat)
+		Vector4& Transform(const Matrix4& mat)
 		{
 			Vector4 tmp;
 			tmp.X = mat.A[0][0] * X + mat.A[1][0] * Y + mat.A[2][0] * Z + mat.A[3][0];
@@ -530,7 +530,10 @@ namespace xtozero
 			tmp.Z = mat.A[0][2] * X + mat.A[1][2] * Y + mat.A[2][2] * Z + mat.A[3][2];
 			tmp.W = mat.A[0][3] * X + mat.A[1][3] * Y + mat.A[2][3] * Z + mat.A[3][3];
 
-			*this = tmp;
+			X = tmp.X;
+			Y = tmp.Y;
+			Z = tmp.Z;
+			W = tmp.W;
 
 			return *this;
 		}
@@ -615,14 +618,16 @@ namespace xtozero
 	{
 		return Vector4(X / rhs.X,
 			Y / rhs.Y,
-			Z / rhs.Z);
+			Z / rhs.Z,
+			W / rhs.W);
 	}
 
 	inline Vector4 Vector4::operator/(float rhs) const
 	{
 		return Vector4(X / rhs,
 			Y / rhs,
-			Z / rhs);
+			Z / rhs,
+			W / rhs);
 	}
 
 	inline const Vector4& Vector4::operator+=(const Vector4 &v)
@@ -648,6 +653,7 @@ namespace xtozero
 		X /= offset;
 		Y /= offset;
 		Z /= offset;
+		W /= offset;
 
 		return *this;
 	}

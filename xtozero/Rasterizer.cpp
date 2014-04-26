@@ -4,6 +4,8 @@
 
 namespace xtozero
 {
+	cmd::CConvar g_BackfaceCulling( "BackfaceCulling", "0" );
+
 	void CRasterizer::CreateEdgeTable( const CRsElementDesc& rsInput, unsigned int faceNumber )
 	{
 		if ( faceNumber >= rsInput.m_faces.size( ) )
@@ -307,6 +309,19 @@ namespace xtozero
 	const std::vector<CPsElementDesc>& CRasterizer::ProcessParallel( CRsElementDesc& rsInput, CXtzThreadPool* threadPool )
 	{
 		m_outputRS.clear( );
+		std::vector<bool> m_IsBack( rsInput.m_faces.size( ) );
+
+		for ( unsigned int i = 0; i < rsInput.m_faces.size(); ++i )
+		{
+			if ( IsBackFace( rsInput, i ) )
+			{
+				m_IsBack[i] = true;
+			}
+			else
+			{
+				m_IsBack[i] = false;
+			}
+		}
 
 		if ( rsInput.m_coodinate == COORDINATE::OBJECT_COORDINATE )
 		{
@@ -322,6 +337,11 @@ namespace xtozero
 
 		for ( unsigned int i = 0; i < rsInput.m_faces.size( ); ++i )
 		{
+			if ( m_IsBack[i] && g_BackfaceCulling.GetBool() )
+			{
+				continue;
+			}
+
 			RsThreadArg* pRsArg = new RsThreadArg;
 
 			pRsArg->pRs = this;
@@ -584,6 +604,27 @@ namespace xtozero
 		m_viewport.m_bottom = bottom;
 
 		m_outputRS.reserve( (right - left) * (bottom - top) );
+	}
+
+	bool CRasterizer::IsBackFace( const CRsElementDesc& rsInput, const int facenumber ) const
+	{
+		const Vector4& v0 = rsInput.m_vertices[rsInput.m_faces[facenumber][0]];
+		const Vector4& v1 = rsInput.m_vertices[rsInput.m_faces[facenumber][1]];
+		const Vector4& v2 = rsInput.m_vertices[rsInput.m_faces[facenumber][2]];
+
+		Vector4 s0 = v1 - v0;
+		Vector4 s1 = v2 - v0;
+
+		s0 = s0.CrossProduct( s1 ); // ¹ý¼± º¤ÅÍ;
+
+		Vector4 toCamera = rsInput.m_cameraPos - v0;
+
+		if ( s0.DotProduct( toCamera ) <= 0 )
+		{
+			return true;
+		}
+
+		return false;
 	}
 
 	void RsThreadWork( LPVOID arg )

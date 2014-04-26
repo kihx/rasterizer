@@ -12,7 +12,7 @@ namespace xtozero
 
 		for ( int i = 0; i < pMesh->m_nVerties; ++i )
 		{
-			Vector3 position = pMesh->m_vertices[i];
+			Vector4 position = pMesh->m_vertices[i];
 			if ( pMesh->m_coordinate == COORDINATE::OBJECT_COORDINATE )
 			{
 				position.Transform( wvpMatrix );
@@ -47,7 +47,7 @@ namespace xtozero
 		m_vsOutput.m_vertices.clear( );
 		m_vsOutput.m_vertices.resize( pMesh->m_nVerties );
 
-		Matrix4& wvpMatrix = m_worldMatrix * m_viewMatrix * m_projectionMatrix;
+		m_wvpMatrix = m_worldMatrix * m_viewMatrix * m_projectionMatrix;
 
 		for ( int i = 0; i < pMesh->m_nVerties; ++i )
 		{
@@ -55,7 +55,6 @@ namespace xtozero
 
 			pArg->index = i;
 			pArg->pVs = this;
-			pArg->matrix = wvpMatrix;
 			pArg->pMesh = pMesh;
 
 			threadPool->AddWork( VsThreadWork, (LPVOID)pArg );
@@ -81,27 +80,25 @@ namespace xtozero
 
 		threadPool->WaitThread( );
 
-		return m_vsOutput;
-	}
+		m_vsOutput.m_cameraPos.W = 1;
+		m_vsOutput.m_cameraPos.X = -m_viewMatrix.A41;
+		m_vsOutput.m_cameraPos.Y = -m_viewMatrix.A42;
+		m_vsOutput.m_cameraPos.Z = -m_viewMatrix.A43;
 
-	void CVertexShader::InsertTransformedVertex( Vector3& pos, int index )
-	{
-		m_vsOutput.m_vertices[index].X = pos.X;
-		m_vsOutput.m_vertices[index].Y = pos.Y;
-		m_vsOutput.m_vertices[index].Z = pos.Z;
+		return m_vsOutput;
 	}
 
 	void VsThreadWork( LPVOID arg )
 	{
 		VsThreadArg* pVsarg = (VsThreadArg*)arg;
 
-		Vector3 position = pVsarg->pMesh->m_vertices[pVsarg->index];
+		Vector4& vector = pVsarg->pVs->GetOutputVertex( pVsarg->index );
+
+		vector = pVsarg->pMesh->m_vertices[pVsarg->index];
 		if ( pVsarg->pMesh->m_coordinate == COORDINATE::OBJECT_COORDINATE )
 		{
-			position.Transform( pVsarg->matrix );
+			vector.Transform( pVsarg->pVs->GetwvpMatrix( ) );
 		}
-
-		pVsarg->pVs->InsertTransformedVertex( position, pVsarg->index );
 
 		delete pVsarg;
 	}

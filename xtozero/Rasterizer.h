@@ -4,6 +4,7 @@
 #include "pipelineElements.h"
 #include "Mesh.h"
 #include "XtzThreadPool.h"
+#include "Concommand.h"
 
 #include <memory>
 #include <vector>
@@ -82,6 +83,8 @@ namespace xtozero
 			std::vector<CPsElementDesc>& outputRS, std::vector<std::pair<int, float>>& horizontalLine );
 
 		void SetViewPort( int left, int top, int right, int bottom );
+
+		bool IsBackFace( const CRsElementDesc& rsInput, const int facenumber ) const;
 	};
 
 	struct RsThreadArg

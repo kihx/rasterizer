@@ -61,7 +61,7 @@ namespace xtozero
 					if ( strncmp( token, "Vertex", sizeof("Vertex") ) == 0 )
 					{
 						meshfile >> token;
-						Vector3 vertex;
+						Vector4 vertex;
 
 						meshfile >> vertex.X >> vertex.Y >> vertex.Z;
 
@@ -144,7 +144,7 @@ namespace xtozero
 					if ( strncmp( token, "Vertex", sizeof("Vertex") ) == 0 )
 					{
 						meshfile >> token;
-						Vector3 vertex;
+						Vector4 vertex;
 
 						meshfile >> vertex.X >> vertex.Y >> vertex.Z;
 
@@ -187,7 +187,7 @@ namespace xtozero
 
 	void CMesh::PrintMeshInfo( void )
 	{
-		for (std::vector<Vector3>::iterator& iter = m_vertices.begin(); iter != m_vertices.end(); ++iter)
+		for (std::vector<Vector4>::iterator& iter = m_vertices.begin(); iter != m_vertices.end(); ++iter)
 		{
 			std::cout << "[VERTEX] ";
 			for ( int i = 0; i < VERTEX_ELEMENT_COUNT; ++i )
