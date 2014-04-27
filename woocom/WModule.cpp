@@ -8,10 +8,12 @@
 #include "Utility.h"
 #include "Thread.h"
 #include "WContextPool.h"
+#include "ConCommand.h"
 
 #include <assert.h>
 #include <memory>
 #include <thread>
+#include <iostream>
 
 #include <Windows.h>
 
@@ -20,8 +22,43 @@ std::shared_ptr<WIDrawable> g_pDrawObj;
 
 std::shared_ptr<WThreadPool> g_pool;
 
+
+typedef void(*RenderFunc)(WModule*);
+RenderFunc g_RenderFunction;
+
+void SingleThreadRendering(WModule* pModule)
+{
+	if (g_pDrawObj)
+	{
+		g_pDrawObj->DrawSolid(pModule);
+	}
+}
+
+void MultiThreadRendering(WModule* pModule)
+{
+	if (g_pDrawObj)
+	{
+		g_pDrawObj->DrawSolidParallel(pModule);
+	}
+}
+
+DECLARE_CONCOMMAND(toggle_rendering)
+{
+	if (g_RenderFunction == SingleThreadRendering)
+	{
+		g_RenderFunction = MultiThreadRendering;
+		std::cout << "MultiThreading." << std::endl;
+	}
+	else
+	{
+		g_RenderFunction = SingleThreadRendering;
+		std::cout << "SingleThreading." << std::endl;
+	}
+}
+
 WModule::WModule() : m_isInit(false), m_depthBuffer(nullptr)
 {
+	g_RenderFunction = SingleThreadRendering;
 }
 
 WModule::~WModule()
@@ -176,7 +213,7 @@ void WModule::ResetFillInfo()
 
 void WModule::InsertLineInfo(size_t lineIndex, int posX, const unsigned char* rgb)
 {
-	assert((lineIndex >= 0 && lineIndex < m_screenHeight) && "fillInfo Index out of range");
+	assert((lineIndex >= 0 && lineIndex < (size_t)m_screenHeight) && "fillInfo Index out of range");
 
 	m_fillInfo[lineIndex].Insert(posX, rgb);
 
@@ -196,7 +233,7 @@ void WModule::InsertLineInfo(size_t lineIndex, int posX, const unsigned char* rg
 
 void WModule::InsertLineDepthInfo(size_t lineIndex, int posX, float depth, const unsigned char* rgb)
 {
-	assert((lineIndex >= 0 && lineIndex < m_screenHeight) && "fillInfo Index out of range");
+	assert((lineIndex >= 0 && lineIndex < (size_t)m_screenHeight) && "fillInfo Index out of range");
 
 	m_fillInfo[lineIndex].Insert(posX, depth, rgb);
 
@@ -317,6 +354,7 @@ BOOL WINAPI DllMain(HINSTANCE hInst, DWORD fdwReason, PVOID fImpLoad)
 	case DLL_THREAD_ATTACH:
 		break;
 	case DLL_PROCESS_DETACH:
+		ConCommandExecuter::Destory();
 		break;
 	case DLL_THREAD_DETACH:
 		break;
@@ -342,12 +380,7 @@ void WRender(void* buffer, int width, int height, int colorDepth)
 	//g_pPainter->Render();
 	g_pPainter->Clear(buffer, width, height, 0x000000);
 	
-	if (g_pDrawObj)
-	{
-		//g_pDrawObj->DrawOutline( g_pPainter.get() );
-		//g_pDrawObj->DrawSolid(g_pPainter.get());
-		g_pDrawObj->DrawSolidParallel(g_pPainter.get());
-	}
+	g_RenderFunction(g_pPainter.get());
 	
 }
 
@@ -384,4 +417,9 @@ void WLoadMesh(const char* fileName)
 		WPolyData* polygon = FileLoader::LoadPoly(fileName);
 		g_pDrawObj = std::shared_ptr<WIDrawable>(new WPolygon(polygon));
 	}
+}
+
+void WExecuteCommand(const char* command)
+{
+	ConCommandExecuter::GetInstance()->Execute(command);
 }

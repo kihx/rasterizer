@@ -97,3 +97,35 @@ public:
 private:
 	CRITICAL_SECTION*	m_cs;
 };
+
+template< typename T>
+class Singleton
+{
+protected:
+	Singleton(){}
+	~Singleton(){}
+
+	static T* m_Instance;
+
+public:
+	static T* GetInstance()
+	{
+		if (m_Instance == nullptr)
+		{
+			m_Instance = new T();
+		}
+		return m_Instance;
+	}
+
+	static void Destory()
+	{
+		if (m_Instance)
+		{
+			delete m_Instance;
+			m_Instance = nullptr;
+		}
+	}
+};
+
+template< typename T >
+T* Singleton<T>::m_Instance = nullptr;
