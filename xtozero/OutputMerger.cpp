@@ -58,8 +58,6 @@ namespace xtozero
 
 		size_t size = m_dpp / 8;
 
-		unsigned int color = PIXEL_COLOR( 0, 0, 0 );
-
 		memset( m_pFrameBuffer, 0, m_width * m_height * size );
 
 		int nPixels = omInput.size();
@@ -73,9 +71,9 @@ namespace xtozero
 			if ( ProcessDepthTest( input.m_x, input.m_y, input.m_z ) )
 			{
 				unsigned char* pixel = m_pFrameBuffer + ((m_width * input.m_y) + input.m_x) * size;
-				pixel[0] = GET_RED( input.m_color );
-				pixel[1] = GET_GREEN( input.m_color );
-				pixel[2] = GET_BULE( input.m_color );
+				pixel[0] = static_cast<unsigned char>( GET_RED( input.m_color ) );
+				pixel[1] = static_cast<unsigned char>( GET_GREEN( input.m_color ) );
+				pixel[2] = static_cast<unsigned char>( GET_BULE( input.m_color ) );
 			}
 		}
 	}

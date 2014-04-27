@@ -17,8 +17,6 @@
 
 XTZ_API void XtzRenderToBuffer( void* buffer, int width, int height, int dpp );
 
-XTZ_API void XtzClearBuffer( void* buffer, int width, int height, int color );
-
 XTZ_API void XtzLoadMeshFromFile( const char* pfilename );
 
 XTZ_API void XtzSetTransform( int transformType, const float* matrix4x4 );

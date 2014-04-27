@@ -2,9 +2,9 @@
 #include "stdafx.h"
 #include "Concommand.h"
 
-BOOL APIENTRY DllMain( HMODULE hModule,
+BOOL APIENTRY DllMain( HMODULE,
 	DWORD  ul_reason_for_call,
-	LPVOID lpReserved
+	LPVOID
 	)
 {
 	switch ( ul_reason_for_call )

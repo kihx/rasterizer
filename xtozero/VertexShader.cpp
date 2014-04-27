@@ -8,7 +8,7 @@ namespace xtozero
 		m_vsOutput.m_vertices.clear();
 		m_vsOutput.m_vertices.reserve( pMesh->m_nVerties );
 
-		Matrix4& wvpMatrix = m_worldMatrix * m_viewMatrix * m_projectionMatrix;
+		Matrix4 wvpMatrix = m_worldMatrix * m_viewMatrix * m_projectionMatrix;
 
 		for ( int i = 0; i < pMesh->m_nVerties; ++i )
 		{
@@ -23,7 +23,7 @@ namespace xtozero
 		
 		unsigned int key = 0;
 		m_vsOutput.m_faces.clear();
-		for ( std::vector<Face>::iterator& faceiter = pMesh->m_faces.begin( ); faceiter != pMesh->m_faces.end( ); ++faceiter )
+		for ( std::vector<Face>::iterator faceiter = pMesh->m_faces.begin( ); faceiter != pMesh->m_faces.end( ); ++faceiter )
 		{
 			key = faceiter - pMesh->m_faces.begin( );
 			if ( m_vsOutput.m_faces.size( ) <= key )
@@ -31,7 +31,7 @@ namespace xtozero
 				m_vsOutput.m_faces.emplace_back( );
 				m_vsOutput.m_faces[key].reserve( faceiter->m_indices.size( ) );
 			}
-			for ( std::vector<int>::iterator& indexiter = faceiter->m_indices.begin( ); indexiter != faceiter->m_indices.end( ); ++indexiter )
+			for ( std::vector<int>::iterator indexiter = faceiter->m_indices.begin( ); indexiter != faceiter->m_indices.end( ); ++indexiter )
 			{
 				m_vsOutput.m_faces[key].emplace_back( *indexiter );
 			}
@@ -62,7 +62,7 @@ namespace xtozero
 
 		unsigned int key = 0;
 		m_vsOutput.m_faces.clear();
-		for ( std::vector<Face>::iterator& faceiter = pMesh->m_faces.begin( ); faceiter != pMesh->m_faces.end( ); ++faceiter )
+		for ( std::vector<Face>::iterator faceiter = pMesh->m_faces.begin( ); faceiter != pMesh->m_faces.end( ); ++faceiter )
 		{
 			key = faceiter - pMesh->m_faces.begin( );
 			if ( m_vsOutput.m_faces.size( ) <= key )
@@ -70,7 +70,7 @@ namespace xtozero
 				m_vsOutput.m_faces.emplace_back( );
 				m_vsOutput.m_faces[key].reserve( faceiter->m_indices.size() );
 			}
-			for ( std::vector<int>::iterator& indexiter = faceiter->m_indices.begin( ); indexiter != faceiter->m_indices.end( ); ++indexiter )
+			for ( std::vector<int>::iterator indexiter = faceiter->m_indices.begin( ); indexiter != faceiter->m_indices.end( ); ++indexiter )
 			{
 				m_vsOutput.m_faces[key].emplace_back( *indexiter );
 			}
@@ -81,9 +81,9 @@ namespace xtozero
 		threadPool->WaitThread( );
 
 		m_vsOutput.m_cameraPos.W = 1;
-		m_vsOutput.m_cameraPos.X = -m_viewMatrix.A41;
-		m_vsOutput.m_cameraPos.Y = -m_viewMatrix.A42;
-		m_vsOutput.m_cameraPos.Z = -m_viewMatrix.A43;
+		m_vsOutput.m_cameraPos.X = -m_viewMatrix.A[4][1];
+		m_vsOutput.m_cameraPos.Y = -m_viewMatrix.A[4][2];
+		m_vsOutput.m_cameraPos.Z = -m_viewMatrix.A[4][3];
 
 		return m_vsOutput;
 	}

@@ -6,6 +6,8 @@
 #include <memory>
 #include <Windows.h>
 
+#pragma warning( disable : 4512 )
+
 namespace xtozero
 {
 	const int MAX_THREAD = 8;
@@ -49,6 +51,8 @@ namespace xtozero
 	private:
 		volatile unsigned int m_Islock;
 
+		SpinLock( const SpinLock& spinlock );
+		SpinLock& operator= (const SpinLock& spinlock);
 	public:
 		explicit SpinLock( ) : m_Islock( 0 )
 		{
@@ -58,11 +62,6 @@ namespace xtozero
 		~SpinLock( )
 		{
 			
-		}
-
-		SpinLock( const SpinLock& spinlock )
-		{
-
 		}
 
 		void Lock( )
@@ -115,7 +114,7 @@ namespace xtozero
 	class CXtzThreadPool
 	{
 	private:
-		int m_nThread;
+		unsigned int m_nThread;
 
 		static SpinLock m_lockObject;
 		std::list<WORK> m_workquere;

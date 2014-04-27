@@ -70,7 +70,7 @@ namespace cmd
 	public:
 		void AddConcommad( const std::string& cmd, const CConcommand& cmdFuc );
 		void AddConvar( const std::string& var, CConvar* cmdVar );
-		void ExcuteConcommand( const char* cmd );
+		void ExcuteConcommand( );
 		void DoTokenizing( const char* cmd );
 
 		CConcommandExecutor( );

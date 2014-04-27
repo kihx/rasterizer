@@ -19,7 +19,7 @@ namespace xtozero
 	public:
 		union
 		{
-			struct
+			struct MatrixElement
 			{
 				float        A11, A12, A13, A14;
 				float        A21, A22, A23, A24;

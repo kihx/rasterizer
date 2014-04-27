@@ -76,7 +76,7 @@ namespace xtozero
 						for ( int i = 0; i < COLOR_ELEMENT_COUNT; ++i )
 						{
 							meshfile >> color;
-							face.m_color[i] = color;
+							face.m_color[i] = static_cast<unsigned char>( color );
 						}
 
 						int indices;
@@ -187,7 +187,7 @@ namespace xtozero
 
 	void CMesh::PrintMeshInfo( void )
 	{
-		for (std::vector<Vector4>::iterator& iter = m_vertices.begin(); iter != m_vertices.end(); ++iter)
+		for (std::vector<Vector4>::iterator iter = m_vertices.begin(); iter != m_vertices.end(); ++iter)
 		{
 			std::cout << "[VERTEX] ";
 			for ( int i = 0; i < VERTEX_ELEMENT_COUNT; ++i )
@@ -196,7 +196,7 @@ namespace xtozero
 			}
 			std::cout << std::endl;
 		}
-		for ( std::vector<Face>::iterator& iter = m_faces.begin(); iter != m_faces.end(); ++iter )
+		for ( std::vector<Face>::iterator iter = m_faces.begin(); iter != m_faces.end(); ++iter )
 		{
 			std::cout << "[FACE] " << "color : ";
 			for ( int i = 0; i < COLOR_ELEMENT_COUNT; ++i )
@@ -204,7 +204,7 @@ namespace xtozero
 				std::cout << static_cast<int>(iter->m_color[i]) << " | ";
 			}
 			std::cout << " indices : ";
-			for ( std::vector<int>::iterator& index = iter->m_indices.begin(); index != iter->m_indices.end(); ++index )
+			for ( std::vector<int>::iterator index = iter->m_indices.begin(); index != iter->m_indices.end(); ++index )
 			{
 				std::cout << *index << " | ";
 			}

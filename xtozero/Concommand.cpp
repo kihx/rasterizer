@@ -26,9 +26,9 @@ namespace cmd
 
 		std::string string( str );
 
-		while ( true )
+		for ( ; ; )
 		{
-			int pos = string.find( token );
+			unsigned int pos = string.find( token );
 
 			if ( pos == std::string::npos ) // bad position
 			{
@@ -48,7 +48,7 @@ namespace cmd
 		CConcommandExecutor::GetInstance( )->AddConvar( m_name, this );
 		m_float = static_cast<float>(atof( m_value.c_str( ) ) );
 		m_int = static_cast<int>(m_float);
-		m_bool = static_cast<bool>(m_int);
+		m_bool = ( m_int > 0 ) ? true : false;
 	}
 
 	const std::string& CConvar::GetName( ) const
@@ -77,7 +77,7 @@ namespace cmd
 		m_value = std::string( value );
 		m_float = static_cast<float>( atof( m_value.c_str( ) ) );
 		m_int = static_cast<int>(m_float);
-		m_bool = static_cast<bool>(m_int);
+		m_bool = (m_int > 0) ? true : false;
 	}
 
 	void CConvar::SetValue( const std::string& value )
@@ -85,7 +85,7 @@ namespace cmd
 		m_value = value;
 		m_float = static_cast<float>(atof( m_value.c_str( ) ));
 		m_int = static_cast<int>(m_float);
-		m_bool = static_cast<bool>(m_int);
+		m_bool = (m_int > 0) ? true : false;
 	}
 
 	CConcommand::CConcommand( const char* name, const CommandFunc func ) : m_name( name ), m_pFunc( func )
@@ -124,12 +124,12 @@ namespace cmd
 		m_cvarMap.emplace( var, cmdVar );
 	}
 
-	void CConcommandExecutor::ExcuteConcommand( const char* cmd )
+	void CConcommandExecutor::ExcuteConcommand( )
 	{
 		if ( m_tokenizer.ArgC() > 0 )
 		{
 			const std::string& cmdStr = m_tokenizer.ArgV( 0 );
-			std::unordered_map<std::string, CConcommand>::const_iterator& findedcmd = m_cmdMap.find( cmdStr );
+			std::unordered_map<std::string, CConcommand>::iterator findedcmd = m_cmdMap.find( cmdStr );
 
 			if ( findedcmd != m_cmdMap.end( ) )
 			{
@@ -137,7 +137,7 @@ namespace cmd
 				return;
 			}
 
-			std::unordered_map<std::string, CConvar*>::iterator& findedvar = m_cvarMap.find( cmdStr );
+			std::unordered_map<std::string, CConvar*>::iterator findedvar = m_cvarMap.find( cmdStr );
 
 			if ( findedvar != m_cvarMap.end( ) )
 			{

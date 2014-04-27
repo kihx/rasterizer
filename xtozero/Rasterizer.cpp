@@ -93,7 +93,7 @@ namespace xtozero
 	void CRasterizer::UpdateActiveEdgeTable( const int scanline )
 	{
 		//AET 에서 사용하지 않는 Edge제거
-		for ( std::vector<Edge>::iterator& iter = m_activeEdgeTable.begin(); iter != m_activeEdgeTable.end(); )
+		for ( std::vector<Edge>::iterator iter = m_activeEdgeTable.begin(); iter != m_activeEdgeTable.end(); )
 		{
 			Edge& edge = *iter;
 			if ( edge.m_maxY < scanline )
@@ -106,7 +106,7 @@ namespace xtozero
 			}
 		}
 
-		while ( true )
+		for ( ; ; )
 		{
 			if ( m_edgeTable.empty() )
 			{
@@ -146,7 +146,7 @@ namespace xtozero
 
 		float intersectX = 0;
 
-		for ( std::vector<Edge>::iterator& iter = m_activeEdgeTable.begin(); iter != m_activeEdgeTable.end(); ++iter )
+		for ( std::vector<Edge>::iterator iter = m_activeEdgeTable.begin(); iter != m_activeEdgeTable.end(); ++iter )
 		{
 			Edge& edge = *iter;
 			if ( edge.m_maxY == edge.m_minY ) // 수평한 선분은 제외
@@ -186,7 +186,7 @@ namespace xtozero
 		int endX;
 		float startZ;
 		float endZ;
-		for ( std::vector<std::pair<int, float>>::iterator& iter = horizontalLine.begin(); iter != horizontalLine.end(); iter += 2 )
+		for ( std::vector<std::pair<int, float>>::iterator iter = horizontalLine.begin(); iter != horizontalLine.end(); iter += 2 )
 		{
 			std::pair<int, float>& posXZ = *iter;
 
@@ -264,7 +264,7 @@ namespace xtozero
 
 		if ( rsInput.m_coodinate == COORDINATE::OBJECT_COORDINATE )
 		{
-			for ( std::vector<Vector4>::iterator& iter = rsInput.m_vertices.begin( ); iter != rsInput.m_vertices.end( ); ++iter )
+			for ( std::vector<Vector4>::iterator iter = rsInput.m_vertices.begin( ); iter != rsInput.m_vertices.end( ); ++iter )
 			{
 				Vector4& vertex = *iter;
 				vertex /= vertex.W;
@@ -325,7 +325,7 @@ namespace xtozero
 
 		if ( rsInput.m_coodinate == COORDINATE::OBJECT_COORDINATE )
 		{
-			for ( std::vector<Vector4>::iterator& iter = rsInput.m_vertices.begin( ); iter != rsInput.m_vertices.end( ); ++iter )
+			for ( std::vector<Vector4>::iterator iter = rsInput.m_vertices.begin( ); iter != rsInput.m_vertices.end( ); ++iter )
 			{
 				Vector4& vertex = *iter;
 				vertex /= vertex.W;
@@ -444,7 +444,7 @@ namespace xtozero
 	void CRasterizer::UpdateActiveEdgeTableParallel( const int scanline, std::vector<Edge>& edgeTable, std::vector<Edge>& activeEdgeTable )
 	{
 		//AET 에서 사용하지 않는 Edge제거
-		for ( std::vector<Edge>::iterator& iter = activeEdgeTable.begin( ); iter != activeEdgeTable.end( ); )
+		for ( std::vector<Edge>::iterator iter = activeEdgeTable.begin( ); iter != activeEdgeTable.end( ); )
 		{
 			Edge& edge = *iter;
 			if ( edge.m_maxY < scanline )
@@ -457,7 +457,7 @@ namespace xtozero
 			}
 		}
 
-		while ( true )
+		for ( ; ; )
 		{
 			if ( edgeTable.empty( ) )
 			{
@@ -600,7 +600,7 @@ namespace xtozero
 		const std::vector<int>& index = rsInput.m_faces[faceNumber];
 		const std::vector<Vector4>& vertices = rsInput.m_vertices;
 		std::vector<BYTE> clipstate( index.size() );
-		int nClipedVertex = 0;
+		unsigned int nClipedVertex = 0;
 		
 		for ( unsigned int i = 0; i < index.size(); ++i )
 		{
@@ -732,7 +732,7 @@ namespace xtozero
 
 		{
 			Lock<SpinLock> lock( rasterizer->GetLockObject() );
-			for ( std::vector<CPsElementDesc>::iterator& iter = outputRS.begin( ); iter != outputRS.end( ); ++iter )
+			for ( std::vector<CPsElementDesc>::iterator iter = outputRS.begin( ); iter != outputRS.end( ); ++iter )
 			{
 				rasterizer->m_outputRS.emplace_back( *iter );
 			}

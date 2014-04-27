@@ -54,7 +54,7 @@ namespace xtozero
 	{
 		CXtzThread* thread = reinterpret_cast<CXtzThread*>(arg);
 
-		while ( true )
+		for ( ; ; )
 		{
 			thread->WaitEvent();
 			if ( thread->IsEnd( ) )
@@ -101,7 +101,7 @@ namespace xtozero
 
 		m_nThread = maxThread;
 
-		for ( int i = 0; i < m_nThread; ++i )
+		for ( unsigned int i = 0; i < m_nThread; ++i )
 		{
 			m_threads.push_back( std::make_unique<CXtzThread>( this ) );
 			m_threadquere.push_back( m_threads[i].get() );
@@ -110,7 +110,7 @@ namespace xtozero
 
 	void CXtzThreadPool::DestroyThreadPool( )
 	{
-		for ( int i = 0; i < m_nThread; ++i )
+		for ( unsigned int i = 0; i < m_nThread; ++i )
 		{
 			CXtzThread* thread = m_threads[i].get();
 			if ( thread != nullptr )
@@ -135,7 +135,8 @@ namespace xtozero
 		{
 			CXtzThread* thread = m_threadquere.front( );
 			m_threadquere.pop_front( );
-			thread->SetWork( WORK( worker, arg ) );
+			WORK threadWork( worker, arg );
+			thread->SetWork( threadWork );
 			thread->WakeUp( );
 		}
 	}
