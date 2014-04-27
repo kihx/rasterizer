@@ -22,7 +22,7 @@ XTZ_API void XtzRenderToBuffer( void* buffer, int width, int height, int dpp )
 {
 	if ( buffer )
 	{
-		gThreadPool->CreateThreadPool( 4 );
+		gThreadPool->CreateThreadPool( 2 );
 		gRasterizer->SetViewPort( 0, 0, width, height );
 		gOutputMerger->CreateDepthBuffer( width, height );
 		gOutputMerger->ClearDepthBuffer();

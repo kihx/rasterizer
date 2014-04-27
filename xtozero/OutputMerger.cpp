@@ -3,7 +3,7 @@
 
 namespace xtozero
 {
-	const int depthPrecision = 255;
+	const int depthPrecision = INT_MAX;
 
 	COutputMerger::COutputMerger( ) : m_dpp( 0 ), m_height( 0 ), m_width( 0 ),
 		m_pFrameBuffer( nullptr )
@@ -27,7 +27,7 @@ namespace xtozero
 	{
 		for ( int i = 0; i < m_width * m_height; ++i )
 		{
-			m_pDepthBuffer[i] = 255;
+			m_pDepthBuffer[i] = INT_MAX;
 		}
 	}
 
@@ -45,7 +45,7 @@ namespace xtozero
 
 		if ( m_pDepthBuffer[y * m_width + x] >= depth * depthPrecision )
 		{
-			m_pDepthBuffer[y * m_width + x] = static_cast<unsigned char>(depth * depthPrecision);
+			m_pDepthBuffer[y * m_width + x] = static_cast<int>(depth * depthPrecision);
 			return true;
 		}
 

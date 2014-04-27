@@ -5,6 +5,7 @@
 namespace xtozero
 {
 	cmd::CConvar g_BackfaceCulling( "BackfaceCulling", "0" );
+	cmd::CConvar g_NoCulling( "NoVPCulling", "1" );
 
 	void CRasterizer::CreateEdgeTable( const CRsElementDesc& rsInput, unsigned int faceNumber )
 	{
@@ -341,7 +342,7 @@ namespace xtozero
 			{
 				continue;
 			}
-			if ( Culling( rsInput, i ) )
+			if ( ViewportCulling( rsInput, i ) )
 			{
 				continue;
 			}
@@ -595,10 +596,17 @@ namespace xtozero
 		}
 	}
 
-	bool CRasterizer::Culling( const CRsElementDesc& rsInput, unsigned int faceNumber )
+	bool CRasterizer::ViewportCulling( CRsElementDesc& rsInput, unsigned int faceNumber )
 	{
-		const std::vector<int>& index = rsInput.m_faces[faceNumber];
-		const std::vector<Vector4>& vertices = rsInput.m_vertices;
+		if ( g_NoCulling.GetBool() )
+		{
+			return false;
+		}
+
+		std::vector<int>& index = rsInput.m_faces[faceNumber];
+		std::vector<int> clipedIndex;
+		clipedIndex.reserve( index.size() + 2 );
+		std::vector<Vector4>& vertices = rsInput.m_vertices;
 		std::vector<BYTE> clipstate( index.size() );
 		unsigned int nClipedVertex = 0;
 		
@@ -618,9 +626,76 @@ namespace xtozero
 		}
 		else if ( nClipedVertex ) // 몇개의 점이 뷰포트 밖에 존재
 		{
+			for ( unsigned int i = 0; i < index.size() - 1; ++i )
+			{
+				const Vector4& start = vertices[index[i]];
+				const Vector4& end = vertices[index[i + 1]];
+				if ( clipstate[i] ) // 시작점이 뷰포트 밖
+				{
+					if ( clipstate[i + 1] ) // 끝점도 뷰포트밖
+					{
+						//DoNothing
+						//다음 점을 시작점으로 한다.
+					}
+					else
+					{
+						//교차점을 구한다.
+						float ratio = CalcClipRatio( start, end, clipstate[i] );
+						vertices.emplace_back( Lerp( start, end, ratio ) );
+						clipedIndex.emplace_back( vertices.size() - 1 );
+					}
+				}
+				else // 시작점은 뷰포트 안
+				{
+					clipedIndex.emplace_back( index[i] );
+					if ( clipstate[i + 1] )
+					{
+						float ratio = CalcClipRatio( end, start, clipstate[i + 1] );
+						vertices.emplace_back( Lerp( end, start, ratio ) );
+						clipedIndex.emplace_back( vertices.size() - 1 );
+					}
+					else // 끝점도 뷰포트 안
+					{
+						//DoNothing
+						//다음에 선택될 것은 끝점이고
+						//뷰포트 안에 있기 때문에 자동으로 포함될 것이다.
+					}
+				}
+			}
+
+			clipedIndex.emplace_back( clipedIndex[0] );
+
+			index.swap( clipedIndex );
+
 			return false;
 		}
 		return false;
+	}
+
+	float CRasterizer::CalcClipRatio( const Vector4& start, const Vector4& end,
+		const BYTE startClipstate) // 끝점은 항상 뷰포트 안에 있는 것으로 한다.
+	{
+		float xRatio = 0.0f;
+		float yRatio = 0.0f;
+
+		if ( startClipstate & CLIP_LEFT )
+		{
+			xRatio = -start.X / (end.X - start.X);
+		}
+		else if ( startClipstate & CLIP_RIGHT )
+		{
+			xRatio = ( start.X - m_viewport.m_right + 1) / (start.X - end.X);
+		}
+		if ( startClipstate & CLIP_TOP )
+		{
+			yRatio = -start.Y / (end.Y - start.Y);
+		}
+		else if ( startClipstate & CLIP_BOTTOM )
+		{
+			yRatio = ( start.Y - m_viewport.m_bottom + 1) / (start.Y - end.Y);
+		}
+
+		return (xRatio > yRatio) ? xRatio : yRatio;
 	}
 
 	BYTE CRasterizer::CalcClipState( const Vector4& vertex )

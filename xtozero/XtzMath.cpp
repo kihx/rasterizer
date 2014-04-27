@@ -401,4 +401,9 @@ namespace xtozero
 	{
 		return start + (end - start) * ratio;
 	}
+
+	Vector4 Lerp( Vector4 start, Vector4 end, float ratio )
+	{
+		return start + (end - start) * ratio;
+	}
 }

@@ -700,6 +700,7 @@ namespace xtozero
 	}
 
 	extern float Lerp( float start, float end, float ratio );
+	extern Vector4 Lerp( Vector4 start, Vector4 end, float ratio );
 }
 
 #endif

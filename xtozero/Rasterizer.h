@@ -90,7 +90,9 @@ namespace xtozero
 		void ProcessScanlineParallel( int scanline, unsigned int facecolor, std::vector<Edge>& activeEdgeTable, 
 			std::vector<CPsElementDesc>& outputRS, std::vector<std::pair<int, float>>& horizontalLine );
 
-		bool Culling( const CRsElementDesc& rsInput, unsigned int faceNumber );
+		bool ViewportCulling( CRsElementDesc& rsInput, unsigned int faceNumber );
+		float CalcClipRatio( const Vector4& start, const Vector4& end,
+			const BYTE startClipstate );
 
 		void SetViewPort( int left, int top, int right, int bottom );
 

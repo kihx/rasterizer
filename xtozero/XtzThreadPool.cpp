@@ -10,7 +10,7 @@ namespace xtozero
 	private:
 		HANDLE m_thread;
 		HANDLE m_threadEvent;
-		bool m_bEnd;
+		volatile bool m_bEnd;
 
 		WORK m_Work;
 
@@ -59,7 +59,7 @@ namespace xtozero
 			thread->WaitEvent();
 			if ( thread->IsEnd( ) )
 			{
-				break;
+				return 0;
 			}
 
 			thread->Work( );
@@ -110,17 +110,17 @@ namespace xtozero
 
 	void CXtzThreadPool::DestroyThreadPool( )
 	{
+		WaitThread( );
+
 		for ( unsigned int i = 0; i < m_nThread; ++i )
 		{
 			CXtzThread* thread = m_threads[i].get();
 			if ( thread != nullptr )
 			{
 				thread->SetEnd( true );
-				thread->WakeUp( );
+				//thread->WakeUp( );
 			}
 		}
-
-		WaitThread( );
 	}
 
 	void CXtzThreadPool::AddWork( WorkerFuntion worker, void* arg )
