@@ -54,8 +54,18 @@ namespace xtozero
 	class CRasterizer
 	{
 	private:
+		enum Clipstate
+		{
+			CLIP_TOP = 1,
+			CLIP_BOTTOM = 2,
+			CLIP_LEFT = 4,
+			CLIP_RIGHT = 8
+		};
+
 		std::vector<Edge> m_edgeTable;
 		std::vector<Edge> m_activeEdgeTable;
+		SpinLock m_lockobject;
+		Rect m_viewport;
 
 		void CreateEdgeTable( const CRsElementDesc& rsInput, unsigned int faceNumber );
 		void UpdateActiveEdgeTable( int scanline );
@@ -63,9 +73,7 @@ namespace xtozero
 
 		float GetIntersectXpos( int minY, int maxY, int scanlineY, float minX, float gradient ) const;
 	public:
-		SpinLock m_lockobject;
 		std::vector<CPsElementDesc> m_outputRS;
-		Rect m_viewport;
 
 		CRasterizer( void ) 
 		{
@@ -82,9 +90,21 @@ namespace xtozero
 		void ProcessScanlineParallel( int scanline, unsigned int facecolor, std::vector<Edge>& activeEdgeTable, 
 			std::vector<CPsElementDesc>& outputRS, std::vector<std::pair<int, float>>& horizontalLine );
 
+		bool Culling( const CRsElementDesc& rsInput, unsigned int faceNumber );
+
 		void SetViewPort( int left, int top, int right, int bottom );
 
 		bool IsBackFace( const CRsElementDesc& rsInput, const int facenumber ) const;
+		BYTE CalcClipState( const Vector4& vertex );
+
+		SpinLock& GetLockObject()
+		{
+			return m_lockobject;
+		}
+		Rect& GetViewport()
+		{
+			return m_viewport;
+		}
 	};
 
 	struct RsThreadArg

@@ -341,6 +341,10 @@ namespace xtozero
 			{
 				continue;
 			}
+			if ( Culling( rsInput, i ) )
+			{
+				continue;
+			}
 
 			RsThreadArg* pRsArg = new RsThreadArg;
 
@@ -591,6 +595,58 @@ namespace xtozero
 		}
 	}
 
+	bool CRasterizer::Culling( const CRsElementDesc& rsInput, unsigned int faceNumber )
+	{
+		const std::vector<int>& index = rsInput.m_faces[faceNumber];
+		const std::vector<Vector4>& vertices = rsInput.m_vertices;
+		std::vector<BYTE> clipstate( index.size() );
+		int nClipedVertex = 0;
+		
+		for ( unsigned int i = 0; i < index.size(); ++i )
+		{
+			clipstate[i] = CalcClipState( vertices[index[i]] );
+			if ( clipstate[i] != 0 )
+			{
+				nClipedVertex++;
+			}
+		}
+
+		if ( nClipedVertex == index.size() )
+		{
+			//전부 뷰포트 밖에 존재
+			return true;
+		}
+		else if ( nClipedVertex ) // 몇개의 점이 뷰포트 밖에 존재
+		{
+			return false;
+		}
+		return false;
+	}
+
+	BYTE CRasterizer::CalcClipState( const Vector4& vertex )
+	{
+		BYTE clipState = 0;
+
+		if ( vertex.X < m_viewport.m_left )
+		{
+			clipState |= CLIP_LEFT;
+		}
+		if ( vertex.X >= m_viewport.m_right )
+		{
+			clipState |= CLIP_RIGHT;
+		}
+		if ( vertex.Y < m_viewport.m_top )
+		{
+			clipState |= CLIP_TOP;
+		}
+		if ( vertex.Y >= m_viewport.m_bottom )
+		{
+			clipState |= CLIP_BOTTOM;
+		}
+
+		return clipState;
+	}
+
 	void CRasterizer::SetViewPort( int left, int top, int right, int bottom )
 	{
 		assert( left < right );
@@ -638,7 +694,7 @@ namespace xtozero
 		std::vector<CPsElementDesc> outputRS;
 		std::vector<std::pair<int, float>> horizontalLine;
 
-		Rect& viewport = rasterizer->m_viewport;
+		Rect& viewport = rasterizer->GetViewport();
 
 		outputRS.reserve( (viewport.m_right - viewport.m_left) );
 
@@ -648,6 +704,11 @@ namespace xtozero
 		horizontalLine.reserve( edgeTable.size( ) );
 
 		int scanline = edgeTable.begin( )->m_minY;
+
+		if ( scanline < viewport.m_top )
+		{
+			scanline = viewport.m_top;
+		}
 
 		unsigned int facecolor = RAND_COLOR( );
 
@@ -662,10 +723,15 @@ namespace xtozero
 				horizontalLine );
 
 			++scanline;
+
+			if ( scanline >= viewport.m_bottom )
+			{
+				break;
+			}
 		}
 
 		{
-			Lock<SpinLock> lock( rasterizer->m_lockobject );
+			Lock<SpinLock> lock( rasterizer->GetLockObject() );
 			for ( std::vector<CPsElementDesc>::iterator& iter = outputRS.begin( ); iter != outputRS.end( ); ++iter )
 			{
 				rasterizer->m_outputRS.emplace_back( *iter );
