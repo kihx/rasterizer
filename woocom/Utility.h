@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../utility/math3d.h"
+#include "Math.h"
 
 namespace Utility
 {

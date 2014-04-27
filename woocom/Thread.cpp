@@ -121,8 +121,13 @@ void WThreadPool::AddTask(const std::function<void()>& task)
 
 void WThreadPool::Join()
 {
-	while ( m_numActiveThread != 0)
+	while (m_numActiveThread != 0 || !m_tasks.empty())
 	{
 		Sleep(1);
 	}
+}
+
+size_t WThreadPool::GetThreadNum() const
+{
+	return m_threads.size();
 }

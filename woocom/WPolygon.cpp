@@ -3,8 +3,7 @@
 #include "Utility.h"
 #include "WModule.h"
 #include "WContext.h"
-#include "../utility/math3d.h"
-#include "../utility/math3d.cpp"
+#include "Math.h"
 #include "Thread.h"
 
 extern std::shared_ptr<WThreadPool> g_pool;
@@ -77,39 +76,52 @@ void WPolygon::DrawSolidParallel(WModule* pModule)
 
 	//Matrix4 wvp = world * view * proj;
 
-	int numFace = m_data->GetFaceNum();
-	for (int i = 0; i < numFace; ++i)
+	size_t numThread = g_pool->GetThreadNum();
+	size_t numFace = m_data->GetFaceNum();
+	size_t numPanding = numThread - (numThread % numFace);
+
+	size_t taskCount = (numFace + numPanding ) / numThread;
+
+	size_t offset = 0;
+	size_t end = taskCount;
+
+	for (size_t i = 0; i < numThread; ++i)
 	{
-		g_pool->AddTask( [=]()
+		g_pool->AddTask([=]()
 		{
 			WContext* pContext = pModule->GetContext();
-
 			Matrix4 wvp = world * view * proj;
 
-			unsigned char color[3] = { rand() % 255, rand() % 255, rand() % 255 };
-			int numVert = m_data->GetVertexNum(i);
-
-			if (numVert == 0)
+			for (size_t faceIndex = offset; faceIndex < end; ++faceIndex)
 			{
-				return;
+				unsigned char color[3] = { rand() % 255, rand() % 255, rand() % 255 };
+				size_t numVert = m_data->GetVertexNum(faceIndex);
+				if (numVert == 0)
+				{
+					return;
+				}
+				Vector3 p1 = *m_data->GetVertex(faceIndex, numVert - 1);
+				pModule->VertexProcess(wvp, p1);
+				for (size_t vertexIndex = 0; vertexIndex < numVert; ++vertexIndex)
+				{
+					Vector3 p2 = *m_data->GetVertex(faceIndex, vertexIndex);
+					pModule->VertexProcess(wvp, p2);
+					pContext->MakeLineInfo(&p1, &p2, color);
+					p1 = p2;
+				}
+
+				// 여러번 겹치는 픽셀을 한번만 칠하도록 하는 것이 필요
+				pContext->SortFillInfo();
+				pContext->DrawFillInfo();
+				pContext->ResetFillInfo();
 			}
 
-			Vector3 p1 = *m_data->GetVertex(i, numVert - 1);
-			pModule->VertexProcess(wvp, p1);
-			for (int vertexIndex = 0; vertexIndex < numVert; ++vertexIndex)
-			{
-				Vector3 p2 = *m_data->GetVertex(i, vertexIndex);
-				pModule->VertexProcess(wvp, p2);
-				pContext->MakeLineInfo(&p1, &p2, color);
-				p1 = p2;
-			}
-
-			// 여러번 겹치는 픽셀을 한번만 칠하도록 하는 것이 필요
-			pContext->SortFillInfo();
-			pContext->DrawFillInfo();
-			pContext->ResetFillInfo();
 			pModule->ReturnContext(pContext);
 		});
+
+		offset = end;
+		end += taskCount;
+		end = min(end, numFace);
 	}
 
 	g_pool->Join();
@@ -117,7 +129,10 @@ void WPolygon::DrawSolidParallel(WModule* pModule)
 
 void WPolygon::DrawLine(WModule* pPainter, const Vector3* v1, const Vector3* v2, const unsigned char* color)
 {
-
+	UNREFERENCED_PARAMETER(pPainter);
+	UNREFERENCED_PARAMETER(v1);
+	UNREFERENCED_PARAMETER(v2);
+	UNREFERENCED_PARAMETER(color);
 }
 
 void WPolygon::InsertLineInfo(WModule* pPainter, const Vector3* v1, const Vector3* v2, const unsigned char* color)

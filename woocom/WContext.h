@@ -20,12 +20,13 @@ public:
 
 	void ResetFillInfo();
 	void MakeLineInfo(const Vector3* v1, const Vector3* v2, const unsigned char* color);
-	void InsertLineInfo(int lineIndex, int posX, const unsigned char* rgb);
-	void InsertLineDepthInfo(int lineIndex, int posX, float depth, const unsigned char* rgb);
+	void InsertLineInfo(size_t lineIndex, int posX, const unsigned char* rgb);
+	void InsertLineDepthInfo(size_t lineIndex, int posX, float depth, const unsigned char* rgb);
 	void SortFillInfo();
 	void DrawFillInfo();
 
 	void VertexProcess(Matrix4& mat, Vector3& vertex);
+	bool BackFaceCull(const Vector3& v1, const Vector3& v2, const Vector3& v3, const Vector3& vCamPos);
 
 private:
 	void DrawScanline(int lineIndex, const EdgeInfo& info);
@@ -33,8 +34,8 @@ private:
 private:
 	WModule* m_module;
 	std::vector< EdgeInfo >	m_fillInfo;
-	int m_width;
-	int m_height;
-	int m_scanOffset;
-	int m_scanCount;
+	size_t m_width;
+	size_t m_height;
+	size_t m_scanOffset;
+	size_t m_scanCount;
 };

@@ -15,6 +15,15 @@ public:
 		:m_pool(pool), m_event(event), m_thread(nullptr), m_stop(0), m_threadID(0){}
 	~WWorker();
 
+	void operator =(const WWorker& rhs)
+	{
+		m_event = rhs.m_event;
+		m_thread = rhs.m_thread;
+		m_exitEvent = rhs.m_exitEvent;
+		m_stop = rhs.m_stop;
+		m_threadID = rhs.m_threadID;
+	}
+
 	// 스레드 생성 핸들 반환
 	HANDLE Init();
 	void Run();
@@ -38,6 +47,8 @@ public:
 
 	void AddTask(const std::function<void()>& );
 	void Join();
+
+	size_t GetThreadNum() const;
 private:
 	friend class WWorker;
 

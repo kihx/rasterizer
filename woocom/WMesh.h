@@ -19,6 +19,7 @@ public:
 
 	virtual void DrawOutline( WModule* pPainter);
 	virtual void DrawSolid( WModule* pPainter);
+	virtual void DrawSolidParallel(WModule* pModule);
 private:
 	void DrawLine(WModule* pPainter, const VERTEX* v1, const VERTEX* v2, const unsigned char* rgb);
 	void InsertLineInfo(WModule* pPainter, const VERTEX* v1, const VERTEX* v2, const unsigned char* rgb);

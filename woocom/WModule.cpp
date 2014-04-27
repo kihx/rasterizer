@@ -54,7 +54,7 @@ void WModule::Init(void* buffer, int width, int height, int bpp)
 
 	const unsigned threadNum = std::thread::hardware_concurrency();
 	g_pool = std::make_shared<WThreadPool>(threadNum);
-	m_contextPool = new WContextPool(threadNum * 2, this);
+	m_contextPool = new WContextPool(threadNum, this);
 }
 
 bool WModule::IsInitialized()
@@ -174,7 +174,7 @@ void WModule::ResetFillInfo()
 	m_scanCount = 0;
 }
 
-void WModule::InsertLineInfo(int lineIndex, int posX, const unsigned char* rgb)
+void WModule::InsertLineInfo(size_t lineIndex, int posX, const unsigned char* rgb)
 {
 	assert((lineIndex >= 0 && lineIndex < m_screenHeight) && "fillInfo Index out of range");
 
@@ -194,7 +194,7 @@ void WModule::InsertLineInfo(int lineIndex, int posX, const unsigned char* rgb)
 	m_isSorted = false;
 }
 
-void WModule::InsertLineDepthInfo(int lineIndex, int posX, float depth, const unsigned char* rgb)
+void WModule::InsertLineDepthInfo(size_t lineIndex, int posX, float depth, const unsigned char* rgb)
 {
 	assert((lineIndex >= 0 && lineIndex < m_screenHeight) && "fillInfo Index out of range");
 
@@ -216,7 +216,6 @@ void WModule::InsertLineDepthInfo(int lineIndex, int posX, float depth, const un
 
 void WModule::SortFillInfo()
 {
-	size_t num = m_fillInfo.size();
 	for (size_t i = m_scanOffset; i < m_scanCount; ++i)
 	{
 		m_fillInfo[i].Sort();
@@ -227,7 +226,6 @@ void WModule::SortFillInfo()
 
 void WModule::DrawFillInfo()
 {
-	size_t num = m_fillInfo.size();
 	for (size_t i = m_scanOffset; i < m_scanCount; ++i)
 	{
 		DrawScanline(i, m_fillInfo[i]);
@@ -309,6 +307,9 @@ const Matrix4& WModule::GetProj() const
 
 BOOL WINAPI DllMain(HINSTANCE hInst, DWORD fdwReason, PVOID fImpLoad)
 {
+	UNREFERENCED_PARAMETER(hInst);
+	UNREFERENCED_PARAMETER(fImpLoad);
+
 	switch(fdwReason)
 	{
 	case DLL_PROCESS_ATTACH:

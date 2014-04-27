@@ -9,7 +9,6 @@ using namespace Utility;
 void WContext::ResetFillInfo()
 {
 	// 라인정보 비우기
-	size_t num = m_fillInfo.size();
 	for (size_t i = m_scanOffset; i <= m_scanCount; ++i)
 	{
 		m_fillInfo[i].m_edgeData.clear();
@@ -107,7 +106,7 @@ void WContext::MakeLineInfo(const Vector3* v1, const Vector3* v2, const unsigned
 	InsertLineDepthInfo(Float2Int(endY), Float2Int(endX), endZ, color);
 }
 
-void WContext::InsertLineInfo(int lineIndex, int posX, const unsigned char* rgb)
+void WContext::InsertLineInfo(size_t lineIndex, int posX, const unsigned char* rgb)
 {
 	assert((lineIndex >= 0 && lineIndex < m_height) && "fillInfo Index out of range");
 
@@ -125,7 +124,7 @@ void WContext::InsertLineInfo(int lineIndex, int posX, const unsigned char* rgb)
 	m_fillInfo[lineIndex].Insert(posX, rgb);
 }
 
-void WContext::InsertLineDepthInfo(int lineIndex, int posX, float depth, const unsigned char* rgb)
+void WContext::InsertLineDepthInfo(size_t lineIndex, int posX, float depth, const unsigned char* rgb)
 {
 	assert((lineIndex >= 0 && lineIndex < m_height) && "fillInfo Index out of range");
 
@@ -196,4 +195,19 @@ void WContext::VertexProcess(Matrix4& mat, Vector3& vertex)
 
 	vertex.X = vertex.X * fHalfWidth + fHalfWidth;
 	vertex.Y = -vertex.Y * fHalfHeight + fHalfHeight;
+}
+
+bool WContext::BackFaceCull(const Vector3& v1, const Vector3& v2, const Vector3& v3, const Vector3& vCamPos)
+{
+	Vector3 edge1 = v3 - v1;
+	Vector3 edge2 = v3 - v2;
+	Vector3 normal = edge1.CrossProduct(edge2);
+
+	Vector3 camDir = vCamPos - v1;
+	if (camDir.DotProduct(normal) > 0)
+	{
+		return true;
+	}
+
+	return false;
 }

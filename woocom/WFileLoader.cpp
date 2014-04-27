@@ -2,7 +2,7 @@
 
 #include "WTrDatai.h"
 #include "WPolyData.h"
-#include "../utility/math3d.h"
+#include "Math.h"
 
 #include <fstream>
 
@@ -49,9 +49,9 @@ WTriData* FileLoader::LoadMesh(const char* fileName)
 			int r, g, b;
 			WFace* face = new WFace();
 			stream >> faceID >> r >> g >> b;
-			face->m_rgb[0] = r;
-			face->m_rgb[1] = g;
-			face->m_rgb[2] = b;
+			face->m_rgb[0] = (char)r;
+			face->m_rgb[1] = (char)g;
+			face->m_rgb[2] = (char)b;
 
 			stream >> indexNum;
 			for (int i = 0; i< indexNum; ++i)
@@ -110,7 +110,6 @@ WPolyData* FileLoader::LoadPoly(const char* fileName)
 		else if (strncmp(buffer, "Face", 4) == 0)
 		{
 			int faceID = 0;
-			int indexNum = 0;
 			stream >> faceID;
 
 			WPolyFace* face = new WPolyFace();

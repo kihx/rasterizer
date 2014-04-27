@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Utility/math3d.h"
+#include "Math.h"
 
 #include <vector>
 
@@ -22,7 +22,7 @@ public:
 	{
 		m_vertices.reserve(num);
 	}
-	int GetVertexNum(size_t faceIndex) const
+	size_t GetVertexNum(size_t faceIndex) const
 	{
 		if (faceIndex >= m_faces.size())
 		{
@@ -34,7 +34,7 @@ public:
 	{
 		m_faces.reserve(num);
 	}
-	int GetFaceNum() const
+	size_t GetFaceNum() const
 	{
 		return m_faces.size();
 	}

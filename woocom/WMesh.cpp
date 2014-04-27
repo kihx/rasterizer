@@ -184,3 +184,8 @@ void WMesh::InsertLineInfo(WModule* pPainter, const VERTEX* v1, const VERTEX* v2
 	}
 
 }
+
+void WMesh::DrawSolidParallel(WModule* pModule)
+{
+	UNREFERENCED_PARAMETER(pModule);
+}

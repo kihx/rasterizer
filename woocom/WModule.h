@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../utility/math3d.h"
+#include "Math.h"
 
 #include "common.h"
 #include <mutex>
@@ -35,8 +35,8 @@ public:
 	void ReturnContext(WContext* pContext);
 
 	void ResetFillInfo();
-	void InsertLineInfo(int lineIndex, int posX, const unsigned char* rgb);
-	void InsertLineDepthInfo(int lineIndex, int posX, float depth, const unsigned char* rgb);
+	void InsertLineInfo(size_t lineIndex, int posX, const unsigned char* rgb);
+	void InsertLineDepthInfo(size_t lineIndex, int posX, float depth, const unsigned char* rgb);
 	void SortFillInfo();
 	void DrawFillInfo();
 
@@ -61,8 +61,8 @@ private:
 
 	bool m_isSorted;
 	std::vector< EdgeInfo >	m_fillInfo;
-	int m_scanOffset;
-	int m_scanCount;
+	size_t m_scanOffset;
+	size_t m_scanCount;
 
 	std::mutex m_mutex;
 
