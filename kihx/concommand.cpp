@@ -173,6 +173,23 @@ namespace kih
 		return nullptr;
 	}
 
+	ConsoleVariable* ConsoleCommandExecuter::FindCommandVariable( const std::string& name ) const
+	{
+		auto iter = m_commandMap.find( name );
+		if ( iter != m_commandMap.end() )
+		{
+			if ( ConsoleCommand* command = iter->second )
+			{
+				if ( !command->IsCommand() )
+				{
+					return dynamic_cast<ConsoleVariable*>( command );
+				}
+			}
+		}
+
+		return nullptr;
+	}
+
 	void ConsoleCommandExecuter::Help() const
 	{
 		for ( const auto& elem : m_commandMap )

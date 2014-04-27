@@ -2,6 +2,7 @@
 
 #include "assertion.h"
 #include "type.h"
+#include "memory.h"
 
 #include <functional>
 #include <type_traits>
@@ -42,7 +43,7 @@ namespace kih
 	// utility functions
 	//
 	template<class T>
-	inline void Swap( T& lhs, T& rhs, typename std::enable_if< std::is_scalar<T>::value >::type* = nullptr )
+	FORCEINLINE void Swap( T& lhs, T& rhs, typename std::enable_if< std::is_scalar<T>::value >::type* = nullptr )
 	{
 		// if T is scalar type, we do not use move semantics
 		T tmp = lhs;
@@ -51,7 +52,7 @@ namespace kih
 	}
 
 	template<class T>
-	inline void Swap( T& lhs, T& rhs, typename std::enable_if< !std::is_scalar<T>::value >::type* = nullptr )
+	FORCEINLINE void Swap( T& lhs, T& rhs, typename std::enable_if< !std::is_scalar<T>::value >::type* = nullptr )
 	{
 		T tmp = std::move( lhs );
 		lhs = std::move( rhs );
@@ -68,6 +69,13 @@ namespace kih
 	//	return sizeof( _SizeOfArray( args ) );
 	//}
 	#define SIZEOF_ARRAY( a )	( sizeof( _SizeOfArray( a ) ) )
+
+	
+	FORCEINLINE int AlignSize( int size, int alignment )
+	{
+		int alignBase = alignment - 1;
+		return ( ( size + alignBase ) & ~alignBase );
+	}
 
 
 	// utility classes

@@ -11,9 +11,6 @@
     <Filter Include="Math">
       <UniqueIdentifier>{2d739c3e-7b48-4038-b660-be7ff3e0643b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Threading">
-      <UniqueIdentifier>{7d506067-97d7-49fc-9ac0-7c34a7d67b42}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Framework">
       <UniqueIdentifier>{768cbd0d-e28e-4645-b734-a8ce2dced1cc}</UniqueIdentifier>
     </Filter>
@@ -67,9 +64,6 @@
     <ClInclude Include="mathlib.h">
       <Filter>Math</Filter>
     </ClInclude>
-    <ClInclude Include="threading.h">
-      <Filter>Threading</Filter>
-    </ClInclude>
     <ClInclude Include="assertion.h">
       <Filter>Framework</Filter>
     </ClInclude>
@@ -77,6 +71,15 @@
       <Filter>Framework</Filter>
     </ClInclude>
     <ClInclude Include="profiler.h">
+      <Filter>Framework</Filter>
+    </ClInclude>
+    <ClInclude Include="memory.h">
+      <Filter>Framework</Filter>
+    </ClInclude>
+    <ClInclude Include="system.h">
+      <Filter>Framework</Filter>
+    </ClInclude>
+    <ClInclude Include="threading.h">
       <Filter>Framework</Filter>
     </ClInclude>
   </ItemGroup>
@@ -111,9 +114,6 @@
     <ClCompile Include="stage.cpp">
       <Filter>Rendering</Filter>
     </ClCompile>
-    <ClCompile Include="threading.cpp">
-      <Filter>Threading</Filter>
-    </ClCompile>
     <ClCompile Include="concommand.cpp">
       <Filter>Framework</Filter>
     </ClCompile>
@@ -122,6 +122,15 @@
     </ClCompile>
     <ClCompile Include="mathlib.cpp">
       <Filter>Math</Filter>
+    </ClCompile>
+    <ClCompile Include="memory.cpp">
+      <Filter>Framework</Filter>
+    </ClCompile>
+    <ClCompile Include="system.cpp">
+      <Filter>Framework</Filter>
+    </ClCompile>
+    <ClCompile Include="threading.cpp">
+      <Filter>Framework</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

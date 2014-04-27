@@ -17,6 +17,7 @@ namespace kih
 	// type definitions
 	//
 	typedef unsigned char byte;
+	typedef unsigned int bitflags;
 
 
 	/* struct IntFloat

@@ -136,6 +136,7 @@ namespace kih
 		void Execute( const char* cmdString ) const;
 
 		ConsoleCommand* FindCommand( const std::string& name ) const;
+		ConsoleVariable* FindCommandVariable( const std::string& name ) const;
 
 		void Help() const;
 

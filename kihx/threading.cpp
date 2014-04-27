@@ -181,6 +181,13 @@ namespace kih
 
 	/* class Thread
 	*/
+	static unsigned int s_MainThreadID = GetCurrentThreadId();
+
+	bool Thread::IsInMainThread()
+	{
+		return GetCurrentThreadId() == s_MainThreadID;
+	}
+
 	int Thread::HardwareConcurrency()
 	{
 		static int _HardwareConcurrency = 0;

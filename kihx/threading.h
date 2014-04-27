@@ -431,7 +431,6 @@ namespace kih
 							t->m_tdata.Func();
 						}
 					}
-					//f_endthreadex( 0 );
 					return 0;
 				},
 				this,	// arg
@@ -456,6 +455,8 @@ namespace kih
 			}
 		}
 
+		static bool IsInMainThread();
+		
 		static int HardwareConcurrency();
 
 		FORCEINLINE void* Handle()
@@ -487,11 +488,6 @@ namespace kih
 			f_waitforsingleobject( m_tdata.Handle, 0xFFFFFFFF );
 			MakeNull( *this );
 		}
-
-		//static Thread& Current()
-		//{
-		//	return *this;
-		//}
 
 		FORCEINLINE void Swap( Thread& other )
 		{
