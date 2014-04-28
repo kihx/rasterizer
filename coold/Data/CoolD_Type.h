@@ -42,3 +42,10 @@ enum MeshType
 	PLY,
 	MESHTYPE_END
 };
+
+enum class BSCULL
+{
+	CW,
+	CCW,
+	ALL
+};

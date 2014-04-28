@@ -69,7 +69,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level4</WarningLevel>
       <PrecompiledHeader>
       </PrecompiledHeader>
       <Optimization>MaxSpeed</Optimization>
@@ -77,6 +77,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;COOLD_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
+      <TreatWarningAsError>false</TreatWarningAsError>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -99,6 +100,7 @@
     <ClInclude Include="Data\CoolD_Struct.h" />
     <ClInclude Include="Render\CoolD_CustomMesh.h" />
     <ClInclude Include="Data\CoolD_Singleton.h" />
+    <ClInclude Include="Render\CoolD_FrustumCull.h" />
     <ClInclude Include="Render\CoolD_Transform.h" />
     <ClInclude Include="Data\CoolD_Type.h" />
     <ClInclude Include="Math\CoolD_Vector2.h" />
@@ -113,6 +115,7 @@
     <ClCompile Include="Math\CoolD_Math.cpp" />
     <ClCompile Include="Math\CoolD_Matrix33.cpp" />
     <ClCompile Include="Math\CoolD_Matrix44.cpp" />
+    <ClCompile Include="Render\CoolD_FrustumCull.cpp" />
     <ClCompile Include="Render\CoolD_Transform.cpp" />
     <ClCompile Include="Math\CoolD_Vector2.cpp" />
     <ClCompile Include="Math\CoolD_Vector3.cpp" />

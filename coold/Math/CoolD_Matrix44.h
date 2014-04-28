@@ -81,11 +81,9 @@ public:
     // column vector multiplier
     Vector4 operator*( const Vector4& vector ) const;
     // row vector multiplier
-    friend Vector4 operator*( const Vector4& vector, const Matrix44& matrix );
 
     // scalar multiplication
-    Matrix44& operator*=( Dfloat scalar );
-    friend Matrix44 operator*( Dfloat scalar, const Matrix44& matrix );
+    Matrix44& operator*=( Dfloat scalar );    
     Matrix44 operator*( Dfloat scalar ) const;
 
     // vector3 ops

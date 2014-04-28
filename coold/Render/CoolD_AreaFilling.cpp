@@ -6,8 +6,11 @@
 namespace CoolD
 {
 	AreaFilling::AreaFilling()
-		: m_Buffer(nullptr), m_DepthBuffer(nullptr)
-	{
+		: m_Buffer(nullptr), m_DepthBuffer(nullptr), m_CullMode(BSCULL::CCW)
+	{			
+		m_vecLine.resize(100);
+		m_edgeTable.resize(100);
+		m_activeTable.resize(100);
 	}
 
 	AreaFilling::~AreaFilling()
@@ -36,35 +39,62 @@ namespace CoolD
 	}
 
 	Dvoid AreaFilling::Render(const vector<Vector3>* pvecVertex, const vector<BaseFace>* pvecFace)
-	{			
-		static vector<Line> vecLine;
-		static vector<LineEdge> edgeTable;
-		static vector<ActiveLine> activeTable;
-		vecLine.reserve(pvecVertex->size());
-		edgeTable.reserve(10000);
-		activeTable.reserve(20); 
-
-		//parallel_for(0, (Dint)pvecFace->size(), [] (Dint faceNum){
+	{							
 		for( Dint faceNum = 0; faceNum < (Dint)pvecFace->size(); ++faceNum )
 		{
-			vecLine.clear();
-			edgeTable.clear();
-			activeTable.clear();
-					
-			CreatePointsToLines(pvecVertex, pvecFace, faceNum, vecLine);
-			
-			auto& unusualValue = STD_FIND_IF(vecLine, [](const Line& line)
+			m_vecLine.clear();
+			m_edgeTable.clear();
+			m_activeTable.clear();
+
+			CreatePointsToLines(pvecVertex, pvecFace, faceNum, m_vecLine);
+
+			//backspace culling
+			if (!BackSpaceCulling(m_vecLine))
+			{
+				continue;
+			}
+
+			auto unusualValue = STD_FIND_IF(m_vecLine, [] (const Line& line)
 			{	//모든 요소의 y 값이 같은지 체크
 				return line.beginVertex.y != line.endVertex.y;
 			});
 
-			if ( unusualValue != end(vecLine) )
-			{		
-				CreateEdgeTable(vecLine, edgeTable);		
-				CreateChainTable(vecLine, activeTable);							
-				DrawFace(activeTable, edgeTable, MixDotColor( (*pvecFace)[ faceNum ].color) );
-			}			
-		}						
+			if( unusualValue != end(m_vecLine) )
+			{
+				CreateEdgeTable(m_vecLine, m_edgeTable);
+				CreateChainTable(m_vecLine, m_activeTable);
+				DrawFace(m_activeTable, m_edgeTable, MixDotColor((*pvecFace)[faceNum].color));
+			}
+		}
+
+		//combinable<vector<Line>> vecLine;
+		//combinable<vector<LineEdge>> edgeTable;
+		//combinable<vector<ActiveLine>> activeTable;
+			
+		///*vecLine.local().reserve(pvecVertex->size());
+		//edgeTable.local().reserve(10000);
+		//activeTable.local().reserve(20);*/
+
+		//parallel_for(0, (Dint)pvecFace->size(), [&] (Dint faceNum)		
+		//{
+		//	vecLine.local().clear();
+		//	edgeTable.local().clear();
+		//	activeTable.local().clear();
+		//			
+		//	CreatePointsToLines(pvecVertex, pvecFace, faceNum, vecLine.local());
+		//	
+		//	auto& unusualValue = STD_FIND_IF(vecLine.local(), [](const Line& line)
+		//	{	//모든 요소의 y 값이 같은지 체크
+		//		return line.beginVertex.y != line.endVertex.y;
+		//	});
+
+		//	if( unusualValue != end(vecLine.local()) )
+		//	{		
+		//		CreateEdgeTable(vecLine.local(), edgeTable.local());
+		//		CreateChainTable(vecLine.local(), activeTable.local());
+		//		DrawFace(activeTable.local(), edgeTable.local(), MixDotColor((*pvecFace)[ faceNum ].color));
+		//	}			
+		//});
 	}
 
 	//-----------------------------------------------------------------------
@@ -117,8 +147,8 @@ namespace CoolD
 			else
 			{
 				node.reverseSlope = dx / dy;
-			}
-					
+			}			
+
 			if( line.beginVertex.y < line.endVertex.y )
 			{
 				node.x_min		= line.beginVertex.x;
@@ -148,10 +178,9 @@ namespace CoolD
 		assert(!vecLine.empty());
 		vector<Dint> vecUpLineSave;	//한 번이라도 윗줄로 올라간 정점들 인덱스 저장
 		
-		auto& maxIter = max_element(begin(vecLine), end(vecLine), [](const Line& lhs, const Line& rhs)	{	return lhs.beginVertex.y < rhs.beginVertex.y; 	});
-		auto& minIter = min_element(begin(vecLine), end(vecLine), [](const Line& lhs, const Line& rhs)	{	return lhs.beginVertex.y < rhs.beginVertex.y;	});
+		auto maxIter = max_element(begin(vecLine), end(vecLine), [](const Line& lhs, const Line& rhs)	{	return lhs.beginVertex.y < rhs.beginVertex.y; 	});
+		auto minIter = min_element(begin(vecLine), end(vecLine), [](const Line& lhs, const Line& rhs)	{	return lhs.beginVertex.y < rhs.beginVertex.y;	});
 
-		Dint totalEdgeSize = vecLine.size();
 		Dint maxY = (Dint)maxIter->beginVertex.y;
 		Dint minY = (Dint)minIter->beginVertex.y;
 
@@ -161,7 +190,7 @@ namespace CoolD
 		for (Dint y = minY; y < maxY; ++y)
 		{				
 			currentLine.clear();
-			for (auto& lineIter = vecLine.begin(); lineIter != vecLine.end();)
+			for (auto lineIter = vecLine.begin(); lineIter != vecLine.end();)
 			{
 				ITER_CONVERT(pLine, &(*lineIter));
 				if (y == pLine->beginVertex.y || y == pLine->endVertex.y) //해당 y축에 정점이 걸치는지 검사			 	
@@ -180,9 +209,9 @@ namespace CoolD
 				continue;
 			}		
 			
-			for( auto& chainIter = currentLine.begin(); chainIter != currentLine.end(); )
+			for( auto chainIter = currentLine.begin(); chainIter != currentLine.end(); )
 			{
-				auto& retIter = STD_FIND_IF(currentLine, [&] (const Line& line){	return CheckContinueLine(chainIter->lineKey, line.lineKey);		});
+				auto retIter = STD_FIND_IF(currentLine, [&] (const Line& line){	return CheckContinueLine(chainIter->lineKey, line.lineKey);		});
 				if( retIter == currentLine.end() )	//특정 정점이 연결되어 있지 않다 ( 1번만 카운트 됨 14_ScanLineFill.pdf 참조 )
 				{
 					if( find(vecUpLineSave.begin(), vecUpLineSave.end(), chainIter->lineKey.beginIndex) == vecUpLineSave.end() )	//리스트에 포함되지 않았다 즉, 올라간적 없다.
@@ -210,7 +239,37 @@ namespace CoolD
 			}
 		}	
 	}
-	
+
+	Dbool AreaFilling::BackSpaceCulling( vector<Line>& vecLine )
+	{
+		if( vecLine.size() > 2 )
+		{	
+			Vector3 v1(0, 0, -1);
+			Vector3 v2 = (vecLine[ 0 ].endVertex - vecLine[ 0 ].beginVertex).Cross(vecLine[ 1 ].endVertex - vecLine[ 1 ].beginVertex);
+			
+			v2.Normalize();
+			switch( m_CullMode )
+			{
+			case BSCULL::CW:
+				if( v1.Dot(v2) <= 0 )
+				{
+					return true;
+				}
+				break;
+			case BSCULL::CCW:
+				if( v1.Dot(v2) >= 0 )
+				{
+					return true;
+				}
+				break;				
+			case BSCULL::ALL:
+				return true;				
+			}			
+		}
+
+		return false;
+	}
+
 	//-------------------------------------------------------------------
 	//해당 위치 점 찍기
 	//-------------------------------------------------------------------
@@ -234,7 +293,7 @@ namespace CoolD
 
 		vector<EdgeNode>::iterator curruntIter;
 		vector<EdgeNode>::iterator nextIter;
-		for( auto& iter = begin(renderLine);; ++iter )
+		for( auto iter = begin(renderLine);; ++iter )
 		{
 			curruntIter = iter;
 			if( curruntIter == end(renderLine) )
@@ -278,7 +337,7 @@ namespace CoolD
 		assert(m_Buffer != nullptr && !activeTable.empty());
 
 		vector<EdgeNode> continueRenderLine;
-		auto& activeIter = activeTable.begin();
+		auto activeIter = activeTable.begin();
 		
 		for (Dint y = activeIter->height;; ++y)	//한줄한줄 그려나가야 하기 때문에 ActiveTable에서 시작값의 높이로 초기화
 		{
@@ -286,7 +345,7 @@ namespace CoolD
 			{
 				for( auto& line : activeIter->currentLine ) //현재 높이에 걸쳐진 라인들을 순회				
 				{
-					auto& iter = STD_FIND_IF(edgeTable, [&line](const LineEdge& le) { return le.lineKey == line.lineKey; });
+					auto iter = STD_FIND_IF(edgeTable, [&line](const LineEdge& le) { return le.lineKey == line.lineKey; });
 					if( iter != edgeTable.end() )
 					{
 						continueRenderLine.emplace_back(iter->edgeNode);
@@ -353,5 +412,5 @@ namespace CoolD
 		endVertex.y = floor(endVertex.y);
 
 		vecLine.emplace_back(lineKey, beginVertex, endVertex);
-	}
+	}	
 }

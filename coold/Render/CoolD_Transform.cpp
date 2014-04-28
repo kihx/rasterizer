@@ -24,7 +24,7 @@ namespace CoolD
 
 	//world -> view
 	Matrix44 TransformHelper::CreateView(const Vector3& eye, const Vector3& lookAt, const Vector3& up)
-	{		
+	{				
 		// compute view vectors
 		Vector3 view = lookAt - eye;
 		Vector3 right;
@@ -60,7 +60,6 @@ namespace CoolD
 		mWorldToViewMatrix(1, 3) = invEye.y;
 		mWorldToViewMatrix(2, 3) = invEye.z;
 					
-		//return make_tuple(mViewToWorldMatrix, mWorldToViewMatrix);
 		return mWorldToViewMatrix;
 	}
 
@@ -92,14 +91,10 @@ namespace CoolD
 
 		return matWorld;
 	}
-
-	Vector3 TransformHelper::TransformVertex(const array<Matrix44, TRANSFORM_END>& arrayTransform, Vector3 vertex)
+	
+	Vector4 TransformHelper::TransformWVP(const array<Matrix44, TRANSFORM_END>& arrayTransform, Vector3 vertex)
 	{			
-		Vector4 transV4 = arrayTransform[ PERSPECTIVE ] * arrayTransform[ VIEW ] * arrayTransform[ WORLD ] * Vector4(vertex, 1);
-		transV4 /= transV4.w;
-		transV4 = arrayTransform[ VIEWPORT ] * transV4;
-		
-		return Vec4ToVec3(transV4, Vector4::W_IGNORE);
+		return arrayTransform[ PERSPECTIVE ] * arrayTransform[ VIEW ] * arrayTransform[ WORLD ] * Vector4(vertex, 1);
 	}
 
 	Matrix33 TransformHelper::CreatePerspectNDCtoView(Dfloat fov, Dfloat aspect, Dfloat sx, Dfloat sy, Dfloat width, Dfloat height )
@@ -114,5 +109,12 @@ namespace CoolD
 		matPerspectNDCtoView(2, 2) = -d;
 
 		return matPerspectNDCtoView;
+	}
+
+	Vector3 TransformHelper::TransformViewport(const array<Matrix44, TRANSFORM_END>& arrayTransform, Vector4& vertex)
+	{
+		vertex /= vertex.w;
+		vertex = arrayTransform[ VIEWPORT ] * vertex;
+		return Vec4ToVec3(vertex, Vector4::W_IGNORE);
 	}
 };

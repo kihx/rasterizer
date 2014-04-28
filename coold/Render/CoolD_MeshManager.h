@@ -2,6 +2,7 @@
 #include "..\Data\CoolD_Type.h"
 #include "..\Data\CoolD_Singleton.h"
 #include "CoolD_CustomMesh.h"
+#include "CoolD_FrustumCull.h"
 
 namespace CoolD
 {
@@ -30,7 +31,8 @@ namespace CoolD
 		
 	private:
 		map<string, CustomMesh*>	m_mapMesh;		
-		vector<Vector3>		m_trasnformVertex;		
+		vector<Vector3>		m_trasnformVertex;
+		FrustumCull			m_FrustumCull;
 	};
 	
 	

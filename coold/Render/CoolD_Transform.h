@@ -15,6 +15,7 @@ namespace CoolD
 		static Matrix44 CreatePerspective(Dfloat fov, Dfloat aspect, Dfloat nearZ, Dfloat farZ);
 		static Matrix44 CreateViewport(Dint left, Dint bottom, Dint width, Dint height);		
 		static Matrix33 CreatePerspectNDCtoView(Dfloat fov, Dfloat aspect, Dfloat sx, Dfloat sy, Dfloat width, Dfloat height);
-		static Vector3 TransformVertex(const array<Matrix44, TRANSFORM_END>& arrayTransform, Vector3 vertex);
+		static Vector4 TransformWVP(const array<Matrix44, TRANSFORM_END>& arrayTransform, Vector3 vertex);	
+		static Vector3 TransformViewport(const array<Matrix44, TRANSFORM_END>& arrayTransform, Vector4& vertex);
 	};
 };

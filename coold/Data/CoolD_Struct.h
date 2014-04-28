@@ -44,7 +44,7 @@ struct LineKey
 	Duint endIndex;
 
 	LineKey()
-		: beginIndex(-1), endIndex(-1) {}
+		: beginIndex(0), endIndex(0) {}
 
 	LineKey(Duint _beginIndex, Duint _endIndex)
 		: beginIndex(_beginIndex), endIndex(_endIndex) {}
@@ -141,8 +141,3 @@ private:
 	std::default_random_engine random_engine;
 	std::uniform_int_distribution<T> uniform_dist;
 };
-
-typedef tuple< const vector<Vector3>*, const vector<BaseFace>* > tuple_meshInfo;
-
-//0 : MinY, 1 : MaxY
-typedef tuple< Dfloat, Dfloat > tuple_OptimizeY;

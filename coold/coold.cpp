@@ -12,6 +12,7 @@
 #include "Math\CoolD_Matrix44.h"
 #include "Math\CoolD_Vector3.h"
 
+#pragma warning(disable: 4100)
 using namespace CoolD;
 
 Matrix44 g_matWorld;
@@ -23,7 +24,7 @@ Matrix44 g_matPers;
 //	return true;
 //}
 
-auto& renderCore = make_unique<AreaFilling>();
+auto renderCore = make_unique<AreaFilling>();
 EXTERN_FORM DLL_API Dvoid __cdecl coold_LoadMeshFromFile( const Dchar* filename )
 {
 	GETSINGLE(MeshManager).Clear();
@@ -31,17 +32,17 @@ EXTERN_FORM DLL_API Dvoid __cdecl coold_LoadMeshFromFile( const Dchar* filename 
 }
 
 EXTERN_FORM DLL_API Dvoid __cdecl coold_RenderToBuffer(Dvoid* buffer, Dint width, Dint height, Dint bpp)
-{
+{	
 	renderCore->SetScreenInfo(buffer, width, height);
 	renderCore->ClearColorBuffer(BLACK);
 	renderCore->SetTransform(WORLD, g_matWorld);
 	renderCore->SetTransform(VIEW, g_matView);
 	renderCore->SetTransform(PERSPECTIVE, g_matPers);
 	renderCore->SetTransform(VIEWPORT, TransformHelper::CreateViewport(0, 0, width, height));		
-	
+
 	for( auto& Mesh : GETSINGLE(MeshManager).GetMapMesh() )
-	{		
-		GETSINGLE(MeshManager).AdjustTransform(Mesh.second, renderCore->GetArrayTransform());		
+	{
+		GETSINGLE(MeshManager).AdjustTransform(Mesh.second, renderCore->GetArrayTransform());	
 		renderCore->Render( GETSINGLE(MeshManager).GetVecTransformVertex(), Mesh.second->GetVectorFace());
 	}
 }
@@ -69,4 +70,9 @@ EXTERN_FORM DLL_API Dvoid __cdecl coold_SetViewFactor(Dfloat* eye, Dfloat* looka
 EXTERN_FORM DLL_API Dvoid __cdecl coold_SetPerspectiveFactor(Dfloat fovY, Dfloat aspect, Dfloat zn, Dfloat zf)
 {	
 	g_matPers = TransformHelper::CreatePerspective(kPI / fovY, aspect, zn, zf);
+}
+								  
+EXTERN_FORM DLL_API Dvoid __cdecl coold_ExecuteCommand(const Dchar* cmd)
+{
+	
 }

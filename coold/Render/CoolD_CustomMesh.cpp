@@ -194,7 +194,7 @@ namespace CoolD
 				RandomGenerator<int> rand(0, 255);
 				
 				BaseFace f;
-				f.color = { rand.GetRand(), rand.GetRand(), rand.GetRand(), 255 };
+				f.color = { (Duchar)rand.GetRand(), (Duchar)rand.GetRand(), (Duchar)rand.GetRand(), 255 };
 				
 				for( Dint i = 0; i < 3; ++i )
 				{

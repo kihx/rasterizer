@@ -15,7 +15,15 @@ namespace CoolD
 		Duchar* m_Buffer;	//프레임 버퍼
 		Dfloat* m_DepthBuffer;	//깊이 버퍼
 		Dint m_Width;
-		Dint m_Height;		
+		Dint m_Height;	
+		BSCULL m_CullMode;
+
+		//combinable<vector<Line>> vecLine;
+		//combinable<vector<LineEdge>> edgeTable;
+		//combinable<vector<ActiveLine>> activeTable;
+		vector<Line> m_vecLine;
+		vector<LineEdge> m_edgeTable;
+		vector<ActiveLine> m_activeTable;
 							
 		array<Matrix44, TRANSFORM_END> m_arrayTransform;	
 
@@ -36,6 +44,8 @@ namespace CoolD
 		Dvoid CreateEdgeTable(vector<Line>& vecLine, vector<LineEdge>& edgeTable);
 		Dvoid CreateChainTable(vector<Line>& vecLine, vector<ActiveLine>& activeTable);
 
+	private:
+		Dbool BackSpaceCulling(vector<Line>& vecLine);
 	private:
 		Dbool DepthTest(const Duint x, const Duint y, Dfloat depth);
 
