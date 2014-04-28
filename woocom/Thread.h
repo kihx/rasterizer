@@ -19,7 +19,6 @@ public:
 	{
 		m_event = rhs.m_event;
 		m_thread = rhs.m_thread;
-		m_exitEvent = rhs.m_exitEvent;
 		m_stop = rhs.m_stop;
 		m_threadID = rhs.m_threadID;
 	}
@@ -28,13 +27,11 @@ public:
 	HANDLE Init();
 	void Run();
 	void Stop();
-	void Signal();
 private:
 
 	WThreadPool& m_pool;
 	HANDLE m_event;
 	HANDLE m_thread;
-	HANDLE m_exitEvent;
 	volatile unsigned int m_stop;
 	unsigned int m_threadID;
 };

@@ -18,7 +18,6 @@ HANDLE WWorker::Init()
 		if (worker)
 		{
 			worker->Run();
-			worker->Signal();
 		}
 		return 0;
 	},
@@ -32,10 +31,8 @@ HANDLE WWorker::Init()
 		std::cout << "_beginthreadex failed." << std::endl;
 		return nullptr;
 	}
-
-	m_exitEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-
-	return m_exitEvent;
+	
+	return m_thread;
 }
 
 void WWorker::Run()
@@ -62,22 +59,15 @@ void WWorker::Run()
 
 			_InterlockedDecrement(&m_pool.m_numActiveThread);
 		}
-		else
-		{
-			WaitForSingleObject(m_event, INFINITE);
-		}
 	}
+
+	WaitForSingleObject(m_event, INFINITE);
 }
 
 void WWorker::Stop()
 {
 	InterlockedExchange(&m_stop, 1);
 	SetEvent(m_event);
-}
-
-void WWorker::Signal()
-{
-	SetEvent(m_exitEvent);
 }
 
 WThreadPool::WThreadPool(size_t threadNum) : m_numActiveThread(0)
@@ -123,7 +113,6 @@ void WThreadPool::Join()
 {
 	while (m_numActiveThread != 0 || !m_tasks.empty())
 	{
-		Sleep(1);
 	}
 }
 
