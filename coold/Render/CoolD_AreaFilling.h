@@ -16,7 +16,7 @@ namespace CoolD
 		Dfloat* m_DepthBuffer;	//±Ì¿Ã πˆ∆€
 		Dint m_Width;
 		Dint m_Height;	
-		BSCULL m_CullMode;
+		BSCullType m_CullMode;
 
 		//combinable<vector<Line>> vecLine;
 		//combinable<vector<LineEdge>> edgeTable;

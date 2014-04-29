@@ -4,8 +4,6 @@
 #include "CoolD_Transform.h"
 #include <fstream>
 #include <sstream>
-#include <string>
-#include <cassert>
 
 namespace CoolD
 {

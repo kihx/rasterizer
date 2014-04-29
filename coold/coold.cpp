@@ -11,6 +11,8 @@
 #include "Math\CoolD_Matrix33.h"
 #include "Math\CoolD_Matrix44.h"
 #include "Math\CoolD_Vector3.h"
+#include "Console\CoolD_Command.h"
+#include "Console\CoolD_ConsoleManager.h"
 
 #pragma warning(disable: 4100)
 using namespace CoolD;
@@ -23,6 +25,24 @@ Matrix44 g_matPers;
 //{
 //	return true;
 //}
+
+static VariableCommand test("test", "0");
+static FunctionCommand testfunc("testfunc", [](initializer_list<string> strs)
+{ 	
+	//함수 인자를 쓰려면 함수 안에서 적절하게 형변환 해서 써야한다.
+	for( auto& it : strs )
+	{
+		string d = it;
+	}
+});
+
+static FunctionCommand ShowCommand("show_command", [] (initializer_list<string> commandNameList)
+{
+	for( auto& commandName : commandNameList )
+	{
+		GETSINGLE(ConsoleManager).ShowCommand(commandName);
+	}
+});
 
 auto renderCore = make_unique<AreaFilling>();
 EXTERN_FORM DLL_API Dvoid __cdecl coold_LoadMeshFromFile( const Dchar* filename )
@@ -74,5 +94,5 @@ EXTERN_FORM DLL_API Dvoid __cdecl coold_SetPerspectiveFactor(Dfloat fovY, Dfloat
 								  
 EXTERN_FORM DLL_API Dvoid __cdecl coold_ExecuteCommand(const Dchar* cmd)
 {
-	
+	GETSINGLE(ConsoleManager).CommandExecute(cmd);
 }

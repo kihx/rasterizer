@@ -65,6 +65,12 @@
     <ClInclude Include="Render\CoolD_FrustumCull.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Console\CoolD_ConsoleManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Console\CoolD_Command.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="coold.cpp">
@@ -101,6 +107,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Render\CoolD_FrustumCull.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Console\CoolD_ConsoleManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Console\CoolD_Command.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

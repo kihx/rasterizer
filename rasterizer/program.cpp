@@ -363,6 +363,7 @@ static void LoadModuleCoolD()
 	g_ModuleContext.InstallFunctionSetTransform( "coold_SetTransform" );
 	g_ModuleContext.InstallFunctionSetViewFactor("coold_SetViewFactor");
 	g_ModuleContext.InstallFunctionSetPerspectiveFactor("coold_SetPerspectiveFactor");
+	g_ModuleContext.InstallFunctionExecuteCommand("coold_ExecuteCommand");
 	
 
 	printf( "\n<CoolD>\n\n" );

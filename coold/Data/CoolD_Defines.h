@@ -29,3 +29,5 @@
 //IterType
 #define ITER_CONVERT(Iter, IteratorValue) auto* Iter = IteratorValue;
 
+#define LOG( msg )	{ printf( "[Log] %s\n", msg); }
+

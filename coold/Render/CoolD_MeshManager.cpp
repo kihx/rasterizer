@@ -59,10 +59,6 @@ namespace CoolD
 		}				
 	}
 
-	MeshManager::MeshManager()
-	{
-	}
-
 	MeshManager::~MeshManager()
 	{		
 		Clear();

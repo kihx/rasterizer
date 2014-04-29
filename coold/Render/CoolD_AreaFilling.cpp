@@ -6,7 +6,7 @@
 namespace CoolD
 {
 	AreaFilling::AreaFilling()
-		: m_Buffer(nullptr), m_DepthBuffer(nullptr), m_CullMode(BSCULL::CCW)
+		: m_Buffer(nullptr), m_DepthBuffer(nullptr), m_CullMode(BSCullType::CCW)
 	{			
 		m_vecLine.resize(100);
 		m_edgeTable.resize(100);
@@ -250,19 +250,19 @@ namespace CoolD
 			v2.Normalize();
 			switch( m_CullMode )
 			{
-			case BSCULL::CW:
+			case BSCullType::CW:
 				if( v1.Dot(v2) <= 0 )
 				{
 					return true;
 				}
 				break;
-			case BSCULL::CCW:
+			case BSCullType::CCW:
 				if( v1.Dot(v2) >= 0 )
 				{
 					return true;
 				}
 				break;				
-			case BSCULL::ALL:
+			case BSCullType::ALL:
 				return true;				
 			}			
 		}

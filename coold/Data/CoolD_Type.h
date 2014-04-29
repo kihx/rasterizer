@@ -11,6 +11,8 @@
 #include <ppl.h>
 #include <mutex>
 #include <iostream>
+#include <string>
+#include <initializer_list>
 
 typedef void	Dvoid;
 typedef bool	Dbool;
@@ -43,9 +45,15 @@ enum MeshType
 	MESHTYPE_END
 };
 
-enum class BSCULL
+enum class BSCullType
 {
 	CW,
 	CCW,
 	ALL
+};
+
+enum class CommandType
+{
+	VARIABLE,
+	FUNCTION
 };

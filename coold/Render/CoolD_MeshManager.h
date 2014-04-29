@@ -11,7 +11,9 @@ namespace CoolD
 	{
 		friend class CSingleton<MeshManager>;
 	private:
-		MeshManager();
+		MeshManager() = default;
+		MeshManager(const MeshManager&) = delete;
+		MeshManager& operator=(const MeshManager&) = delete;
 
 	public:
 		~MeshManager();	
