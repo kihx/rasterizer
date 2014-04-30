@@ -1,17 +1,17 @@
 // Include Directive
 // 
-#include "../kihx/kihx.h"
-#include "../woocom/WModule.h"
-#include "../xtozero/xtozero.h"
 #include "../utility/math3d.h"
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <windows.h>
+#define _CRTDBG_MAP_ALLOC
+#include <crtdbg.h>
+
 #include <memory.h>
-#include <type_traits>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string>
 #include <thread>
+#include <type_traits>
+#include <windows.h>
 
 #include "glut.h"
 
@@ -548,22 +548,23 @@ void keyboard( unsigned char key, int x, int y)
 
 	case 'z':
 		g_dZoomFactor += 0.5;
-		if ( g_dZoomFactor >= 8.0) 
+		if ( g_dZoomFactor >= 20.0) 
 		{
-			g_dZoomFactor = 8.0;
+			g_dZoomFactor = 20.0;
 		}
 		break;
 
 	case 'Z':
 		g_dZoomFactor -= 0.5;
-		if ( g_dZoomFactor <= 0.5) 
+		if ( g_dZoomFactor <= 0.0) 
 		{
-			g_dZoomFactor = 0.5;
+			g_dZoomFactor = 0.0;
 		}
 		break;
 
 	case 27:
-		exit( 0 );
+		_CrtDumpMemoryLeaks();
+		std::terminate();
 		break;
 
 	default:
@@ -588,6 +589,11 @@ void update( void )
 
 int main( int argc, char** argv)
 {
+	_CrtSetBreakAlloc( 0x008F55B8 );
+
+	_CrtSetDbgFlag ( _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF );
+	_CrtSetReportMode( _CRT_ERROR, _CRTDBG_MODE_DEBUG );
+
 	glutInit( &argc, argv );
 	glutInitDisplayMode( GLUT_SINGLE | GLUT_RGBA );
 	glutInitWindowSize( SCREEN_WIDTH, SCREEN_HEIGHT );
@@ -615,6 +621,8 @@ int main( int argc, char** argv)
 	};
 
 	glutMainLoop();
+
+	_CrtDumpMemoryLeaks();
 
 	return 0; 
 }
