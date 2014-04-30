@@ -1,15 +1,10 @@
 #pragma once
 
 #include "base.h"
+#include "stdsupport.h"
 
 #include <stdexcept>
-#include <vector>
 #include <queue>
-
-//#include <mutex>
-
-//#define Mutex	std::mutex;
-//#define LockGuard	std::lock_guard;
 
 
 namespace kih
@@ -539,7 +534,7 @@ namespace kih
 
 	/* class ThreadPool
 	*/
-	class ThreadPool : public Singleton<ThreadPool>
+	class ThreadPool final : public Singleton<ThreadPool>
 	{
 		NONCOPYABLE_CLASS( ThreadPool );
 
@@ -558,7 +553,7 @@ namespace kih
 
 		FORCEINLINE size_t MaxConcurrency() const
 		{
-			return m_allThreads.size();
+			return m_threadPool.size();
 		}
 
 		void Queue( ThreadFunc funcWork );
@@ -570,7 +565,7 @@ namespace kih
 	private:
 		std::queue<ThreadFunc> m_taskQueue;
 		std::queue<TaskThread*> m_threadQueue;	// available threads to work
-		std::vector<std::shared_ptr<TaskThread>> m_allThreads;	// all of threads
+		StlVector<std::shared_ptr<TaskThread>> m_threadPool;
 		Mutex m_mutex;
 	};
 

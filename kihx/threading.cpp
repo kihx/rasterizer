@@ -317,11 +317,11 @@ namespace kih
 	ThreadPool::ThreadPool()
 	{
 		int concurrency = Thread::HardwareConcurrency();
-		m_allThreads.reserve( concurrency );
+		m_threadPool.reserve( concurrency );
 		for ( int i = 0; i < concurrency; ++i )
 		{
-			m_allThreads.emplace_back( std::make_shared<TaskThread>( this ) );
-			m_threadQueue.push( m_allThreads[i].get() );
+			m_threadPool.emplace_back( std::make_shared<TaskThread>( this ) );
+			m_threadQueue.push( m_threadPool[i].get() );
 		}
 	}
 
@@ -329,14 +329,14 @@ namespace kih
 	{
 		WaitForAllTasks();
 		
-		for ( auto& thread : m_allThreads )
+		for ( auto& thread : m_threadPool )
 		{
 			if ( thread->Launched() )
 			{
 				thread->Kill();
 			}
 		}
-		m_allThreads.clear();
+		m_threadPool.clear();
 	}
 
 	void ThreadPool::Queue( ThreadFunc task )
@@ -371,7 +371,7 @@ namespace kih
 
 	void ThreadPool::WaitForAllTasks()
 	{
-		while ( m_threadQueue.size() != m_allThreads.size() )
+		while ( m_threadQueue.size() != m_threadPool.size() )
 		{
 			Thread::Sleep( 1 );
 		}
@@ -470,10 +470,10 @@ DEFINE_UNITTEST( threadpool_test )
 
 	auto f2 = std::bind( []( const char* str ) { std::cout << "f2: " << str << std::endl; }, "parallel_bind" );
 
-	std::vector<int> data{ 0, 1, 2, 3, 4, 5 };
+	StlVector<int> data{ 0, 1, 2, 3, 4, 5 };
 	kih::ThreadFunc f3 = [=]() { std::cout << "f3: " << data[0] << std::endl; };
 
-	auto f4 = std::bind( []( std::vector<int> data ) { std::cout << "f4: " << data[0] << std::endl; }, data );
+	auto f4 = std::bind( []( StlVector<int> data ) { std::cout << "f4: " << data[0] << std::endl; }, data );
 
 	for ( int i = 0; i < 10; ++i )
 	{

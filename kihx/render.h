@@ -3,6 +3,7 @@
 #include "base.h"
 #include "buffer.h"
 #include "matrix.h"
+#include "stdsupport.h"
 
 #include <vector>
 
@@ -79,7 +80,7 @@ namespace kih
 		
 		// In FuncPreRender, the world matrix of the specified mesh should be set onto the constant buffer of the rendering context.
 		using FuncPreRender = std::function<void( std::shared_ptr<RenderingContext> context, size_t index )>;
-		static void DrawInParallel( std::vector<std::shared_ptr<RenderingContext>>& contexts, const std::vector<std::shared_ptr<IMesh>>& meshes, int meshCount, FuncPreRender funcPreRender );
+		static void DrawInParallel( StlVector<std::shared_ptr<RenderingContext>>& contexts, const StlVector<std::shared_ptr<IMesh>>& meshes, int meshCount, FuncPreRender funcPreRender );
 
 		// render targets
 		FORCEINLINE size_t NumberOfRenderTargets() const
@@ -157,7 +158,7 @@ namespace kih
 
 		// Resolve the UAV to display. This function processes the traditional output merger stage using the UAC.
 		// Note that UAV and RT must be binded.
-		void ResolveUnorderedAccessViews( std::vector<std::shared_ptr<RenderingContext>>& contexts );
+		void ResolveUnorderedAccessViews( StlVector<std::shared_ptr<RenderingContext>>& contexts );
 
 	private:
 		// render stages
@@ -168,7 +169,7 @@ namespace kih
 		std::shared_ptr<OutputMerger> m_outputMerger;
 		
 		// render target
-		std::vector< std::shared_ptr<Texture> > m_renderTargets;
+		StlVector< std::shared_ptr<Texture> > m_renderTargets;
 		std::shared_ptr<Texture> m_depthStencil;
 
 		// constant buffer
@@ -238,7 +239,7 @@ namespace kih
 		void SetProjectionMatrix( const Matrix4& m );
 
 	private:
-		std::vector<std::shared_ptr<RenderingContext>> m_renderingContexts;
+		StlVector<std::shared_ptr<RenderingContext>> m_renderingContexts;
 		Matrix4 m_worldMatrix;
 		Matrix4 m_viewMatrix;
 		Matrix4 m_projMatrix;

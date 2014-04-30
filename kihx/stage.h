@@ -5,7 +5,6 @@
 #include "mathlib.h"
 #include "stream.h"
 
-#include <vector>
 
 
 #define DEPTHTEST_FAST
@@ -332,8 +331,8 @@ namespace kih
 
 		// rasterization using an edge table
 		void RasterizeUsingEdgeTable( const std::shared_ptr<RasterizerInputStream>& inputStream, size_t numVerticesPerPrimitive, unsigned short width, unsigned short height );
-		void GatherPixelsBeingDrawnFromScanlines( std::vector<ActiveEdgeTableElement>& aet, unsigned short minScanline, unsigned short maxScanline, unsigned short width, DepthBuffering& depthBufferingParam ) const;
-		bool UpdateActiveEdgeTable( std::vector<ActiveEdgeTableElement>& aet, unsigned short scanline ) const;
+		void GatherPixelsBeingDrawnFromScanlines( StlVector<ActiveEdgeTableElement>& aet, unsigned short minScanline, unsigned short maxScanline, unsigned short width, DepthBuffering& depthBufferingParam ) const;
+		bool UpdateActiveEdgeTable( StlVector<ActiveEdgeTableElement>& aet, unsigned short scanline ) const;
 
 		// rasterization using barycentric coordinates
 		void RasterizeUsingBarycentricCoordinates( const std::shared_ptr<RasterizerInputStream>& inputStream, unsigned short width, unsigned short height );
@@ -343,7 +342,7 @@ namespace kih
 		void TransformViewport( const std::shared_ptr<RasterizerInputStream>& inputStream, unsigned short width, unsigned short height ) const;
 
 	private:
-		std::vector<std::vector<EdgeTableElement>> m_edgeTable;
+		StlVector<StlVector<EdgeTableElement>> m_edgeTable;
 		CullMode m_cullMode;
 	};
 

@@ -171,7 +171,7 @@ namespace kih
 		}
 	}
 
-	void RenderingContext::DrawInParallel( std::vector<std::shared_ptr<RenderingContext>>& contexts, const std::vector<std::shared_ptr<IMesh>>& meshes, int meshCount, FuncPreRender funcPreRender )
+	void RenderingContext::DrawInParallel( StlVector<std::shared_ptr<RenderingContext>>& contexts, const StlVector<std::shared_ptr<IMesh>>& meshes, int meshCount, FuncPreRender funcPreRender )
 	{
 		if ( meshes.empty() )
 		{
@@ -374,7 +374,7 @@ namespace kih
 		// because the output merger directly write data on render targets and a depth-stencil buffer, or a unordered resource view.
 	}
 
-	void RenderingContext::ResolveUnorderedAccessViews( std::vector<std::shared_ptr<RenderingContext>>& contexts )
+	void RenderingContext::ResolveUnorderedAccessViews( StlVector<std::shared_ptr<RenderingContext>>& contexts )
 	{
 		Assert( m_outputMerger );
 

@@ -7,8 +7,22 @@
 
 namespace kih
 {
-#pragma push_macro("new")
-#undef new
+	/* Global allocator accessors
+	*/
+	typedef IAllocable* ( *FpAllocatorGetter )( );
+
+	static FpAllocatorGetter s_FpAllocableGetter;
+
+	void InstallGlobalAllocatorGetter( FpAllocatorGetter fp )
+	{
+		s_FpAllocableGetter = fp;
+	}
+
+	IAllocable* GetGlobalAllocator()
+	{
+		return s_FpAllocableGetter ? s_FpAllocableGetter() : nullptr;
+	}
+
 
 	/* Low Fragmentation Heap (LFH)
 	*/
@@ -25,7 +39,7 @@ namespace kih
 		{
 #ifdef DEBUG_ALLOCATION
 			FileName = "";
-			Line = 0;
+			Line = -1;
 #endif	
 			Address = nullptr;
 			Next = nullptr;
@@ -38,36 +52,36 @@ namespace kih
 		LFHBucket();
 		~LFHBucket();
 
-		int GetBlockSize() const
+		int BlockSize() const
 		{
 			return m_blockSize;
 		}
 
-		int GetBlockCount() const
+		int BlockCount() const
 		{
 			return m_blockCount;
 		}
 
-		int GetUsedBlockCount() const
+		int UsedBlockCount() const
 		{
 			return m_usedBlockCount;
 		}
 
 		// Returns reserved heap size of this bucket in bytes
-		int GetReservedBytes() const
+		int ReservedBytes() const
 		{
 			return m_blockSize * m_blockCount;
 		}
 
 		// Returns committed heap size of this bucket in bytes
-		int GetCommittedBytes() const
+		int CommittedBytes() const
 		{
 			return m_committedBytes;
 		}
 
-		int GetAllocatedBytes() const
+		int AllocatedBytes() const
 		{
-			return GetBlockCount() * GetUsedBlockCount();
+			return BlockCount() * UsedBlockCount();
 		}
 
 		bool IsFull() const
@@ -75,7 +89,7 @@ namespace kih
 			return m_freeBlockHead == nullptr;
 		}
 
-		void PrintMemoryUsage();
+		void PrintMemoryUsage() const;
 
 		// only call by LFHAllocator
 	private:
@@ -84,7 +98,7 @@ namespace kih
 		void Init( int blockSize, int blockCount, byte* pBaseAddress );
 
 		void* Allocate( const char* filename, int line );
-		inline void* Allocate()
+		FORCEINLINE void* Allocate()
 		{
 			return Allocate( __FILE__, __LINE__ );
 		}
@@ -103,14 +117,6 @@ namespace kih
 		LFHBlock* m_freeBlockHead;
 	};
 
-
-#pragma pop_macro("new")
-
-
-
-
-
-#undef new
 
 	/* class LFHBucket
 	*/
@@ -160,12 +166,12 @@ namespace kih
 		// Commit one page in the virtual address space
 		int pageSize = isystem->GetPageSize();
 		m_committedBytes = max( pageSize, AlignSize( m_blockSize, pageSize ) );
-		m_committedBytes = min( m_committedBytes, GetReservedBytes() );
+		m_committedBytes = min( m_committedBytes, ReservedBytes() );
 		isystem->CommitVirtualMemory( m_baseAddress, m_committedBytes );
 
 		// Initialize blocks 
 		// and build the sequential free list from the blocks
-		m_blockBudgets = ( LFHBlock* ) ::malloc( sizeof( LFHBlock ) * m_blockCount );
+		m_blockBudgets = static_cast< LFHBlock* >( ::malloc( sizeof( LFHBlock ) * m_blockCount ) );
 
 		byte* p = m_baseAddress;
 		m_freeBlockHead = &m_blockBudgets[0];
@@ -175,11 +181,7 @@ namespace kih
 			pCurrent = &m_blockBudgets[i];
 			pCurrent->Reset();
 
-			if ( i + 1 < m_blockCount )
-			{
-				pCurrent->Next = &m_blockBudgets[i + 1];
-			}
-
+			pCurrent->Next = ( i + 1 < m_blockCount ) ? &m_blockBudgets[i + 1] : nullptr;
 			pCurrent->Address = p;
 			p += m_blockSize;
 		}
@@ -195,7 +197,7 @@ namespace kih
 			if ( pCurrent->Address >= m_baseAddress + m_committedBytes )
 			{
 				int growBytes = AlignSize( m_committedBytes, isystem->GetPageSize() );
-				int reservedBytes = GetReservedBytes();
+				int reservedBytes = ReservedBytes();
 				if ( m_committedBytes + growBytes > reservedBytes )
 				{
 					growBytes = reservedBytes - m_committedBytes;
@@ -217,6 +219,7 @@ namespace kih
 
 			// Move the current cursor to next and return free address
 			m_freeBlockHead = pCurrent->Next;
+			pCurrent->Next = nullptr;	// invalidate
 			return pCurrent->Address;
 		}
 
@@ -253,6 +256,12 @@ namespace kih
 		LFHBlock* pHead = m_freeBlockHead;
 		m_freeBlockHead = &m_blockBudgets[blockIndex];
 		m_freeBlockHead->Next = pHead;
+
+#ifdef DEBUG_ALLOCATION
+		m_freeBlockHead->FileName = nullptr;
+		m_freeBlockHead->Line = -1;
+#endif
+
 #else
 		// FIXME: bugbugbug
 
@@ -292,25 +301,38 @@ namespace kih
 		--m_usedBlockCount;
 	}
 
-	void LFHBucket::PrintMemoryUsage()
+	void LFHBucket::PrintMemoryUsage() const
 	{
-		for ( int i = 0; i < m_blockCount; ++i )
-		{
-			if ( m_blockBudgets[i].Address )
-			{
+		printf( "<%d> %d / %d\n", BlockSize(), UsedBlockCount(), BlockCount() );
 
+		if ( UsedBlockCount() > 0 )
+		{
+			for ( int i = 0; i < m_blockCount; ++i )
+			{
+				if ( m_blockBudgets[i].Next == nullptr )
+				{
+#ifdef DEBUG_ALLOCATION
+					printf( "\t%x, %s (%d)%\n", m_blockBudgets[i].Address, m_blockBudgets[i].FileName, m_blockBudgets[i].Line );
+#else
+					printf( "\t%x\n", m_blockBudgets[i].Address );
+#endif			
+				}
 			}
 		}
 	}
 
+
+#undef new
 
 	
 	/* class LFHAllocator
 	*/
 	class LFHBucket;
 
-	class LFHAllocator : public IAllocable
+	class LFHAllocator final : public IAllocable
 	{
+		NONCOPYABLE_CLASS( LFHAllocator );
+
 	public:
 		enum { BucketCount = 128 };
 		enum { MaxBlockSizeInBytes = 0x4000 };	// 16k limit
@@ -335,12 +357,12 @@ namespace kih
 
 		virtual void InstallAllocFailHandler( FpAllocFailHandler fp );
 
+		virtual void PrintMemoryUsage() const;
+
 		// bytesPerBucket is aligned by system's allocation granularity.
 		void Init( int bytesPerBucket );
 
 		int TotalMemoryInBytes() const { return m_bytesPerBucket * BucketCount; }
-
-		void PrintMemoryUsage();
 
 	private:
 		// Get the best-fit sized bucket
@@ -421,7 +443,7 @@ namespace kih
 			{
 				if ( !m_fpAllocFailHandler() )
 				{
-					throw new std::bad_alloc();
+					throw std::bad_alloc();
 				}
 			}
 		}
@@ -457,7 +479,7 @@ namespace kih
 			{
 				if ( !m_fpAllocFailHandler() )
 				{
-					throw new std::bad_alloc();
+					throw std::bad_alloc();
 				}
 			}
 		}
@@ -499,7 +521,7 @@ namespace kih
 		m_bytesPerBucket = AlignSize( bytesPerBucket, isystem->GetPageSize() );
 
 		// Reserve virtual memory
-		m_pBaseAddress = ( byte* ) isystem->ReserveVirtualMemory( m_bytesPerBucket * BucketCount );
+		m_pBaseAddress = static_cast< byte*>( isystem->ReserveVirtualMemory( m_bytesPerBucket * BucketCount ) );
 
 		const int Granularities[] = { 8, 16, 32, 64, 128, 256, 512 };
 		const int Capacities[] = { 256, 512, 1024, 2048, 4096, 8192, 16384 };
@@ -523,6 +545,15 @@ namespace kih
 		}
 	}
 
+	void LFHAllocator::PrintMemoryUsage() const
+	{
+		for ( int i = 0; i < BucketCount; ++i )
+		{
+			const LFHBucket& bucket = m_buckets[i];
+			bucket.PrintMemoryUsage();
+		}
+	}
+
 	LFHBucket* LFHAllocator::GetBestFitBucket( int size )
 	{
 		// Fast search using predefined ranges
@@ -535,7 +566,7 @@ namespace kih
 			{
 				for ( int bucket = ( i == 0 ) ? 0 : BucketIndicies[i - 1]; bucket < BucketIndicies[i]; ++bucket )
 				{
-					if ( size <= m_buckets[bucket].GetBlockSize() )
+					if ( size <= m_buckets[bucket].BlockSize() )
 					{
 						return &m_buckets[bucket];
 					}
@@ -560,15 +591,7 @@ namespace kih
 		}
 	}
 
-	void LFHAllocator::PrintMemoryUsage()
-	{
-		for ( int i = 0; i < BucketCount; ++i )
-		{
-			//const LFHBucket& bucket = m_buckets[i];
-			//bucket.PrintMemoryUsage();
-		}
-	}
-
+	
 
 
 	/* Global functions
@@ -603,19 +626,16 @@ namespace kih
 	}
 
 
-
-	/* Global allocator accessors
+	/* global functions
 	*/
-	static FpAllocatorGetter s_FpAllocableGetter;
-
-	void InstallGlobalAllocatorGetter( FpAllocatorGetter fp )
+	void InitAllocator()
 	{
-		s_FpAllocableGetter = fp;
+		LFHAllocator::InitGlobalAllocator( 32 * 1024 * 1024, 0 );
 	}
-
-	IAllocable* GetGlobalAllocator()
+	
+	void ShutdownAllocator()
 	{
-		return s_FpAllocableGetter ? s_FpAllocableGetter() : nullptr;
+		LFHAllocator::ShutdownGlobalAllocator();
 	}
 }
 
@@ -743,12 +763,10 @@ void operator delete[]( void* ptr, kih::IAllocable* pAllocable, const char* file
 
 
 
-DEFINE_COMMAND( lfh_on )
+DEFINE_COMMAND( memory )
 {
-	kih::LFHAllocator::InitGlobalAllocator( 32 * 1024 * 1024, 0 );
-}
-
-DEFINE_COMMAND( lfh_off )
-{
-	kih::LFHAllocator::ShutdownGlobalAllocator();
+	if ( kih::IAllocable* pAllocable = kih::GetGlobalAllocator() )
+	{
+		pAllocable->PrintMemoryUsage();
+	}
 }

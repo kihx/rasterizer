@@ -106,3 +106,4 @@ namespace kih
 
 using kih::PrimitiveType;
 using kih::CoordinatesType;
+

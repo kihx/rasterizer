@@ -1,8 +1,7 @@
 #pragma once
 
 #include "base.h"
-
-#include <vector>
+#include "stdsupport.h"
 
 
 namespace kih
@@ -35,7 +34,7 @@ namespace kih
 		unsigned char g;
 		unsigned char b;
 		unsigned char a;
-		std::vector<IndexType> m_indices;
+		StlVector<IndexType> m_indices;
 	};
 
 	
@@ -87,7 +86,7 @@ namespace kih
 		}
 
 	private:
-		std::vector<Vertex<VertexType>> m_vertices;
+		StlVector<Vertex<VertexType>> m_vertices;
 	};
 
 		
@@ -139,7 +138,7 @@ namespace kih
 		}
 
 	private:
-		std::vector<IndexType> m_indicies;
+		StlVector<IndexType> m_indicies;
 	};
 
 
@@ -211,8 +210,8 @@ namespace kih
 		}
 
 	private:
-		std::vector<VertexF> m_vertices;
-		std::vector<FaceS> m_faces;
+		StlVector<VertexF> m_vertices;
+		StlVector<FaceS> m_faces;
 	};
 
 	

@@ -82,6 +82,12 @@
     <ClInclude Include="threading.h">
       <Filter>Framework</Filter>
     </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="stdsupport.h">
+      <Filter>Framework</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -132,5 +138,8 @@
     <ClCompile Include="threading.cpp">
       <Filter>Framework</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="kihx.rc" />
   </ItemGroup>
 </Project>

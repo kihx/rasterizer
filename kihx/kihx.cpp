@@ -26,31 +26,36 @@ static ConsoleVariable concurrency( "concurrency", "4" );
 
 
 // Resources
-static std::vector<std::shared_ptr<IMesh>> g_meshes;
+FORCEINLINE StlVector<std::shared_ptr<IMesh>>& GetMeshes()
+{
+	static StlVector<std::shared_ptr<IMesh>> g_meshes;
+	return g_meshes;
+}
 
 
 
 KIHX_API void kiLoadMeshFromFile( const char* filename )
 {
-	g_meshes.clear();
+	auto& meshes = GetMeshes();
+	meshes.clear();
 
-	g_meshes.emplace_back( kih::CreateMeshFromFile( filename ) );
-	if ( g_meshes[0] == nullptr )
+	meshes.emplace_back( kih::CreateMeshFromFile( filename ) );
+	if ( meshes[0] == nullptr )
 	{
-		g_meshes.clear();
+		meshes.clear();
 		return;
 	}
 
 	for ( int i = 0; i < 6 * 6 - 1; ++i )
 	{
-		auto mesh = g_meshes[0]->Clone();
+		auto mesh = meshes[0]->Clone();
 		if ( mesh )
 		{
-			g_meshes.push_back( mesh );
+			meshes.push_back( mesh );
 		}
 		else
 		{
-			g_meshes.emplace_back( kih::CreateMeshFromFile( filename ) );
+			meshes.emplace_back( kih::CreateMeshFromFile( filename ) );
 		}
 	}
 }
@@ -85,12 +90,12 @@ void DrawGridScene( std::shared_ptr<RenderingContext> context, const Matrix4& ma
 			// various color
 			cbuffer.SetVector4( ConstantBuffer::DiffuseColor, Vector4( max( 0.2f, matTrans.A41 * 0.5f + 0.8f ), max( 0.4f, matTrans.A42 * 0.5f + 0.6f ), matTrans.A43 * 0.5f + 1.0f, 1.0f ) );
 
-			context->Draw( g_meshes[row * columns + col] );
+			context->Draw( GetMeshes()[row * columns + col] );
 		}
 	}
 }
 
-void DrawGridSceneInParallel( std::vector<std::shared_ptr<RenderingContext>>& contexts, const Matrix4& matWorld )
+void DrawGridSceneInParallel( StlVector<std::shared_ptr<RenderingContext>>& contexts, const Matrix4& matWorld )
 {
 	float scale = model_scale.Float();
 
@@ -125,7 +130,7 @@ void DrawGridSceneInParallel( std::vector<std::shared_ptr<RenderingContext>>& co
 		}
 	);
 
-	RenderingContext::DrawInParallel( contexts, g_meshes, grid_size.Int() * grid_size.Int(), funcPreRender );
+	RenderingContext::DrawInParallel( contexts, GetMeshes(), grid_size.Int() * grid_size.Int(), funcPreRender );
 }
 
 KIHX_API void kiRenderToBuffer( void* buffer, int width, int height, int bpp )
@@ -183,7 +188,7 @@ KIHX_API void kiRenderToBuffer( void* buffer, int width, int height, int bpp )
 		else
 		{
 			// Copy array contexts to vector one.
-			std::vector<std::shared_ptr<RenderingContext>> concurrencyContexts;
+			StlVector<std::shared_ptr<RenderingContext>> concurrencyContexts;
 			concurrencyContexts.resize( concurrency.Int() - 1 );		// the other thread is for resolve.	
 			for ( size_t i = 0; i < concurrencyContexts.size(); ++i )
 			{
@@ -198,7 +203,7 @@ KIHX_API void kiRenderToBuffer( void* buffer, int width, int height, int bpp )
 	{
 		context->GetSharedConstantBuffer().SetMatrix4( ConstantBuffer::WorldMatrix, matWorld );
 		context->GetSharedConstantBuffer().SetVector4( ConstantBuffer::DiffuseColor, Vector4( 1.0f, 1.0f, 1.0f, 1.0f ) );
-		context->Draw( g_meshes[0] );
+		context->Draw( GetMeshes()[0] );
 	}
 }
 

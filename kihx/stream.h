@@ -1,10 +1,9 @@
 #pragma once
 
 #include "base.h"
+#include "stdsupport.h"
 #include "threading.h"
 #include "vector.h"
-
-#include <vector>
 
 
 namespace kih
@@ -189,7 +188,7 @@ namespace kih
 		}
 		
 	private:
-		std::vector<Data> m_streamSource;
+		StlVector<Data> m_streamSource;
 	};	
 
 	/* class VertexShaderInputStream

@@ -1,17 +1,18 @@
 #include "stdafx.h"
 #include "concommand.h"
 #include "mathlib.h"
+#include "stdsupport.h"
 
 #include <iostream>
-#include <vector>
+
 
 namespace kih
 {
 	// String splitter: http://stackoverflow.com/questions/236129/how-to-split-a-string-in-c
 	template<class T>
-	std::vector<T> SplitString( const T& str, const T& delimiters ) 
+	StlVector<T> SplitString( const T& str, const T& delimiters ) 
 	{
-		std::vector<T> v;
+		StlVector<T> v;
 		T::size_type start = 0;
 		auto pos = str.find_first_of( delimiters, start );
 		while ( pos != T::npos ) 
@@ -116,7 +117,7 @@ namespace kih
 
 		VerifyReentry();
 
-		std::vector<std::string> params = SplitString<std::string>( std::string( cmdString ), std::string( " " ) );
+		StlVector<std::string> params = SplitString<std::string>( std::string( cmdString ), std::string( " " ) );
 		if ( params.size() <= 0 )
 		{
 			return;

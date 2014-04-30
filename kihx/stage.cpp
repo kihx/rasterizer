@@ -301,11 +301,11 @@ namespace kih
 		m_edgeTable.resize( height );
 
 		// the list of indices of edges in ET to reduce traversing empty elements.
-		std::vector<unsigned short> validEdgeIndices;
+		StlVector<unsigned short> validEdgeIndices;
 		validEdgeIndices.reserve( numVerticesPerPrimitive );
 
 		// active edge table
-		std::vector<ActiveEdgeTableElement> aet;
+		StlVector<ActiveEdgeTableElement> aet;
 		aet.reserve( 8 );
 
 		// Build an edge table by traversing each primitive in vertices,
@@ -430,7 +430,7 @@ namespace kih
 		}
 	}
 
-	void Rasterizer::GatherPixelsBeingDrawnFromScanlines( std::vector<ActiveEdgeTableElement>& aet, unsigned short minScanline, unsigned short maxScanline, unsigned short width, DepthBuffering& depthBuffering ) const
+	void Rasterizer::GatherPixelsBeingDrawnFromScanlines( StlVector<ActiveEdgeTableElement>& aet, unsigned short minScanline, unsigned short maxScanline, unsigned short width, DepthBuffering& depthBuffering ) const
 	{
 		Assert( m_outputStream );
 		Assert( minScanline >= 0 && minScanline <= maxScanline );
@@ -536,7 +536,7 @@ namespace kih
 		}
 	}
 
-	bool Rasterizer::UpdateActiveEdgeTable( std::vector<ActiveEdgeTableElement>& aet, unsigned short scanline ) const
+	bool Rasterizer::UpdateActiveEdgeTable( StlVector<ActiveEdgeTableElement>& aet, unsigned short scanline ) const
 	{
 		Assert( scanline >= 0 && scanline < m_edgeTable.size() );
 
@@ -558,7 +558,7 @@ namespace kih
 		}
 
 		// Push inside ET elements on this scanline into the AET.
-		const std::vector<EdgeTableElement>& elemList = m_edgeTable[scanline];
+		const StlVector<EdgeTableElement>& elemList = m_edgeTable[scanline];
 		size_t elemSize = elemList.size();
 		for ( size_t i = 0; i < elemSize; ++i )
 		{

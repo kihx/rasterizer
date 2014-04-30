@@ -1,6 +1,6 @@
 #pragma once
 
-//#define MEMORY_OVERRIDE
+#define MEMORY_OVERRIDE
 
 #define DEBUG_ALLOCATION
 
@@ -22,15 +22,107 @@ namespace kih
 		virtual void Deallocate( void* ptr ) = 0;
 
 		virtual void InstallAllocFailHandler( FpAllocFailHandler fp ) = 0;
+
+		virtual void PrintMemoryUsage() const = 0;
 	};
 
-	typedef IAllocable* ( *FpAllocatorGetter )( );
-	void InstallGlobalAllocatorGetter( FpAllocatorGetter fp );
 	IAllocable* GetGlobalAllocator();
+
+	void InitAllocator();
+	void ShutdownAllocator();
 };
 
 
+
 #ifdef MEMORY_OVERRIDE
+
+namespace kih
+{
+	// Allocator for STL containers.	
+	template<class T>
+	class StlAllocator
+	{
+	public:
+		typedef T value_type;
+		typedef value_type* pointer;
+		typedef const value_type* const_pointer;
+		typedef value_type& reference;
+		typedef const value_type& const_reference;
+		typedef size_t size_type;
+		typedef ptrdiff_t difference_type;
+
+	public:
+		// convert T to U
+		template<class U> 
+		struct rebind 
+		{
+			typedef StlAllocator<U> other;
+		};
+
+	public:
+		// address
+		FORCEINLINE pointer address( reference r ) 
+		{
+			return &r; 
+		}
+
+		FORCEINLINE const_pointer address( const_reference r ) 
+		{
+			return &r; 
+		}
+
+		// allocation
+		FORCEINLINE pointer allocate( size_type count )
+		{
+#ifdef DEBUG_ALLOCATION
+			return reinterpret_cast< pointer >( kih::GetGlobalAllocator()->Allocate( count * sizeof( T ), __FILE__, __LINE__ ) );
+#else
+			return reinterpret_cast< pointer >( kih::GetGlobalAllocator()->Allocate( count * sizeof( T ) ) );
+#endif
+		}
+
+		FORCEINLINE pointer allocate( size_type count, const void* )
+		{
+			Unused( other );
+			return allocate( count );
+		}
+
+		FORCEINLINE void deallocate( pointer ptr, size_type )
+		{
+			::operator delete( ptr );
+		}
+
+		FORCEINLINE void construct( pointer ptr, const value_type& t )
+		{
+			::new( ptr ) T( t );
+		}
+
+		template<class U, class... Args>
+		FORCEINLINE void construct( pointer ptr, Args&&... args )
+		{
+			::new( ptr ) U( std::forward<Args>( args )... );
+		}
+
+		FORCEINLINE void destroy( pointer ptr )
+		{
+			Unused( ptr );
+			ptr->~T();
+		}
+
+		template<class U>
+		FORCEINLINE void destroy( U* ptr )
+		{
+			Unused( ptr );
+			ptr->~U();
+		}
+
+		FORCEINLINE size_type max_size() const
+		{
+			return static_cast<size_t>( -1 );
+		}
+	};
+}
+
 
 /* new-delete operator overloading
 */
@@ -65,5 +157,6 @@ void operator delete[]( void* ptr, kih::IAllocable* pAllocable, const char* file
 #endif
 
 #else
-// nothing 
+
 #endif	// MEMORY_OVERRIDE
+
