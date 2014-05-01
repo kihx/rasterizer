@@ -26,55 +26,55 @@ namespace kih
 
 	/* Low Fragmentation Heap (LFH)
 	*/
-	struct LFHBlock
+	struct LFHBlock final
 	{
 		LFHBlock* Next;		// next block pointer
-		void* Address;		// heap address
+		byte* Address;		// heap address
 #ifdef DEBUG_ALLOCATION
 		const char* FileName;
 		int Line;
 #endif
-
-		void Reset()
-		{
-#ifdef DEBUG_ALLOCATION
-			FileName = "";
-			Line = -1;
-#endif	
-			Address = nullptr;
-			Next = nullptr;
-		}
 	};
 
-	class LFHBucket
+	void LFHBlock_MakeNull( LFHBlock& block )
+	{
+#ifdef DEBUG_ALLOCATION
+		block.FileName = "";
+		block.Line = -1;
+#endif	
+		block.Address = nullptr;
+		block.Next = nullptr;
+	}
+
+	class LFHBucket final
 	{
 	public:
 		LFHBucket();
 		~LFHBucket();
 
-		int BlockSize() const
+		size_t BlockSize() const
 		{
 			return m_blockSize;
 		}
 
-		int BlockCount() const
+		size_t BlockCount() const
 		{
 			return m_blockCount;
 		}
 
-		int UsedBlockCount() const
+		size_t UsedBlockCount() const
 		{
 			return m_usedBlockCount;
 		}
 
 		// Returns reserved heap size of this bucket in bytes
-		int ReservedBytes() const
+		size_t ReservedBytes() const
 		{
 			return m_blockSize * m_blockCount;
 		}
 
 		// Returns committed heap size of this bucket in bytes
-		int CommittedBytes() const
+		size_t CommittedBytes() const
 		{
 			return m_committedBytes;
 		}
@@ -95,7 +95,7 @@ namespace kih
 	private:
 		friend class LFHAllocator;
 
-		void Init( int blockSize, int blockCount, byte* pBaseAddress );
+		void Init( size_t blockSize, size_t blockCount, byte* pBaseAddress );
 
 		void* Allocate( const char* filename, int line );
 		FORCEINLINE void* Allocate()
@@ -106,10 +106,10 @@ namespace kih
 		void Deallocate( void* ptr );
 
 	private:
-		int m_blockSize;			// memory block size
-		int m_blockCount;			// the number of reserved blocks
-		int m_usedBlockCount;		// the number of used blocks
-		int m_committedBytes;		// committed virtual memory bytes
+		size_t m_blockSize;			// memory block size
+		size_t m_blockCount;			// the number of reserved blocks
+		size_t m_usedBlockCount;		// the number of used blocks
+		size_t m_committedBytes;		// committed virtual memory bytes
 
 		byte* m_baseAddress;		// the base address of memory blocks
 
@@ -137,7 +137,7 @@ namespace kih
 		::free( m_blockBudgets );
 	}
 
-	void LFHBucket::Init( int blockSize, int blockCount, byte* pBaseAddress )
+	void LFHBucket::Init( size_t blockSize, size_t blockCount, byte* pBaseAddress )
 	{
 		// Prevent double initialization
 		if ( m_baseAddress )
@@ -158,13 +158,13 @@ namespace kih
 		}
 
 		// Force 8 byte alignment
-		m_blockSize = AlignSize( blockSize, 8 );
+		m_blockSize = AlignSize( blockSize, static_cast<size_t>( 8 ) );
 		m_blockCount = blockCount;
 
 		m_baseAddress = pBaseAddress;
 
 		// Commit one page in the virtual address space
-		int pageSize = isystem->GetPageSize();
+		size_t pageSize = isystem->GetPageSize();
 		m_committedBytes = max( pageSize, AlignSize( m_blockSize, pageSize ) );
 		m_committedBytes = min( m_committedBytes, ReservedBytes() );
 		isystem->CommitVirtualMemory( m_baseAddress, m_committedBytes );
@@ -174,17 +174,17 @@ namespace kih
 		m_blockBudgets = static_cast< LFHBlock* >( ::malloc( sizeof( LFHBlock ) * m_blockCount ) );
 
 		byte* p = m_baseAddress;
-		m_freeBlockHead = &m_blockBudgets[0];
-		LFHBlock* pCurrent = m_freeBlockHead;
-		for ( int i = 0; i < m_blockCount; ++i )
+		LFHBlock* pCurrent = nullptr;
+		for ( size_t i = 0; i < m_blockCount; ++i )
 		{
+			LFHBlock_MakeNull( m_blockBudgets[i] );
 			pCurrent = &m_blockBudgets[i];
-			pCurrent->Reset();
-
 			pCurrent->Next = ( i + 1 < m_blockCount ) ? &m_blockBudgets[i + 1] : nullptr;
 			pCurrent->Address = p;
 			p += m_blockSize;
 		}
+
+		m_freeBlockHead = &m_blockBudgets[0];
 	}
 
 	void* LFHBucket::Allocate( const char* filename, int line )
@@ -194,10 +194,10 @@ namespace kih
 			LFHBlock* pCurrent = m_freeBlockHead;
 
 			// Commit a region of pages as the last committed page size in the virtual address space
-			if ( pCurrent->Address >= m_baseAddress + m_committedBytes )
+			if ( pCurrent->Address + m_blockSize >= m_baseAddress + m_committedBytes )
 			{
-				int growBytes = AlignSize( m_committedBytes, isystem->GetPageSize() );
-				int reservedBytes = ReservedBytes();
+				size_t growBytes = AlignSize( m_committedBytes, static_cast<size_t>( isystem->GetPageSize() ) );
+				size_t reservedBytes = ReservedBytes();
 				if ( m_committedBytes + growBytes > reservedBytes )
 				{
 					growBytes = reservedBytes - m_committedBytes;
@@ -307,7 +307,7 @@ namespace kih
 
 		if ( UsedBlockCount() > 0 )
 		{
-			for ( int i = 0; i < m_blockCount; ++i )
+			for ( size_t i = 0; i < m_blockCount; ++i )
 			{
 				if ( m_blockBudgets[i].Next == nullptr )
 				{
@@ -360,13 +360,13 @@ namespace kih
 		virtual void PrintMemoryUsage() const;
 
 		// bytesPerBucket is aligned by system's allocation granularity.
-		void Init( int bytesPerBucket );
+		void Init( size_t bytesPerBucket );
 
 		int TotalMemoryInBytes() const { return m_bytesPerBucket * BucketCount; }
 
 	private:
 		// Get the best-fit sized bucket
-		LFHBucket* GetBestFitBucket( int size );
+		LFHBucket* GetBestFitBucket( size_t size );
 
 		// Find the bucket by the specified address using memory range
 		LFHBucket* FindBucketByAddress( void* ptr );
@@ -409,6 +409,8 @@ namespace kih
 
 	LFHAllocator::~LFHAllocator()
 	{
+		//PrintMemoryUsage();
+
 		isystem->ReleaseVirtualMemory( m_pBaseAddress );
 		m_pBaseAddress = nullptr;
 	}
@@ -509,7 +511,7 @@ namespace kih
 		m_fpAllocFailHandler = fp;
 	}
 
-	void LFHAllocator::Init( int bytesPerBucket )
+	void LFHAllocator::Init( size_t bytesPerBucket )
 	{
 		if ( bytesPerBucket < MaxBlockSizeInBytes )
 		{
@@ -521,7 +523,7 @@ namespace kih
 		m_bytesPerBucket = AlignSize( bytesPerBucket, isystem->GetPageSize() );
 
 		// Reserve virtual memory
-		m_pBaseAddress = static_cast< byte*>( isystem->ReserveVirtualMemory( m_bytesPerBucket * BucketCount ) );
+		m_pBaseAddress = static_cast< byte* >( isystem->ReserveVirtualMemory( m_bytesPerBucket * BucketCount ) );
 
 		const int Granularities[] = { 8, 16, 32, 64, 128, 256, 512 };
 		const int Capacities[] = { 256, 512, 1024, 2048, 4096, 8192, 16384 };
@@ -554,17 +556,17 @@ namespace kih
 		}
 	}
 
-	LFHBucket* LFHAllocator::GetBestFitBucket( int size )
+	LFHBucket* LFHAllocator::GetBestFitBucket( size_t size )
 	{
 		// Fast search using predefined ranges
-		const int BucketIndicies[] = { 31, 47, 65, 79, 95, 111, 127 };
-		const int Capacities[] = { 256, 512, 1024, 2048, 4096, 8192, 16384 };
+		const size_t BucketIndicies[] = { 31, 47, 65, 79, 95, 111, 127 };
+		const size_t Capacities[] = { 256, 512, 1024, 2048, 4096, 8192, 16384 };
 
 		for ( int i = 0; i < 7; ++i )
 		{
 			if ( size <= Capacities[i] )
 			{
-				for ( int bucket = ( i == 0 ) ? 0 : BucketIndicies[i - 1]; bucket < BucketIndicies[i]; ++bucket )
+				for ( size_t bucket = ( i == 0 ) ? 0 : BucketIndicies[i - 1]; bucket < BucketIndicies[i]; ++bucket )
 				{
 					if ( size <= m_buckets[bucket].BlockSize() )
 					{
@@ -579,8 +581,8 @@ namespace kih
 
 	LFHBucket* LFHAllocator::FindBucketByAddress( void* ptr )
 	{
-		int diff = ( byte* ) ptr - m_pBaseAddress;
-		int index = diff / m_bytesPerBucket;
+		size_t diff = static_cast< byte* >( ptr ) - m_pBaseAddress;
+		size_t index = diff / m_bytesPerBucket;
 		if ( index >= 0 && index < BucketCount )
 		{
 			return &m_buckets[index];

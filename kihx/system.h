@@ -20,8 +20,8 @@ namespace kih
 		virtual bool ReleaseVirtualMemory( void* ptr ) = 0;
 
 		// system information
-		virtual int GetPageSize() const = 0;
-		virtual int GetAllocationGranularity() const = 0;
+		virtual size_t GetPageSize() const = 0;
+		virtual size_t GetAllocationGranularity() const = 0;
 	};
 
 	extern ISystem* isystem;
@@ -46,7 +46,7 @@ namespace kih
 		virtual bool ReleaseVirtualMemory( void* ptr );
 
 		// system information
-		virtual int GetPageSize() const;
-		virtual int GetAllocationGranularity() const;
+		virtual size_t GetPageSize() const;
+		virtual size_t GetAllocationGranularity() const;
 	};
 }

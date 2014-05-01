@@ -1,6 +1,6 @@
 #pragma once
 
-#define MEMORY_OVERRIDE
+//#define MEMORY_OVERRIDE
 
 #define DEBUG_ALLOCATION
 
@@ -89,7 +89,7 @@ namespace kih
 
 		FORCEINLINE void deallocate( pointer ptr, size_type )
 		{
-			::operator delete( ptr );
+			kih::GetGlobalAllocator()->Deallocate( ptr );
 		}
 
 		FORCEINLINE void construct( pointer ptr, const value_type& t )

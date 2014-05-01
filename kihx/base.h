@@ -71,9 +71,11 @@ namespace kih
 	#define SIZEOF_ARRAY( a )	( sizeof( _SizeOfArray( a ) ) )
 
 	
-	FORCEINLINE int AlignSize( int size, int alignment )
+	template<class T>
+	FORCEINLINE T AlignSize( T size, T alignment )
 	{
-		int alignBase = alignment - 1;
+		static_assert( std::is_integral<T>::value, "should use integal type arguments" );
+		T alignBase = alignment - static_cast<T>( 1 );
 		return ( ( size + alignBase ) & ~alignBase );
 	}
 

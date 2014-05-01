@@ -65,23 +65,23 @@ namespace kih
 		return ::VirtualFree( ptr, 0, MEM_RELEASE ) == TRUE;
 	}
 
-	int SystemWindows::GetPageSize() const
+	size_t SystemWindows::GetPageSize() const
 	{
 		if ( g_SystemInfo.dwPageSize <= 0 )
 		{
 			::GetSystemInfo( &g_SystemInfo );
 		}
 
-		return g_SystemInfo.dwPageSize;
+		return static_cast<size_t>( g_SystemInfo.dwPageSize );
 	}
 
-	int SystemWindows::GetAllocationGranularity() const
+	size_t SystemWindows::GetAllocationGranularity() const
 	{
 		if ( g_SystemInfo.dwAllocationGranularity <= 0 )
 		{
 			::GetSystemInfo( &g_SystemInfo );
 		}
 
-		return g_SystemInfo.dwAllocationGranularity;
+		return static_cast<size_t>( g_SystemInfo.dwAllocationGranularity );
 	}
 }
