@@ -12,7 +12,7 @@ namespace CoolD
 		~FrustumCull();
 
 	public:		
-		Dvoid CreateFrustum(const Matrix44& matView, const Matrix44& matPerspective);
+		Dvoid CreateFrustum();
 		Dbool CheckFrustumCull(const Vector3& vPoint);
 
 	private:

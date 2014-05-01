@@ -44,8 +44,11 @@ namespace CoolD
 		Dvoid CreateEdgeTable(vector<Line>& vecLine, vector<LineEdge>& edgeTable);
 		Dvoid CreateChainTable(vector<Line>& vecLine, vector<ActiveLine>& activeTable);
 
-	private:
+	private:		
 		Dbool BackSpaceCulling(vector<Line>& vecLine);
+	public:
+		inline Dvoid SetBackSpaceCullType(BSCullType type){ m_CullMode = type; }
+
 	private:
 		Dbool DepthTest(const Duint x, const Duint y, Dfloat depth);
 

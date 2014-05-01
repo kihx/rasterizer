@@ -35,6 +35,15 @@ namespace CoolD
 
 	void ConsoleManager::ShowCommand(const string& name)
 	{	
+		if( name == "all" )
+		{
+			for( auto command : m_mapCommand )
+			{
+				command.second->ShowCommand();
+			}
+			return;
+		}
+
 		Command* command = FindCommand(name);
 		if( command == nullptr )
 		{			

@@ -11,7 +11,7 @@ namespace CoolD
 	{
 		friend class CSingleton<MeshManager>;
 	private:
-		MeshManager() = default;
+		MeshManager();
 		MeshManager(const MeshManager&) = delete;
 		MeshManager& operator=(const MeshManager&) = delete;
 
@@ -24,6 +24,7 @@ namespace CoolD
 		
 		const map<string, CustomMesh*>& GetMapMesh();
 		const vector<Vector3>* GetVecTransformVertex();
+		const vector<BaseFace>* GetVecCulledFace();
 		Dvoid AdjustTransform(CustomMesh* pMesh, const array<Matrix44, TRANSFORM_END>& arrayTransform);
 		Duint GetMeshNum() const;
 		Dvoid Clear();				
@@ -34,7 +35,7 @@ namespace CoolD
 	private:
 		map<string, CustomMesh*>	m_mapMesh;		
 		vector<Vector3>		m_trasnformVertex;
-		FrustumCull			m_FrustumCull;
+		FrustumCull			m_frustumCull;
 	};
 	
 	

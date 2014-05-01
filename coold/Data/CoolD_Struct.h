@@ -12,11 +12,12 @@ class BaseFace
 {
 public:
 	BaseColor		color;
-	vector<Dint>	vecIndex;
+	vector<Duint>	vecIndex;
+	Dbool			isCull;
 
 	BaseFace(){};
 	BaseFace(const BaseFace& baseFace)
-		:color(baseFace.color), vecIndex(baseFace.vecIndex)
+		:color(baseFace.color), vecIndex(baseFace.vecIndex), isCull(false)
 	{}
 };
 
@@ -40,13 +41,13 @@ struct EdgeNode
 
 struct LineKey
 {
-	Duint beginIndex;
-	Duint endIndex;
+	Dint beginIndex;
+	Dint endIndex;
 
 	LineKey()
 		: beginIndex(0), endIndex(0) {}
 
-	LineKey(Duint _beginIndex, Duint _endIndex)
+	LineKey(Dint _beginIndex, Dint _endIndex)
 		: beginIndex(_beginIndex), endIndex(_endIndex) {}
 
 	LineKey(const LineKey& lineKey)
@@ -83,13 +84,16 @@ struct Line
 	LineKey	lineKey;
 	Vector3	beginVertex;
 	Vector3	endVertex;
+	Dbool	isOneCount;
 
 	Line() = default;
-	Line(LineKey _lineKey, Vector3 _beginVertex, Vector3 _endVertex)
-		:lineKey(_lineKey.beginIndex, _lineKey.endIndex), beginVertex(_beginVertex), endVertex(_endVertex) {}
+	Line(LineKey _lineKey, Vector3 _beginVertex, Vector3 _endVertex, Dbool _isOneCount = false)
+		:lineKey(_lineKey.beginIndex, _lineKey.endIndex), beginVertex(_beginVertex), endVertex(_endVertex), isOneCount(_isOneCount)
+	{}
 
 	Line(const Line& _line)
-		:lineKey(_line.lineKey), beginVertex(_line.beginVertex), endVertex(_line.endVertex) {}
+		:lineKey(_line.lineKey), beginVertex(_line.beginVertex), endVertex(_line.endVertex), isOneCount(_line.isOneCount)
+	{}
 
 	Dfloat& GetMinY()
 	{

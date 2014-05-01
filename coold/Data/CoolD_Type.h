@@ -45,7 +45,7 @@ enum MeshType
 	MESHTYPE_END
 };
 
-enum class BSCullType
+enum BSCullType
 {
 	CW,
 	CCW,

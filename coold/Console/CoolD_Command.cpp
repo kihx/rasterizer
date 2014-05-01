@@ -5,8 +5,8 @@
 namespace CoolD
 {
 //---------------------------------------------------------------
-	Command::Command(CommandType type, const string& Name)
-		:m_Type(type), m_Name(Name)
+	Command::Command(const string& Name)
+		:m_Name(Name)
 	{
 		GETSINGLE(ConsoleManager).AddCommand(this);
 	}
@@ -16,7 +16,7 @@ namespace CoolD
 	}
 //---------------------------------------------------------------
 	VariableCommand::VariableCommand(const string& Name, const string& value)
-		: Command(CommandType::VARIABLE, Name)
+		: Command(Name)
 	{
 		SetValue( value );
 	}
@@ -80,7 +80,7 @@ namespace CoolD
 	//---------------------------------------------------------------
 
 	FunctionCommand::FunctionCommand(const string& Name, FP func /*= nullptr */)
-		: Command(CommandType::FUNCTION, Name)
+		: Command(Name)
 	{
 		m_Func = func;
 	}

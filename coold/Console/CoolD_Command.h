@@ -11,13 +11,12 @@ namespace CoolD
 		Command(const Command&) = delete;
 		Command& operator=(const Command&) = delete;
 	protected:
-		Command(CommandType type, const string& Name);
+		Command(const string& Name);
 
 	public:
 		virtual ~Command();
 
 	public:
-		inline CommandType GetCommandType()	const	{ return m_Type; }
 		inline string GetCommandName()		const	{ return m_Name; }
 
 	public:
@@ -25,7 +24,6 @@ namespace CoolD
 		virtual void ShowCommand() = 0;
 
 	protected:
-		const CommandType m_Type;
 		const string m_Name;
 	};
 
@@ -39,7 +37,7 @@ namespace CoolD
 		inline const string& String()	const { return m_Str; }
 		inline const Dint Integer()		const { return m_Integer; }
 		inline const Dfloat Float()		const { return m_Float; }
-		inline const Dbool Bool()		const { return m_Integer != 0; }
+		inline const Dbool Bool()		const { return m_Float != 0; }
 
 	public:
 		void SetValue(const string& Str);
@@ -69,6 +67,5 @@ namespace CoolD
 
 	private:
 		FP m_Func;
-
 	};
 };

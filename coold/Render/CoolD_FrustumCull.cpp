@@ -16,16 +16,16 @@ namespace CoolD
 		*/
 
 		//근평면
-		m_PlanePoints[ 0 ] = { -1,  1, -1, 1 };
-		m_PlanePoints[ 1 ] = {  1,  1, -1, 1 };
-		m_PlanePoints[ 2 ] = { -1, -1, -1, 1 };
-		m_PlanePoints[ 3 ] = {  1, -1, -1, 1 };
+		m_PlanePoints[ 0 ] = { -1,  1, 1, 1 };
+		m_PlanePoints[ 1 ] = {  1,  1, 1, 1 };
+		m_PlanePoints[ 2 ] = { -1, -1, 1, 1 };
+		m_PlanePoints[ 3 ] = {  1, -1, 1, 1 };
 
 		//원평면
-		m_PlanePoints[ 4 ] = { -1,  1,  1, 1 };
-		m_PlanePoints[ 5 ] = {  1,  1,  1, 1 };
-		m_PlanePoints[ 6 ] = { -1, -1,  1, 1 };
-		m_PlanePoints[ 7 ] = {  1, -1,  1, 1 };		
+		m_PlanePoints[ 4 ] = { -1,  1,  -1, 1 };
+		m_PlanePoints[ 5 ] = {  1,  1,  -1, 1 };
+		m_PlanePoints[ 6 ] = { -1, -1,  -1, 1 };
+		m_PlanePoints[ 7 ] = {  1, -1,  -1, 1 };		
 	}
 
 	FrustumCull::~FrustumCull()
@@ -33,15 +33,8 @@ namespace CoolD
 
 	}
 
-	void FrustumCull::CreateFrustum(const Matrix44& matView, const Matrix44& matPerspective)
+	void FrustumCull::CreateFrustum()
 	{
-		Matrix44 invMat = (matPerspective * matView).AffineInverse();
-
-		for( Duint i = 0; i < m_PlanePoints.size(); ++i )
-		{	//투영 -> 뷰 -> 월드
-			m_PlanePoints[ i ] = invMat * m_PlanePoints[ i ];
-		}
-
 		// 평면 만들기
 		m_Plane[0] = CreatePlane(m_PlanePoints[ 0 ], m_PlanePoints[ 1 ], m_PlanePoints[ 2 ]);	//근평면
 		m_Plane[1] = CreatePlane(m_PlanePoints[ 4 ], m_PlanePoints[ 5 ], m_PlanePoints[ 0 ]);	//상평면

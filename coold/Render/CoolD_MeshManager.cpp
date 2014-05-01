@@ -2,10 +2,16 @@
 #include "CoolD_Transform.h"
 #include "..\Data\CoolD_Inlines.h"
 #include "..\Data\CoolD_Defines.h"
+#include "..\Console\CoolD_Command.h"
 
 
 namespace CoolD
 {
+	MeshManager::MeshManager()
+	{
+		m_frustumCull.CreateFrustum();
+	}
+
 	CustomMesh* MeshManager::GetMesh(string PathName)
 	{
 		return m_mapMesh[ PathName ];
@@ -28,30 +34,48 @@ namespace CoolD
 	{
 		return m_mapMesh.size();
 	}
-	
-	Dvoid MeshManager::AdjustTransform(CustomMesh* pMesh, const array<Matrix44, TRANSFORM_END>& arrayTransform)
-	{
-		//m_FrustumCull.CreateFrustum(arrayTransform[ VIEW ], arrayTransform[ PERSPECTIVE ]);
 
+	static VariableCommand use_frustumcull("use_frustumcull", "0");
+	Dvoid MeshManager::AdjustTransform(CustomMesh* pMesh, const array<Matrix44, TRANSFORM_END>& arrayTransform)
+	{		
 		m_trasnformVertex.clear();
 
 		if( pMesh->GetType() == MSH )
 		{
-			m_trasnformVertex = (*pMesh->GetVectorVertex());
+			m_trasnformVertex = (*pMesh->GetVectorVertex());		
 		}
 		else if( pMesh->GetType() == PLY )
-		{
+		{			
 			for( Duint i = 1; i <= pMesh->GetVertexSize(); ++i )
 			{
-				Vector4 v = TransformHelper::TransformWVP(arrayTransform, pMesh->GetVertex(i));
+				Vector4 v = TransformHelper::TransformWVP(arrayTransform, pMesh->GetVertex(i));		
 
-				//if( m_FrustumCull.CheckFrustumCull(pMesh->GetVertex(i)) )	//포함되는 경우
-				//{
-				//	
-				//}					
+				if( use_frustumcull.Bool() )
+				{
+					if( !m_frustumCull.CheckFrustumCull(Vec4ToVec3(v, Vector4::W_DIVIDE)) )
+					{ //포함되지 않는 경우
+						STD_FIND_IF((*pMesh->GetVectorFace()), [i] (BaseFace& face){ for( auto index : face.vecIndex )	{ if( index == i ){ face.isCull = true; return true; } }	return false; });
+					}
+				}				
 
-				m_trasnformVertex.emplace_back(TransformHelper::TransformViewport(arrayTransform, v));
+				m_trasnformVertex.emplace_back(TransformHelper::TransformViewport(arrayTransform, v));			
 			}
+
+			//if( !m_frustumCull.CheckFrustumCull(Vec4ToVec3(v, Vector4::W_DIVIDE)) )//포함되는 경우
+			//{					
+			//	STD_ERASE(m_culledFace, STD_REMOVE_IF(m_culledFace, [i] (BaseFace& face)
+			//	{ 
+			//		for( auto index : face.vecIndex )
+			//		{
+			//			if( index == i )
+			//			{
+			//				return true;
+			//			}
+			//		}
+			//		return false;
+			//	}));
+			//}				
+			
 		}
 		else
 		{	//타입지정이 안 되어있음 무조건 실패
@@ -96,7 +120,6 @@ namespace CoolD
 	const vector<Vector3>* MeshManager::GetVecTransformVertex()
 	{
 		return &m_trasnformVertex;
-	}
-
+	}	
 };
 
