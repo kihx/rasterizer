@@ -41,11 +41,12 @@ namespace xtozero
 
 	bool COutputMerger::ProcessDepthTest( const int x, const int y, const float depth )
 	{
-		assert( m_pDepthBuffer.size( ) >= static_cast<size_t>( m_width * m_height ) );
+		int index = y * m_width + x;
+		assert( m_pDepthBuffer.size( ) >= static_cast<size_t>(index) );
 
-		if ( m_pDepthBuffer[y * m_width + x] >= depth * depthPrecision )
+		if ( m_pDepthBuffer[index] >= depth * depthPrecision )
 		{
-			m_pDepthBuffer[y * m_width + x] = static_cast<int>(depth * depthPrecision);
+			m_pDepthBuffer[index] = static_cast<int>(depth * depthPrecision);
 			return true;
 		}
 

@@ -72,6 +72,7 @@ namespace cmd
 		void AddConvar( const std::string& var, CConvar* cmdVar );
 		void ExcuteConcommand( );
 		void DoTokenizing( const char* cmd );
+		void PrintCommand( );
 
 		CConcommandExecutor( );
 		~CConcommandExecutor( );

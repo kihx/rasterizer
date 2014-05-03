@@ -163,9 +163,25 @@ namespace cmd
 	{
 		m_tokenizer.DoTokenizing( cmd, ' ' );
 	}
+
+	void CConcommandExecutor::PrintCommand( )
+	{
+		std::cout << "--------------Commmand List---------------" << std::endl;
+		for ( std::unordered_map<std::string, CConcommand>::iterator iter = m_cmdMap.begin();
+			iter != m_cmdMap.end(); ++iter )
+		{
+			std::cout << iter->first << std::endl;
+		}
+	}
 }
 
 DECLARE_CONCOMMAND( exit )
 {
 	std::exit( 0 );
+}
+
+DECLARE_CONCOMMAND( show_command )
+{
+	using namespace cmd;
+	CConcommandExecutor::GetInstance()->PrintCommand();
 }

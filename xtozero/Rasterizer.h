@@ -54,14 +54,6 @@ namespace xtozero
 	class CRasterizer
 	{
 	private:
-		enum Clipstate
-		{
-			CLIP_TOP = 1,
-			CLIP_BOTTOM = 2,
-			CLIP_LEFT = 4,
-			CLIP_RIGHT = 8
-		};
-
 		std::vector<Edge> m_edgeTable;
 		std::vector<Edge> m_activeEdgeTable;
 		SpinLock m_lockobject;
@@ -90,14 +82,9 @@ namespace xtozero
 		void ProcessScanlineParallel( int scanline, unsigned int facecolor, std::vector<Edge>& activeEdgeTable, 
 			std::vector<CPsElementDesc>& outputRS, std::vector<std::pair<int, float>>& horizontalLine );
 
-		bool ViewportCulling( CRsElementDesc& rsInput, unsigned int faceNumber );
-		float CalcClipRatio( const Vector4& start, const Vector4& end,
-			const BYTE startClipstate );
-
 		void SetViewPort( int left, int top, int right, int bottom );
 
 		bool IsBackFace( const CRsElementDesc& rsInput, const int facenumber ) const;
-		BYTE CalcClipState( const Vector4& vertex );
 
 		SpinLock& GetLockObject()
 		{

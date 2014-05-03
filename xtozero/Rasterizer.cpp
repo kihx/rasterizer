@@ -4,8 +4,7 @@
 
 namespace xtozero
 {
-	cmd::CConvar g_BackfaceCulling( "BackfaceCulling", "0" );
-	cmd::CConvar g_NoCulling( "NoVPCulling", "1" );
+	cmd::CConvar g_BackfaceCulling( "BackfaceCulling", "1" );
 
 	void CRasterizer::CreateEdgeTable( const CRsElementDesc& rsInput, unsigned int faceNumber )
 	{
@@ -216,9 +215,9 @@ namespace xtozero
 				startX = m_viewport.m_left;
 			}
 
-			if ( endX >= m_viewport.m_right )
+			if ( endX > m_viewport.m_right )
 			{
-				endX = m_viewport.m_right - 1;
+				endX = m_viewport.m_right;
 			}
 
 			for ( int i = startX; i <= endX; ++i )
@@ -339,10 +338,6 @@ namespace xtozero
 		for ( unsigned int i = 0; i < rsInput.m_faces.size( ); ++i )
 		{
 			if ( m_IsBack[i] && g_BackfaceCulling.GetBool() )
-			{
-				continue;
-			}
-			if ( ViewportCulling( rsInput, i ) )
 			{
 				continue;
 			}
@@ -543,7 +538,18 @@ namespace xtozero
 
 			if ( (i + 1) == horizontalLine.size( ) )
 			{
-				outputRS.emplace_back( posXZ.first, scanline, posXZ.second, facecolor );
+				int x = posXZ.first;
+				if ( x < m_viewport.m_left )
+				{
+					x = m_viewport.m_left;
+				}
+				if ( x > m_viewport.m_right )
+				{
+					x = m_viewport.m_right;
+				}
+
+				outputRS.emplace_back( x, scanline, posXZ.second, facecolor );
+
 				break;
 			}
 
@@ -566,160 +572,19 @@ namespace xtozero
 				startX = m_viewport.m_left;
 			}
 
-			if ( endX >= m_viewport.m_right )
+			if ( endX > m_viewport.m_right )
 			{
-				endX = m_viewport.m_right - 1;
+				endX = m_viewport.m_right;
 			}
 
 			for ( int i = startX; i <= endX; ++i )
 			{
-				float lerpRatio = 1.0f;
-				if ( endX == startX )
-				{
-					//Do Nothing
-				}
-				else
-				{
-					lerpRatio = static_cast<float>(i - startX) / (endX - startX);
-				}
+				float lerpRatio = static_cast<float>(i - startX) / (endX - startX);
 				float z = Lerp( startZ, endZ, lerpRatio );
 
-				if ( z > 1.0f || z < 0.0f )
-				{
-
-				}
-				else
-				{
-					outputRS.emplace_back( i, scanline, z, facecolor );
-				}
+				outputRS.emplace_back( i, scanline, z, facecolor );
 			}
 		}
-	}
-
-	bool CRasterizer::ViewportCulling( CRsElementDesc& rsInput, unsigned int faceNumber )
-	{
-		if ( g_NoCulling.GetBool() )
-		{
-			return false;
-		}
-
-		std::vector<int>& index = rsInput.m_faces[faceNumber];
-		std::vector<int> clipedIndex;
-		clipedIndex.reserve( index.size() + 2 );
-		std::vector<Vector4>& vertices = rsInput.m_vertices;
-		std::vector<BYTE> clipstate( index.size() );
-		unsigned int nClipedVertex = 0;
-		
-		for ( unsigned int i = 0; i < index.size(); ++i )
-		{
-			clipstate[i] = CalcClipState( vertices[index[i]] );
-			if ( clipstate[i] != 0 )
-			{
-				nClipedVertex++;
-			}
-		}
-
-		if ( nClipedVertex == index.size() )
-		{
-			//전부 뷰포트 밖에 존재
-			return true;
-		}
-		else if ( nClipedVertex ) // 몇개의 점이 뷰포트 밖에 존재
-		{
-			for ( unsigned int i = 0; i < index.size() - 1; ++i )
-			{
-				const Vector4& start = vertices[index[i]];
-				const Vector4& end = vertices[index[i + 1]];
-				if ( clipstate[i] ) // 시작점이 뷰포트 밖
-				{
-					if ( clipstate[i + 1] ) // 끝점도 뷰포트밖
-					{
-						//DoNothing
-						//다음 점을 시작점으로 한다.
-					}
-					else
-					{
-						//교차점을 구한다.
-						float ratio = CalcClipRatio( start, end, clipstate[i] );
-						vertices.emplace_back( Lerp( start, end, ratio ) );
-						clipedIndex.emplace_back( vertices.size() - 1 );
-					}
-				}
-				else // 시작점은 뷰포트 안
-				{
-					clipedIndex.emplace_back( index[i] );
-					if ( clipstate[i + 1] )
-					{
-						float ratio = CalcClipRatio( end, start, clipstate[i + 1] );
-						vertices.emplace_back( Lerp( end, start, ratio ) );
-						clipedIndex.emplace_back( vertices.size() - 1 );
-					}
-					else // 끝점도 뷰포트 안
-					{
-						//DoNothing
-						//다음에 선택될 것은 끝점이고
-						//뷰포트 안에 있기 때문에 자동으로 포함될 것이다.
-					}
-				}
-			}
-
-			clipedIndex.emplace_back( clipedIndex[0] );
-
-			index.swap( clipedIndex );
-
-			return false;
-		}
-		return false;
-	}
-
-	float CRasterizer::CalcClipRatio( const Vector4& start, const Vector4& end,
-		const BYTE startClipstate) // 끝점은 항상 뷰포트 안에 있는 것으로 한다.
-	{
-		float xRatio = 0.0f;
-		float yRatio = 0.0f;
-
-		if ( startClipstate & CLIP_LEFT )
-		{
-			xRatio = -start.X / (end.X - start.X);
-		}
-		else if ( startClipstate & CLIP_RIGHT )
-		{
-			xRatio = ( start.X - m_viewport.m_right + 1) / (start.X - end.X);
-		}
-		if ( startClipstate & CLIP_TOP )
-		{
-			yRatio = -start.Y / (end.Y - start.Y);
-		}
-		else if ( startClipstate & CLIP_BOTTOM )
-		{
-			yRatio = ( start.Y - m_viewport.m_bottom + 1) / (start.Y - end.Y);
-		}
-
-		return (xRatio > yRatio) ? xRatio : yRatio;
-	}
-
-	BYTE CRasterizer::CalcClipState( const Vector4& vertex )
-	{
-		BYTE clipState = 0;
-
-		if ( vertex.X < m_viewport.m_left )
-		{
-			clipState |= CLIP_LEFT;
-		}
-		if ( vertex.X >= m_viewport.m_right )
-		{
-			clipState |= CLIP_RIGHT;
-		}
-		if ( vertex.Y < m_viewport.m_top )
-		{
-			clipState |= CLIP_TOP;
-		}
-		if ( vertex.Y >= m_viewport.m_bottom )
-		{
-			clipState |= CLIP_BOTTOM;
-		}
-
-		return clipState;
 	}
 
 	void CRasterizer::SetViewPort( int left, int top, int right, int bottom )
@@ -731,7 +596,7 @@ namespace xtozero
 
 		m_viewport.m_left = left;
 		m_viewport.m_top = top;
-		m_viewport.m_right = right;
+		m_viewport.m_right = right - 1;
 		m_viewport.m_bottom = bottom;
 
 		m_outputRS.reserve( (right - left) * (bottom - top) );
@@ -746,11 +611,11 @@ namespace xtozero
 		Vector4 s0 = v1 - v0;
 		Vector4 s1 = v2 - v0;
 
-		s0 = s0.CrossProduct( s1 ); // 법선 벡터;
+		s1 = s1.CrossProduct( s0 ); // 법선 벡터;
 
-		Vector4 toCamera = rsInput.m_cameraPos - v0;
+		Vector4 toCamera = v0;
 
-		if ( s0.DotProduct( toCamera ) <= 0 )
+		if ( s1.DotProduct( toCamera ) <= 0 )
 		{
 			return true;
 		}
@@ -785,7 +650,8 @@ namespace xtozero
 			scanline = viewport.m_top;
 		}
 
-		unsigned int facecolor = RAND_COLOR( );
+		unsigned int facecolor = PIXEL_COLOR( 50, 204, 153 );
+		//unsigned int facecolor = RAND_COLOR( );
 
 		while ( !(edgeTable.empty( ) && activeEdgeTable.empty( )) )
 		{

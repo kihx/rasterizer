@@ -3,6 +3,7 @@
 
 #include "stdafx.h"
 #include "xtozero.h"
+#include "Concommand.h"
 
 using namespace xtozero;
 
@@ -22,7 +23,7 @@ XTZ_API void XtzRenderToBuffer( void* buffer, int width, int height, int dpp )
 {
 	if ( buffer )
 	{
-		gThreadPool->CreateThreadPool( 2 );
+		gThreadPool->CreateThreadPool( 4 );
 		gRasterizer->SetViewPort( 0, 0, width, height );
 		gOutputMerger->CreateDepthBuffer( width, height );
 		gOutputMerger->ClearDepthBuffer();
