@@ -46,7 +46,7 @@ namespace xtozero
 
 		if ( m_pDepthBuffer[index] >= depth * depthPrecision )
 		{
-			m_pDepthBuffer[index] = static_cast<int>(depth * depthPrecision);
+			m_pDepthBuffer[index] = depth * depthPrecision;
 			return true;
 		}
 
@@ -67,8 +67,7 @@ namespace xtozero
 		{
 			assert( 0 <= omInput.at( i ).m_x && omInput.at( i ).m_x < m_width );
 			assert( 0 <= omInput.at( i ).m_y && omInput.at( i ).m_y < m_height );
-			assert( 0.0f <= omInput.at( i ).m_z && omInput.at( i ).m_z <= 1.0f );
-			const COmElementDesc& input = omInput.at( i );
+			const COmElementDesc& input = omInput[i];
 			if ( ProcessDepthTest( input.m_x, input.m_y, input.m_z ) )
 			{
 				unsigned char* pixel = m_pFrameBuffer + ((m_width * input.m_y) + input.m_x) * size;

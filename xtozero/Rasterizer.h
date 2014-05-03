@@ -56,6 +56,7 @@ namespace xtozero
 	private:
 		std::vector<Edge> m_edgeTable;
 		std::vector<Edge> m_activeEdgeTable;
+		std::vector<bool> m_IsBack;
 		SpinLock m_lockobject;
 		Rect m_viewport;
 
@@ -84,8 +85,6 @@ namespace xtozero
 
 		void SetViewPort( int left, int top, int right, int bottom );
 
-		bool IsBackFace( const CRsElementDesc& rsInput, const int facenumber ) const;
-
 		SpinLock& GetLockObject()
 		{
 			return m_lockobject;
@@ -100,10 +99,13 @@ namespace xtozero
 	{
 		CRasterizer* pRs;
 		CRsElementDesc* pRsElementDesc;
-		int index;
+		int startIdx;
+		int endIdx;
 	};
 
 	static void RsThreadWork( LPVOID arg );
+
+	bool IsBackFace( const CRsElementDesc& rsInput, const int facenumber );
 
 	inline bool CompareEdgeY( const Edge& lhs, const Edge& rhs )
 	{

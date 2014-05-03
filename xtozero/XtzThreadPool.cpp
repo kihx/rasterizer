@@ -14,11 +14,12 @@ namespace xtozero
 
 		WORK m_Work;
 
-		static DWORD WINAPI ThreadMain( LPVOID arg );
+		static unsigned int WINAPI ThreadMain( LPVOID arg );
 
 		CXtzThreadPool* m_pOwner;
+		int m_index;
 	public:
-		explicit CXtzThread( CXtzThreadPool* pOwner );
+		explicit CXtzThread( CXtzThreadPool* pOwner, int index );
 		~CXtzThread( );
 
 		void WaitEvent( );
@@ -31,26 +32,36 @@ namespace xtozero
 		{
 			m_Work = work;
 		}
+		int GetIndex()
+		{
+			return m_index;
+		}
 	};
 
-	CXtzThread::CXtzThread( CXtzThreadPool* pOwner ) : m_thread( nullptr ), m_threadEvent( nullptr ), m_pOwner( pOwner )
+	CXtzThread::CXtzThread( CXtzThreadPool* pOwner, int index ) : m_thread( nullptr ), m_threadEvent( nullptr ), m_pOwner( pOwner ), m_index( index )
 	{
 		m_threadEvent = CreateEvent( nullptr, FALSE, FALSE, nullptr );
-		m_thread = CreateThread( nullptr,
+		m_thread = reinterpret_cast<HANDLE>(_beginthreadex( nullptr,
 			0,
 			ThreadMain,
 			(LPVOID)this,
 			0,
-			nullptr );
+			nullptr ));
 	}
 
 	CXtzThread::~CXtzThread( )
 	{
-		CloseHandle( m_threadEvent );
-		CloseHandle( m_thread );
+		if ( m_threadEvent )
+		{
+			CloseHandle( m_threadEvent );
+		}
+		if ( m_thread )
+		{
+			CloseHandle( m_thread );
+		}
 	}
 
-	DWORD WINAPI CXtzThread::ThreadMain( LPVOID arg )
+	unsigned int WINAPI CXtzThread::ThreadMain( LPVOID arg )
 	{
 		CXtzThread* thread = reinterpret_cast<CXtzThread*>(arg);
 
@@ -96,15 +107,29 @@ namespace xtozero
 
 	void CXtzThreadPool::CreateThreadPool( int maxThread )
 	{
-		if ( m_nThread > 0 )
+		if ( m_nThread == maxThread )
 			return;
 
+		int prevThread = m_nThread;
 		m_nThread = maxThread;
 
-		for ( unsigned int i = 0; i < m_nThread; ++i )
+		if ( m_threads.size() < maxThread )
 		{
-			m_threads.push_back( std::make_unique<CXtzThread>( this ) );
-			m_threadquere.push_back( m_threads[i].get() );
+			for ( unsigned int i = m_threads.size( ); i < maxThread; ++i )
+			{
+				m_threads.push_back( std::make_unique<CXtzThread>( this, i ) );
+				m_threadquere.push_back( m_threads[i].get( ) );
+			}
+		}
+		else
+		{
+			if ( prevThread < m_nThread )
+			{
+				for ( unsigned int i = prevThread; i < maxThread; ++i )
+				{
+					m_threadquere.push_back( m_threads[i].get( ) );
+				}
+			}
 		}
 	}
 
@@ -112,13 +137,12 @@ namespace xtozero
 	{
 		WaitThread( );
 
-		for ( unsigned int i = 0; i < m_nThread; ++i )
+		for ( unsigned int i = 0; i < m_threads.size(); ++i )
 		{
 			CXtzThread* thread = m_threads[i].get();
 			if ( thread != nullptr )
 			{
 				thread->SetEnd( true );
-				//thread->WakeUp( );
 			}
 		}
 	}
@@ -144,6 +168,11 @@ namespace xtozero
 	void CXtzThreadPool::AddThraed( CXtzThread* thread )
 	{
 		Lock<SpinLock> lock( m_lockObject );
+
+		if ( m_nThread <= thread->GetIndex() )
+		{
+			return;
+		}
 
 		if ( m_workquere.empty() )
 		{

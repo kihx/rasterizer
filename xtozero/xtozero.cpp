@@ -19,11 +19,13 @@ void TestThreadFunc( LPVOID arg )
 	std::cout << (int)arg << std::endl;
 }
 
+cmd::CConvar g_threadNumber( "threadNumber", "1" );
+
 XTZ_API void XtzRenderToBuffer( void* buffer, int width, int height, int dpp )
 {
 	if ( buffer )
 	{
-		gThreadPool->CreateThreadPool( 4 );
+		gThreadPool->CreateThreadPool( g_threadNumber.GetInt() );
 		gRasterizer->SetViewPort( 0, 0, width, height );
 		gOutputMerger->CreateDepthBuffer( width, height );
 		gOutputMerger->ClearDepthBuffer();

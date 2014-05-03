@@ -17,12 +17,15 @@ namespace xtozero
 		m_psOutput.clear();
 		int size = psInput.size( );
 
-		m_psOutput.reserve( size );
+		m_psOutput.resize( size );
 
 		for ( int i = 0; i < size; ++i )
 		{
-			const CPsElementDesc& ominput = psInput.at( i );
-			m_psOutput.emplace_back( ominput.m_x, ominput.m_y, ominput.m_z, ominput.m_color );
+			const CPsElementDesc& ominput = psInput[i];
+			m_psOutput[i].m_x = ominput.m_x;
+			m_psOutput[i].m_y = ominput.m_y;
+			m_psOutput[i].m_z = ominput.m_z;
+			m_psOutput[i].m_color = ominput.m_color;
 		}
 
 		return m_psOutput;
