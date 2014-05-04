@@ -94,7 +94,7 @@
     <ClInclude Include="Console\CoolD_Command.h" />
     <ClInclude Include="Console\CoolD_ConsoleManager.h" />
     <ClInclude Include="coold.h" />
-    <ClInclude Include="Render\CoolD_AreaFilling.h" />
+    <ClInclude Include="Render\CoolD_RenderModule.h" />
     <ClInclude Include="Data\CoolD_Defines.h" />
     <ClInclude Include="Data\CoolD_Inlines.h" />
     <ClInclude Include="Math\CoolD_Math.h" />
@@ -103,29 +103,31 @@
     <ClInclude Include="Data\CoolD_Struct.h" />
     <ClInclude Include="Render\CoolD_CustomMesh.h" />
     <ClInclude Include="Data\CoolD_Singleton.h" />
-    <ClInclude Include="Render\CoolD_FrustumCull.h" />
     <ClInclude Include="Render\CoolD_Transform.h" />
     <ClInclude Include="Data\CoolD_Type.h" />
     <ClInclude Include="Math\CoolD_Vector2.h" />
     <ClInclude Include="Math\CoolD_Vector3.h" />
     <ClInclude Include="Math\CoolD_Vector4.h" />
     <ClInclude Include="Render\CoolD_MeshManager.h" />
+    <ClInclude Include="Thread\CoolD_Thread.h" />
+    <ClInclude Include="Thread\CoolD_ThreadManager.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Console\CoolD_Command.cpp" />
     <ClCompile Include="Console\CoolD_ConsoleManager.cpp" />
     <ClCompile Include="coold.cpp" />
-    <ClCompile Include="Render\CoolD_AreaFilling.cpp" />
+    <ClCompile Include="Render\CoolD_RenderModule.cpp" />
     <ClCompile Include="Render\CoolD_CustomMesh.cpp" />
     <ClCompile Include="Math\CoolD_Math.cpp" />
     <ClCompile Include="Math\CoolD_Matrix33.cpp" />
     <ClCompile Include="Math\CoolD_Matrix44.cpp" />
-    <ClCompile Include="Render\CoolD_FrustumCull.cpp" />
     <ClCompile Include="Render\CoolD_Transform.cpp" />
     <ClCompile Include="Math\CoolD_Vector2.cpp" />
     <ClCompile Include="Math\CoolD_Vector3.cpp" />
     <ClCompile Include="Math\CoolD_Vector4.cpp" />
     <ClCompile Include="Render\CoolD_MeshManager.cpp" />
+    <ClCompile Include="Thread\CoolD_Thread.cpp" />
+    <ClCompile Include="Thread\CoolD_ThreadManager.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

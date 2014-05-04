@@ -12,12 +12,11 @@ class BaseFace
 {
 public:
 	BaseColor		color;
-	vector<Duint>	vecIndex;
-	Dbool			isCull;
+	vector<Duint>	vecIndex;	//msh 메쉬만 없으면 array<Duint, 3>으로 변경가능	
 
 	BaseFace(){};
 	BaseFace(const BaseFace& baseFace)
-		:color(baseFace.color), vecIndex(baseFace.vecIndex), isCull(false)
+		:color(baseFace.color), vecIndex(baseFace.vecIndex)
 	{}
 };
 
@@ -122,6 +121,8 @@ struct ActiveLine
 	ActiveLine(const Dint& _height, const vector<Line> _currentLine)
 		:height(_height), currentLine(_currentLine)	{}
 };
+
+
 
 template <typename T>
 class RandomGenerator

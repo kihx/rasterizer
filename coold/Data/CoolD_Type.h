@@ -2,6 +2,7 @@
 
 #include <array>
 #include <vector>
+#include <queue>
 #include <map>
 #include <algorithm>
 #include <cmath>
@@ -13,6 +14,7 @@
 #include <iostream>
 #include <string>
 #include <initializer_list>
+#include <thread>
 
 typedef void	Dvoid;
 typedef bool	Dbool;
@@ -45,15 +47,16 @@ enum MeshType
 	MESHTYPE_END
 };
 
-enum BSCullType
+enum class BSCullType
 {
 	CW,
 	CCW,
 	ALL
 };
 
-enum class CommandType
+enum class ThreadType
 {
-	VARIABLE,
-	FUNCTION
+	BASE,
+	RENDER,
+	END
 };

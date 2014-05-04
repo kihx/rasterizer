@@ -2,7 +2,6 @@
 #include "..\Data\CoolD_Type.h"
 #include "..\Data\CoolD_Singleton.h"
 #include "CoolD_CustomMesh.h"
-#include "CoolD_FrustumCull.h"
 
 namespace CoolD
 {
@@ -20,24 +19,19 @@ namespace CoolD
 
 	public:		
 		Dbool LoadMesh( string PathName );
+		Dbool AddMesh(string name, CustomMesh* pMesh);
 		CustomMesh* GetMesh( string PathName );
 		
-		const map<string, CustomMesh*>& GetMapMesh();
-		const vector<Vector3>* GetVecTransformVertex();
-		const vector<BaseFace>* GetVecCulledFace();
-		Dvoid AdjustTransform(CustomMesh* pMesh, const array<Matrix44, TRANSFORM_END>& arrayTransform);
-		Duint GetMeshNum() const;
-		Dvoid Clear();				
+		const map<string, CustomMesh*>& GetMapMesh();		
+		const vector<BaseFace>* GetVecCulledFace();		
+		Duint GetMeshNum() const;		
+		Dvoid Clear();
 
 	private:
 		CustomMesh* CreateMeshFromFile(const Dchar* filename);		
 		
 	private:
-		map<string, CustomMesh*>	m_mapMesh;		
-		vector<Vector3>		m_trasnformVertex;
-		FrustumCull			m_frustumCull;
-	};
-	
-	
+		map<string, CustomMesh*>	m_mapMesh;					
+	};	
 };
 

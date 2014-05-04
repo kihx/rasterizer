@@ -92,9 +92,10 @@ namespace CoolD
 		return matWorld;
 	}
 	
-	Vector4 TransformHelper::TransformWVP(const array<Matrix44, TRANSFORM_END>& arrayTransform, Vector3 vertex)
+	Vector3 TransformHelper::TransformWVP(const array<Matrix44, TRANSFORM_END>& arrayTransform, Vector3 vertex)
 	{			
-		return arrayTransform[ PERSPECTIVE ] * arrayTransform[ VIEW ] * arrayTransform[ WORLD ] * Vector4(vertex, 1);
+		Vector4 v = arrayTransform[ PERSPECTIVE ] * arrayTransform[ VIEW ] * arrayTransform[ WORLD ] * Vector4(vertex, 1);		
+		return Vec4ToVec3(v, Vector4::W_DIVIDE);
 	}
 
 	Matrix33 TransformHelper::CreatePerspectNDCtoView(Dfloat fov, Dfloat aspect, Dfloat sx, Dfloat sy, Dfloat width, Dfloat height )
@@ -111,10 +112,9 @@ namespace CoolD
 		return matPerspectNDCtoView;
 	}
 
-	Vector3 TransformHelper::TransformViewport(const array<Matrix44, TRANSFORM_END>& arrayTransform, Vector4& vertex)
-	{
-		vertex /= vertex.w;
-		vertex = arrayTransform[ VIEWPORT ] * vertex;
-		return Vec4ToVec3(vertex, Vector4::W_IGNORE);
+	Vector3 TransformHelper::TransformViewport(const array<Matrix44, TRANSFORM_END>& arrayTransform, Vector3& vertex)
+	{		
+		Vector4 v = arrayTransform[ VIEWPORT ] * Vector4(vertex, 1);
+		return Vec4ToVec3(v, Vector4::W_IGNORE);
 	}
 };

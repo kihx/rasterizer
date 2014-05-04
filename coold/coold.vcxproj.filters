@@ -12,12 +12,12 @@
     <Filter Include="Math">
       <UniqueIdentifier>{1ce2c5a8-a1e9-4a1f-a2ac-7d1586e1270c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Thread">
+      <UniqueIdentifier>{9f3cc74d-d9e9-4153-9957-6674f8f76402}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="coold.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Render\CoolD_AreaFilling.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Math\CoolD_Math.h">
@@ -62,21 +62,24 @@
     <ClInclude Include="Data\CoolD_Singleton.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Render\CoolD_FrustumCull.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Console\CoolD_ConsoleManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Console\CoolD_Command.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Thread\CoolD_Thread.h">
+      <Filter>Thread</Filter>
+    </ClInclude>
+    <ClInclude Include="Thread\CoolD_ThreadManager.h">
+      <Filter>Thread</Filter>
+    </ClInclude>
+    <ClInclude Include="Render\CoolD_RenderModule.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="coold.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Render\CoolD_AreaFilling.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Math\CoolD_Math.cpp">
@@ -106,13 +109,19 @@
     <ClCompile Include="Render\CoolD_Transform.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Render\CoolD_FrustumCull.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Console\CoolD_ConsoleManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Console\CoolD_Command.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Thread\CoolD_ThreadManager.cpp">
+      <Filter>Thread</Filter>
+    </ClCompile>
+    <ClCompile Include="Thread\CoolD_Thread.cpp">
+      <Filter>Thread</Filter>
+    </ClCompile>
+    <ClCompile Include="Render\CoolD_RenderModule.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
