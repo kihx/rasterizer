@@ -56,7 +56,7 @@ namespace xtozero
 	private:
 		std::vector<Edge> m_edgeTable;
 		std::vector<Edge> m_activeEdgeTable;
-		std::vector<bool> m_IsBack;
+		std::vector<std::pair<int, float>> m_horizontalLine;
 		SpinLock m_lockobject;
 		Rect m_viewport;
 
@@ -76,6 +76,7 @@ namespace xtozero
 		}
 		const std::vector<CPsElementDesc>& Process( CRsElementDesc& rsInput );
 		const std::vector<CPsElementDesc>& ProcessParallel( CRsElementDesc& rsInput, CXtzThreadPool* threadPool );
+		const std::vector<CPsElementDesc>& ProcessFaceRange( CRsElementDesc& rsInput, unsigned int startface, unsigned int endface );
 
 		void CreateEdgeTableParallel( const CRsElementDesc& rsInput, unsigned int faceNumber, 
 			std::vector<Edge>& edgeTable );
@@ -99,8 +100,8 @@ namespace xtozero
 	{
 		CRasterizer* pRs;
 		CRsElementDesc* pRsElementDesc;
-		int startIdx;
-		int endIdx;
+		unsigned int startIdx;
+		unsigned int endIdx;
 	};
 
 	static void RsThreadWork( LPVOID arg );

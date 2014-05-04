@@ -17,7 +17,7 @@ namespace xtozero
 		static unsigned int WINAPI ThreadMain( LPVOID arg );
 
 		CXtzThreadPool* m_pOwner;
-		int m_index;
+		unsigned int m_index;
 	public:
 		explicit CXtzThread( CXtzThreadPool* pOwner, int index );
 		~CXtzThread( );
@@ -32,7 +32,7 @@ namespace xtozero
 		{
 			m_Work = work;
 		}
-		int GetIndex()
+		unsigned int GetIndex()
 		{
 			return m_index;
 		}
@@ -105,12 +105,12 @@ namespace xtozero
 		DestroyThreadPool();
 	}
 
-	void CXtzThreadPool::CreateThreadPool( int maxThread )
+	void CXtzThreadPool::CreateThreadPool( unsigned int maxThread )
 	{
 		if ( m_nThread == maxThread )
 			return;
 
-		int prevThread = m_nThread;
+		unsigned int prevThread = m_nThread;
 		m_nThread = maxThread;
 
 		if ( m_threads.size() < maxThread )

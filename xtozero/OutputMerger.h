@@ -2,6 +2,7 @@
 #define _OUTPUTMERGER_H_
 
 #include "pipelineElements.h"
+#include "XtzThreadPool.h"
 
 namespace xtozero
 {
@@ -14,16 +15,20 @@ namespace xtozero
 
 		int m_height;
 		int m_width;
+
+		SpinLock m_lockObject;
 	public:
 		COutputMerger();
 		~COutputMerger();
 
 		void CreateDepthBuffer( const int width, const int height );
 		void ClearDepthBuffer( );
+		void ClearFrameBuffer( );
 		void SetFrameBuffer( void* pbuffer, int dpp, int width, int height );
 
 		bool ProcessDepthTest( const int x, const int y, const float depth );
 		void Process( const std::vector<COmElementDesc>& omInput );
+		void ProcessParallel( const std::vector<COmElementDesc>& omInput );
 	};
 }
 

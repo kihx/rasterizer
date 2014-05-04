@@ -127,11 +127,16 @@ namespace xtozero
 
 		std::list<WORK>& GetWorkQuere() { return m_workquere; }
 
-		void CreateThreadPool(int maxThread);
+		void CreateThreadPool( unsigned int maxThread );
 		void DestroyThreadPool();
 		void AddWork( WorkerFuntion worker, LPVOID arg );
 		void AddThraed( CXtzThread* thread );
 		void WaitThread();
+
+		unsigned int GetThreadNumber( )
+		{
+			return m_nThread;
+		}
 	};
 }
 

@@ -31,6 +31,13 @@ namespace xtozero
 		}
 	}
 
+	void COutputMerger::ClearFrameBuffer( )
+	{
+		size_t size = m_dpp / 8;
+
+		memset( m_pFrameBuffer, 0, m_width * m_height * size );
+	}
+
 	void COutputMerger::SetFrameBuffer( void* pbuffer, int dpp, int width, int height )
 	{
 		m_dpp = dpp;
@@ -46,7 +53,7 @@ namespace xtozero
 
 		if ( m_pDepthBuffer[index] >= depth * depthPrecision )
 		{
-			m_pDepthBuffer[index] = depth * depthPrecision;
+			m_pDepthBuffer[index] = static_cast<int>( depth * depthPrecision );
 			return true;
 		}
 
@@ -74,6 +81,31 @@ namespace xtozero
 				pixel[0] = static_cast<unsigned char>( GET_RED( input.m_color ) );
 				pixel[1] = static_cast<unsigned char>( GET_GREEN( input.m_color ) );
 				pixel[2] = static_cast<unsigned char>( GET_BULE( input.m_color ) );
+			}
+		}
+	}
+
+	void COutputMerger::ProcessParallel( const std::vector<COmElementDesc>& omInput )
+	{
+		Lock<SpinLock> lock( m_lockObject );
+
+		assert( m_pFrameBuffer );
+
+		size_t size = m_dpp / 8;
+
+		int nPixels = omInput.size( );
+
+		for ( int i = 0; i < nPixels; ++i )
+		{
+			assert( 0 <= omInput.at( i ).m_x && omInput.at( i ).m_x < m_width );
+			assert( 0 <= omInput.at( i ).m_y && omInput.at( i ).m_y < m_height );
+			const COmElementDesc& input = omInput[i];
+			if ( ProcessDepthTest( input.m_x, input.m_y, input.m_z ) )
+			{
+				unsigned char* pixel = m_pFrameBuffer + ((m_width * input.m_y) + input.m_x) * size;
+				pixel[0] = static_cast<unsigned char>(GET_RED( input.m_color ));
+				pixel[1] = static_cast<unsigned char>(GET_GREEN( input.m_color ));
+				pixel[2] = static_cast<unsigned char>(GET_BULE( input.m_color ));
 			}
 		}
 	}
