@@ -12,14 +12,15 @@
 #endif
 
 
+// type definitions
+//
+typedef unsigned char byte;
+typedef unsigned int bitflags;
+typedef __int64 int64;
+
+
 namespace kih
 {
-	// type definitions
-	//
-	typedef unsigned char byte;
-	typedef unsigned int bitflags;
-
-
 	/* struct IntFloat
 	*/
 	struct IntFloat

@@ -3,25 +3,181 @@
 #include "mathlib.h"
 #include "memory.h"
 #include "system.h"
+#include "threading.h"
+
+
+#define MEMORY_THREAD_SAFE
 
 
 namespace kih
 {
 	/* Global allocator accessors
 	*/
-	typedef IAllocable* ( *FpAllocatorGetter )( );
+	using AllocableGetter = std::function<IAllocable*()>;
 
-	static FpAllocatorGetter s_FpAllocableGetter;
+	static AllocableGetter s_GlobalAllocableGetter;
+	static AllocableGetter s_ThreadLocalAllocableGetter;
 
-	void InstallGlobalAllocatorGetter( FpAllocatorGetter fp )
+	static void InstallAllocableGetter( AllocableGetter func )
 	{
-		s_FpAllocableGetter = fp;
+		s_GlobalAllocableGetter = func;
+	}
+
+	static void InstallThreadLocalAllocatorGetter( AllocableGetter func )
+	{
+		s_ThreadLocalAllocableGetter = func;
 	}
 
 	IAllocable* GetGlobalAllocator()
 	{
-		return s_FpAllocableGetter ? s_FpAllocableGetter() : nullptr;
+		return s_GlobalAllocableGetter ? s_GlobalAllocableGetter() : nullptr;
 	}
+
+	static IAllocable* GetThreadLocalAllocator()
+	{
+		return s_ThreadLocalAllocableGetter ? s_ThreadLocalAllocableGetter() : nullptr;
+	}
+
+	IAllocable* GetCurrentAllocator()
+	{
+#ifdef MEMORY_THREAD_SAFE
+		if ( Thread::IsInMainThread() )
+		{
+			return GetGlobalAllocator();
+		}
+		else
+		{
+			return GetThreadLocalAllocator();
+		}
+#else
+		return GetGlobalAllocator();
+#endif // MEMORY_THREAD_SAFE
+	}
+
+
+	/* class ArrayMT: thread-safe simple and fast dynamic array
+	*/
+	template<class T>
+	class ArrayMT
+	{
+		NONCOPYABLE_CLASS( ArrayMT );
+
+	public:
+		ArrayMT() :
+			m_elements( nullptr ),
+			m_size( 0 ),
+			m_capacity( 0 )
+		{
+		}
+
+		~ArrayMT()
+		{
+			Purge();
+		}
+
+		FORCEINLINE size_t Capacity() const
+		{
+			return m_capacity;
+		}
+
+		FORCEINLINE void Reserve( size_t capacity )
+		{
+			LockGuard<SpinLock> guard( m_lock );
+
+			ReallocNonConstruct( Max( capacity, 1 ) );
+		}
+
+		FORCEINLINE size_t Size() const
+		{
+			return m_size;
+		}
+
+		FORCEINLINE void Add( const T& elem )
+		{
+			LockGuard<SpinLock> guard( m_lock );
+
+			CheckIncrement();
+			m_elements[m_size++] = elem;
+		}
+
+		void Remove( size_t index )
+		{
+			assert( index + 1 <= m_size );
+
+			LockGuard<SpinLock> guard( m_lock );
+
+			--m_size;
+			if ( index == m_size )
+			{
+				return;
+			}
+
+			// Shift elements to left.
+			for ( size_t i = index; i < m_size; ++i )
+			{
+				m_elements[i] = m_elements[i + 1];
+			}
+		}
+
+		void RemoveAll()
+		{
+			m_size = 0;
+		}
+
+		void Purge()
+		{
+			LockGuard<SpinLock> guard( m_lock );
+
+			::free( m_elements );
+			m_elements = nullptr;
+			m_size = 0;
+			m_capacity = 0;
+		}
+
+		FORCEINLINE const T& operator[]( size_t index ) const
+		{
+			assert( index >= 0 && index < Size() );
+			return m_elements[index];
+		}
+
+		FORCEINLINE T& operator[]( size_t index )
+		{
+			assert( index >= 0 && index < Size() );
+			return m_elements[index];
+		}
+
+	private:
+		void ReallocNonConstruct( size_t capacity )
+		{
+			size_t copyableSize = Min( Size(), capacity );
+			T* newElements = static_cast<T*>( ::malloc( sizeof( T ) * capacity ) );
+			if ( m_elements )
+			{
+				for ( size_t i = 0; i < copyableSize; ++i )
+				{
+					newElements[i] = m_elements[i];
+				}
+			}
+			m_elements = newElements;
+			m_size = copyableSize;
+			m_capacity = capacity;
+		}
+
+		// Checks a free space to add one element and expands if neccesary
+		FORCEINLINE void CheckIncrement()
+		{
+			if ( m_size + 1 > m_capacity )
+			{
+				ReallocNonConstruct( m_capacity + m_capacity / 2 + 1 );
+			}
+		}
+
+	private:
+		T* m_elements;
+		size_t m_capacity;
+		size_t m_size;
+		SpinLock m_lock;
+	};
 
 
 	/* Low Fragmentation Heap (LFH)
@@ -33,6 +189,9 @@ namespace kih
 #ifdef DEBUG_ALLOCATION
 		const char* FileName;
 		int Line;
+		size_t Index;
+		LFHBlock* Prev;
+		bool Used;
 #endif
 	};
 
@@ -41,6 +200,9 @@ namespace kih
 #ifdef DEBUG_ALLOCATION
 		block.FileName = "";
 		block.Line = -1;
+		block.Index = 0;
+		block.Prev = nullptr;
+		block.Used = false;
 #endif	
 		block.Address = nullptr;
 		block.Next = nullptr;
@@ -52,39 +214,39 @@ namespace kih
 		LFHBucket();
 		~LFHBucket();
 
-		size_t BlockSize() const
+		FORCEINLINE size_t BlockSize() const
 		{
 			return m_blockSize;
 		}
 
-		size_t BlockCount() const
+		FORCEINLINE size_t BlockCount() const
 		{
 			return m_blockCount;
 		}
 
-		size_t UsedBlockCount() const
+		FORCEINLINE size_t UsedBlockCount() const
 		{
 			return m_usedBlockCount;
 		}
 
 		// Returns reserved heap size of this bucket in bytes
-		size_t ReservedBytes() const
+		FORCEINLINE size_t ReservedBytes() const
 		{
 			return m_blockSize * m_blockCount;
 		}
 
 		// Returns committed heap size of this bucket in bytes
-		size_t CommittedBytes() const
+		FORCEINLINE size_t CommittedBytes() const
 		{
 			return m_committedBytes;
 		}
 
-		int AllocatedBytes() const
+		FORCEINLINE size_t AllocatedBytes() const
 		{
 			return BlockCount() * UsedBlockCount();
 		}
 
-		bool IsFull() const
+		FORCEINLINE bool IsFull() const
 		{
 			return m_freeBlockHead == nullptr;
 		}
@@ -181,6 +343,10 @@ namespace kih
 			pCurrent = &m_blockBudgets[i];
 			pCurrent->Next = ( i + 1 < m_blockCount ) ? &m_blockBudgets[i + 1] : nullptr;
 			pCurrent->Address = p;
+#ifdef DEBUG_ALLOCATION
+			pCurrent->Index = i;
+			pCurrent->Prev = ( i > 0 ) ? &m_blockBudgets[i - 1] : nullptr;
+#endif
 			p += m_blockSize;
 		}
 
@@ -191,10 +357,11 @@ namespace kih
 	{
 		if ( m_freeBlockHead )
 		{
-			LFHBlock* pCurrent = m_freeBlockHead;
+			LFHBlock* current = m_freeBlockHead;
+			Assert( current->Next );
 
 			// Commit a region of pages as the last committed page size in the virtual address space
-			if ( pCurrent->Address + m_blockSize >= m_baseAddress + m_committedBytes )
+			if ( current->Address + m_blockSize >= m_baseAddress + m_committedBytes )
 			{
 				size_t growBytes = AlignSize( m_committedBytes, static_cast<size_t>( isystem->GetPageSize() ) );
 				size_t reservedBytes = ReservedBytes();
@@ -203,7 +370,14 @@ namespace kih
 					growBytes = reservedBytes - m_committedBytes;
 				}
 
-				if ( !isystem->CommitVirtualMemory( pCurrent->Address, growBytes ) )
+				if ( growBytes == 0 )
+				{
+					// Is this OK?
+					VerifyNoEntry();
+					return nullptr;
+				}
+
+				if ( !isystem->CommitVirtualMemory( current->Address, growBytes ) )
 				{
 					throw std::bad_alloc();
 				}
@@ -213,14 +387,18 @@ namespace kih
 			++m_usedBlockCount;
 
 #ifdef DEBUG_ALLOCATION
-			m_freeBlockHead->FileName = filename;
-			m_freeBlockHead->Line = line;
+			current->FileName = filename;
+			current->Line = line;
+			current->Used = true;
+#else
+			Unused( filename, line );
 #endif
 
 			// Move the current cursor to next and return free address
-			m_freeBlockHead = pCurrent->Next;
-			pCurrent->Next = nullptr;	// invalidate
-			return pCurrent->Address;
+			m_freeBlockHead = current->Next;
+			current->Next = nullptr;	// unlink
+
+			return current->Address;
 		}
 
 		return nullptr;
@@ -228,7 +406,7 @@ namespace kih
 
 	void LFHBucket::Deallocate( void* ptr )
 	{
-		byte* p = ( byte* ) ptr;
+		byte* p = reinterpret_cast<byte*>( ptr );
 
 		/*
 		int blockIndex = 0;
@@ -242,7 +420,7 @@ namespace kih
 		break;
 		}
 		}
-		int diff = p - m_pBaseAddress;
+		int diff = p - m_baseAddress;
 		assert( blockIndex == ( diffAddr / m_blockSize ) );
 		*/
 
@@ -250,17 +428,17 @@ namespace kih
 		// Find the block by using address range (constant time search)
 		int diff = p - m_baseAddress;
 		int blockIndex = diff / m_blockSize;
-
+		
 #if 1
 		// Make the block the head of the free list
-		LFHBlock* pHead = m_freeBlockHead;
-		m_freeBlockHead = &m_blockBudgets[blockIndex];
-		m_freeBlockHead->Next = pHead;
-
+		LFHBlock* current = &m_blockBudgets[blockIndex];
+		current->Next = m_freeBlockHead;
 #ifdef DEBUG_ALLOCATION
-		m_freeBlockHead->FileName = nullptr;
-		m_freeBlockHead->Line = -1;
+		current->FileName = nullptr;
+		current->Line = -1;
+		current->Used = false;
 #endif
+		m_freeBlockHead = current;
 
 #else
 		// FIXME: bugbugbug
@@ -303,22 +481,20 @@ namespace kih
 
 	void LFHBucket::PrintMemoryUsage() const
 	{
+#ifdef DEBUG_ALLOCATION
 		printf( "<%d> %d / %d\n", BlockSize(), UsedBlockCount(), BlockCount() );
 
 		if ( UsedBlockCount() > 0 )
 		{
 			for ( size_t i = 0; i < m_blockCount; ++i )
 			{
-				if ( m_blockBudgets[i].Next == nullptr )
+				if ( m_blockBudgets[i].Used )
 				{
-#ifdef DEBUG_ALLOCATION
 					printf( "\t%x, %s (%d)%\n", m_blockBudgets[i].Address, m_blockBudgets[i].FileName, m_blockBudgets[i].Line );
-#else
-					printf( "\t%x\n", m_blockBudgets[i].Address );
-#endif			
 				}
 			}
 		}
+#endif			
 	}
 
 
@@ -355,15 +531,26 @@ namespace kih
 		// void* Reallocate(...)
 		virtual void Deallocate( void* ptr );
 
+		// Verify the specified pointer address is in this allocator.
+		virtual bool IsValidHeap( void* ptr );
+
 		virtual void InstallAllocFailHandler( FpAllocFailHandler fp );
 
 		virtual void PrintMemoryUsage() const;
 
-		// bytesPerBucket is aligned by system's allocation granularity.
+		FORCEINLINE size_t TotalMemoryInBytes() const
+		{
+			return m_bytesPerBucket * BucketCount; 
+		}
+		
+		FORCEINLINE const char* GetName() const 
+		{
+			return m_name; 
+		}
+
+		// bytesPerBucket would be aligned by system's allocation granularity.
 		void Init( size_t bytesPerBucket );
-
-		int TotalMemoryInBytes() const { return m_bytesPerBucket * BucketCount; }
-
+		
 	private:
 		// Get the best-fit sized bucket
 		LFHBucket* GetBestFitBucket( size_t size );
@@ -372,20 +559,57 @@ namespace kih
 		LFHBucket* FindBucketByAddress( void* ptr );
 
 	private:
-		int m_bytesPerBucket;
-		byte* m_pBaseAddress;
+		size_t m_bytesPerBucket;
+		byte* m_baseAddress;
+		byte* m_endAddress;
+		char* m_name;
 		LFHBucket m_buckets[BucketCount];
-		FpAllocFailHandler m_fpAllocFailHandler;
-		//String m_name;
+		FpAllocFailHandler m_allocFailHandler;		
+		SpinLock m_lock;
 
-		// global allocator
+		// static handlers
 	public:
-		static bool InitGlobalAllocator( int capacityInBytes, bitflags heapCompatibilities );
-		static void ShutdownGlobalAllocator();
-		static LFHAllocator* GetGlobalAllocator();
+		static bool InitAllocator( int capacityInBytes, bitflags heapCompatibilities );
+		static void ShutdownAllocator();
+
+		static FORCEINLINE LFHAllocator* GetGlobalAllocator()
+		{
+			// The first allocator is always the global allocator.
+			return s_LFHAllocators[0];
+		}
+
+		static FORCEINLINE LFHAllocator* GetThreadLocalAllocator()
+		{
+			static thread_local LFHAllocator* TlsAllocator = nullptr;			
+			if ( TlsAllocator == nullptr )
+			{
+				char buff[32] = { 0 };
+				sprintf_s( buff, 32, "%u", Thread::CurrentThreadID() );
+				TlsAllocator = new LFHAllocator( buff );
+				TlsAllocator->Init( Max( 8 * 1024 * 1024 / LFHAllocator::BucketCount, static_cast< int >( MaxBlockSizeInBytes ) ) );
+				
+				// Push it into the container.
+				s_LFHAllocators.Add( TlsAllocator );
+			}
+			return TlsAllocator;
+		}
+
+		static FORCEINLINE LFHAllocator* FindAllocatorByAddress( void* ptr )
+		{
+			for ( size_t i = 0; i < s_LFHAllocators.Size(); ++i )
+			{
+				LFHAllocator* allocator = s_LFHAllocators[i];
+				if ( allocator && allocator->IsValidHeap( ptr ) )
+				{
+					return allocator;
+				}
+			}
+			
+			return nullptr;
+		}
 
 	private:
-		static LFHAllocator* s_pGlobalInstance;
+		static ArrayMT<LFHAllocator*> s_LFHAllocators;
 	};
 	
 	void* LFHAllocator::operator new( size_t size )
@@ -400,19 +624,25 @@ namespace kih
 
 	LFHAllocator::LFHAllocator( const char* name ) :
 		m_bytesPerBucket( 0 ),
-		m_fpAllocFailHandler( nullptr )/*,
-		m_name( name )*/
+		m_allocFailHandler( nullptr ),
+		m_baseAddress( nullptr ),
+		m_endAddress( nullptr )
 	{
-		Unused( name );
-		//int alignedSize = AlignSize( ::strlen( name ) + 1, 8 );
+		//Unused( name );
+		//size_t alignedSize = AlignSize( ::strlen( name ) + 1, static_cast<size_t>( 8 ) );
+		m_name = ::_strdup( name );
 	}
 
 	LFHAllocator::~LFHAllocator()
 	{
 		//PrintMemoryUsage();
 
-		isystem->ReleaseVirtualMemory( m_pBaseAddress );
-		m_pBaseAddress = nullptr;
+		isystem->ReleaseVirtualMemory( m_baseAddress );
+		m_baseAddress = nullptr;
+		m_endAddress = nullptr;
+
+		::free( m_name );
+		m_name = nullptr;
 	}
 
 	void* LFHAllocator::Allocate( int size )
@@ -428,10 +658,19 @@ namespace kih
 			}
 			else if ( LFHBucket* pBucket = GetBestFitBucket( size ) )
 			{
-				p = pBucket->Allocate();
+				{
+					LockGuard<SpinLock> guard( m_lock );
+					p = pBucket->Allocate();
+				}
+
+				if ( p == nullptr )
+				{
+					p = ::malloc( size );
+				}
 			}
 			else
 			{
+				VerifyNoEntry();
 				return ::malloc( size );
 			}
 
@@ -441,12 +680,10 @@ namespace kih
 			}
 
 			// call new handler
-			if ( m_fpAllocFailHandler )
+			if ( m_allocFailHandler == nullptr ||
+				!m_allocFailHandler() )
 			{
-				if ( !m_fpAllocFailHandler() )
-				{
-					throw std::bad_alloc();
-				}
+				throw std::bad_alloc();
 			}
 		}
 	}
@@ -464,10 +701,19 @@ namespace kih
 			}
 			else if ( LFHBucket* pBucket = GetBestFitBucket( size ) )
 			{
-				p = pBucket->Allocate( filename, line );
+				{
+					LockGuard<SpinLock> guard( m_lock );
+					p = pBucket->Allocate( filename, line );
+				}
+
+				if ( p == nullptr )
+				{
+					p = ::malloc( size );
+				}
 			}
 			else
 			{
+				VerifyNoEntry();
 				return ::malloc( size );
 			}
 
@@ -477,12 +723,10 @@ namespace kih
 			}
 
 			// call new handler
-			if ( m_fpAllocFailHandler )
+			if ( m_allocFailHandler == nullptr ||
+				!m_allocFailHandler() )
 			{
-				if ( !m_fpAllocFailHandler() )
-				{
-					throw std::bad_alloc();
-				}
+				throw std::bad_alloc();
 			}
 		}
 	}
@@ -494,10 +738,14 @@ namespace kih
 			return;
 		}
 
-		// Find a bucket using address range
+		// Find a bucket using range of address
 		// and then deallocate memory
 		if ( LFHBucket* pBucket = FindBucketByAddress( ptr ) )
 		{
+			// If we does not use thread affinity, Allocate() and Deallocate() would be called on different threads.
+			// So we need a simple and fast lock such as SpinLock.
+			// TODO: Could we move to lock-free?
+			LockGuard<SpinLock> guard( m_lock );
 			pBucket->Deallocate( ptr );
 		}
 		else
@@ -506,9 +754,24 @@ namespace kih
 		}
 	}
 
+	bool LFHAllocator::IsValidHeap( void* ptr )
+	{
+		byte* p = static_cast< byte* >( ptr );
+		return ( ( p >= m_baseAddress ) && ( p < m_endAddress ) );
+	}
+
 	void LFHAllocator::InstallAllocFailHandler( FpAllocFailHandler fp )
 	{
-		m_fpAllocFailHandler = fp;
+		m_allocFailHandler = fp;
+	}
+
+	void LFHAllocator::PrintMemoryUsage() const
+	{
+		for ( int i = 0; i < BucketCount; ++i )
+		{
+			const LFHBucket& bucket = m_buckets[i];
+			bucket.PrintMemoryUsage();
+		}
 	}
 
 	void LFHAllocator::Init( size_t bytesPerBucket )
@@ -523,7 +786,7 @@ namespace kih
 		m_bytesPerBucket = AlignSize( bytesPerBucket, isystem->GetPageSize() );
 
 		// Reserve virtual memory
-		m_pBaseAddress = static_cast< byte* >( isystem->ReserveVirtualMemory( m_bytesPerBucket * BucketCount ) );
+		m_baseAddress = static_cast< byte* >( isystem->ReserveVirtualMemory( m_bytesPerBucket * BucketCount ) );
 
 		const int Granularities[] = { 8, 16, 32, 64, 128, 256, 512 };
 		const int Capacities[] = { 256, 512, 1024, 2048, 4096, 8192, 16384 };
@@ -541,21 +804,14 @@ namespace kih
 				m_buckets[bucketIdx].Init(
 					blockSize,						// block size
 					m_bytesPerBucket / blockSize,	// block count (internal fragmentation occurs because m_bytesPerBucket % blockSize != 0)
-					m_pBaseAddress + m_bytesPerBucket * bucketIdx );	// base address of the bucket
+					m_baseAddress + m_bytesPerBucket * bucketIdx );	// base address of the bucket
 				++bucketIdx;
 			}
 		}
-	}
 
-	void LFHAllocator::PrintMemoryUsage() const
-	{
-		for ( int i = 0; i < BucketCount; ++i )
-		{
-			const LFHBucket& bucket = m_buckets[i];
-			bucket.PrintMemoryUsage();
-		}
+		m_endAddress = m_baseAddress + TotalMemoryInBytes();
 	}
-
+	
 	LFHBucket* LFHAllocator::GetBestFitBucket( size_t size )
 	{
 		// Fast search using predefined ranges
@@ -581,7 +837,7 @@ namespace kih
 
 	LFHBucket* LFHAllocator::FindBucketByAddress( void* ptr )
 	{
-		size_t diff = static_cast< byte* >( ptr ) - m_pBaseAddress;
+		size_t diff = static_cast< byte* >( ptr ) - m_baseAddress;
 		size_t index = diff / m_bytesPerBucket;
 		if ( index >= 0 && index < BucketCount )
 		{
@@ -598,46 +854,65 @@ namespace kih
 
 	/* Global functions
 	*/
-	LFHAllocator* LFHAllocator::s_pGlobalInstance = nullptr;
+	ArrayMT<LFHAllocator*> LFHAllocator::s_LFHAllocators;
 
-	IAllocable* GetLFHAllocable()
+	IAllocable* GetGlobalLFHAllocable()
 	{
 		return LFHAllocator::GetGlobalAllocator();
 	}
 
-	bool LFHAllocator::InitGlobalAllocator( int capacityInBytes, bitflags heapCompatibilities )
+	IAllocable* GetThreadLocalLFHAllocable()
 	{
-		s_pGlobalInstance = new LFHAllocator( "global" );
-		s_pGlobalInstance->Init( Max( capacityInBytes / LFHAllocator::BucketCount, static_cast<int>( MaxBlockSizeInBytes ) ) );
-		InstallGlobalAllocatorGetter( &GetLFHAllocable );
+		return LFHAllocator::GetThreadLocalAllocator();
+	}
 
-		Unused( heapCompatibilities );
+	bool LFHAllocator::InitAllocator( int capacityInBytes, bitflags heapCompatibilities )
+	{
+		if ( s_LFHAllocators.Size() > 0 )
+		{
+			return false;
+		}
+
+		LFHAllocator* allocator = new LFHAllocator( "global" );
+		allocator->Init( Max( capacityInBytes / LFHAllocator::BucketCount, static_cast<int>( MaxBlockSizeInBytes ) ) );
+		s_LFHAllocators.Add( allocator );
+
+		InstallAllocableGetter( &GetGlobalLFHAllocable );
+
+		if ( heapCompatibilities & LFHAllocator::ThreadSafe )
+		{
+			InstallThreadLocalAllocatorGetter( &GetThreadLocalLFHAllocable );
+		};
 
 		return true;
 	}
 
-	void LFHAllocator::ShutdownGlobalAllocator()
+	void LFHAllocator::ShutdownAllocator()
 	{
-		delete s_pGlobalInstance;
-		s_pGlobalInstance = nullptr;
-	}
-
-	LFHAllocator* LFHAllocator::GetGlobalAllocator()
-	{
-		return s_pGlobalInstance;
+		for ( size_t i = 0; i < s_LFHAllocators.Size(); ++i )
+		{
+			delete s_LFHAllocators[i];
+		}
+		s_LFHAllocators.Purge();
 	}
 
 
 	/* global functions
-	*/
+	*/	
 	void InitAllocator()
 	{
-		LFHAllocator::InitGlobalAllocator( 32 * 1024 * 1024, 0 );
+		LFHAllocator::InitAllocator( 32 * 1024 * 1024, LFHAllocator::ThreadSafe );
 	}
 	
 	void ShutdownAllocator()
 	{
-		LFHAllocator::ShutdownGlobalAllocator();
+		LFHAllocator::ShutdownAllocator();
+	}
+
+	// Find an allocator that include the specified address.
+	IAllocable* FindAllocatorByAddress( void* ptr )
+	{
+		return LFHAllocator::FindAllocatorByAddress( ptr );
 	}
 }
 
@@ -647,41 +922,41 @@ namespace kih
 
 /* new-delete operator overloading
 */
-void* operator new( size_t size, kih::IAllocable* pAllocable )
+void* operator new( size_t size, kih::IAllocable* allocable )
 {
-	if ( pAllocable )
+	if ( allocable )
 	{
-		return pAllocable->Allocate( size );
+		return allocable->Allocate( size );
 	}
 
 	return ::malloc( size );
 }
 
-void* operator new[]( size_t size, kih::IAllocable* pAllocable )
+void* operator new[]( size_t size, kih::IAllocable* allocable )
 {
-	if ( pAllocable )
+	if ( allocable )
 	{
-		return pAllocable->Allocate( size );
+		return allocable->Allocate( size );
 	}
 
 	return ::malloc( size );
 }
 
-void* operator new( size_t size, kih::IAllocable* pAllocable, const char* filename, int line )
+void* operator new( size_t size, kih::IAllocable* allocable, const char* filename, int line )
 {
-	if ( pAllocable )
+	if ( allocable )
 	{
-		return pAllocable->Allocate( size, filename, line );
+		return allocable->Allocate( size, filename, line );
 	}
 
 	return ::malloc( size );
 }
 
-void* operator new[]( size_t size, kih::IAllocable* pAllocable, const char* filename, int line )
+void* operator new[]( size_t size, kih::IAllocable* allocable, const char* filename, int line )
 {
-	if ( pAllocable )
+	if ( allocable )
 	{
-		return pAllocable->Allocate( size, filename, line );
+		return allocable->Allocate( size, filename, line );
 	}
 
 	return ::malloc( size );
@@ -689,10 +964,11 @@ void* operator new[]( size_t size, kih::IAllocable* pAllocable, const char* file
 
 void operator delete( void* ptr )
 {
-	// TODO: find an appropriate allocator
-	if ( kih::IAllocable* pAllocable = kih::GetGlobalAllocator() )
+	kih::IAllocable* allocable = kih::FindAllocatorByAddress( ptr );
+	if ( allocable )
 	{
-		pAllocable->Deallocate( ptr );
+		Assert( allocable->IsValidHeap( ptr ) );
+		allocable->Deallocate( ptr );
 		return;
 	}
 
@@ -701,43 +977,47 @@ void operator delete( void* ptr )
 
 void operator delete[]( void* ptr )
 {
-	// TODO: find an appropriate allocator
-	if ( kih::IAllocable* pAllocable = kih::GetGlobalAllocator() )
+	kih::IAllocable* allocable = kih::FindAllocatorByAddress( ptr );
+	if ( allocable )
 	{
-		pAllocable->Deallocate( ptr );
+		Assert( allocable->IsValidHeap( ptr ) );
+		allocable->Deallocate( ptr );
 		return;
 	}
 
 	::free( ptr );
 }
 
-void operator delete( void* ptr, kih::IAllocable* pAllocable )
+void operator delete( void* ptr, kih::IAllocable* allocable )
 {
-	if ( pAllocable )
+	if ( allocable )
 	{
-		pAllocable->Deallocate( ptr );
+		Assert( allocable->IsValidHeap( ptr ) );
+		allocable->Deallocate( ptr );
 		return;
 	}
 
 	::free( ptr );
 }
 
-void operator delete[]( void* ptr, kih::IAllocable* pAllocable )
+void operator delete[]( void* ptr, kih::IAllocable* allocable )
 {
-	if ( pAllocable )
+	if ( allocable )
 	{
-		pAllocable->Deallocate( ptr );
+		Assert( allocable->IsValidHeap( ptr ) );
+		allocable->Deallocate( ptr );
 		return;
 	}
 
 	::free( ptr );
 }
 
-void operator delete( void* ptr, kih::IAllocable* pAllocable, const char* filename, int line )
+void operator delete( void* ptr, kih::IAllocable* allocable, const char* filename, int line )
 {
-	if ( pAllocable )
+	if ( allocable )
 	{
-		pAllocable->Deallocate( ptr );
+		Assert( allocable->IsValidHeap( ptr ) );
+		allocable->Deallocate( ptr );
 		return;
 	}
 
@@ -746,11 +1026,12 @@ void operator delete( void* ptr, kih::IAllocable* pAllocable, const char* filena
 	kih::Unused( filename, line );
 }
 
-void operator delete[]( void* ptr, kih::IAllocable* pAllocable, const char* filename, int line )
+void operator delete[]( void* ptr, kih::IAllocable* allocable, const char* filename, int line )
 {
-	if ( pAllocable )
+	if ( allocable )
 	{
-		pAllocable->Deallocate( ptr );
+		Assert( allocable->IsValidHeap( ptr ) );
+		allocable->Deallocate( ptr );
 		return;
 	}
 
@@ -767,8 +1048,8 @@ void operator delete[]( void* ptr, kih::IAllocable* pAllocable, const char* file
 
 DEFINE_COMMAND( memory )
 {
-	if ( kih::IAllocable* pAllocable = kih::GetGlobalAllocator() )
+	if ( kih::IAllocable* allocable = kih::GetGlobalAllocator() )
 	{
-		pAllocable->PrintMemoryUsage();
+		allocable->PrintMemoryUsage();
 	}
 }

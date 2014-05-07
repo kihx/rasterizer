@@ -1,7 +1,6 @@
 #pragma once
 
-//#define MEMORY_OVERRIDE
-
+#define MEMORY_OVERRIDE
 #define DEBUG_ALLOCATION
 
 
@@ -21,12 +20,16 @@ namespace kih
 
 		virtual void Deallocate( void* ptr ) = 0;
 
+		// Verify the specified pointer address is in this allocable.
+		virtual bool IsValidHeap( void* ptr ) = 0;
+
 		virtual void InstallAllocFailHandler( FpAllocFailHandler fp ) = 0;
 
 		virtual void PrintMemoryUsage() const = 0;
 	};
 
-	IAllocable* GetGlobalAllocator();
+	// Get the global allocator in the main thread or a thread-local allocator in a secondary thread.
+	IAllocable* GetCurrentAllocator();
 
 	void InitAllocator();
 	void ShutdownAllocator();
@@ -75,9 +78,9 @@ namespace kih
 		FORCEINLINE pointer allocate( size_type count )
 		{
 #ifdef DEBUG_ALLOCATION
-			return reinterpret_cast< pointer >( kih::GetGlobalAllocator()->Allocate( count * sizeof( T ), __FILE__, __LINE__ ) );
+			return reinterpret_cast< pointer >( GetCurrentAllocator()->Allocate( count * sizeof( T ), __FILE__, __LINE__ ) );
 #else
-			return reinterpret_cast< pointer >( kih::GetGlobalAllocator()->Allocate( count * sizeof( T ) ) );
+			return reinterpret_cast< pointer >( GetCurrentAllocator()->Allocate( count * sizeof( T ) ) );
 #endif
 		}
 
@@ -89,7 +92,7 @@ namespace kih
 
 		FORCEINLINE void deallocate( pointer ptr, size_type )
 		{
-			kih::GetGlobalAllocator()->Deallocate( ptr );
+			::operator delete( ptr );
 		}
 
 		FORCEINLINE void construct( pointer ptr, const value_type& t )
@@ -127,34 +130,34 @@ namespace kih
 /* new-delete operator overloading
 */
 // general allocation
-void* operator new( size_t size, kih::IAllocable* pAllocable );
-void* operator new[]( size_t size, kih::IAllocable* pAllocable );
+void* operator new( size_t size, kih::IAllocable* allocable );
+void* operator new[]( size_t size, kih::IAllocable* allocable );
 
 // support allocation debugging
-void* operator new( size_t size, kih::IAllocable* pAllocable, const char* filename, int line );
-void* operator new[]( size_t size, kih::IAllocable* pAllocable, const char* filename, int line );
+void* operator new( size_t size, kih::IAllocable* allocable, const char* filename, int line );
+void* operator new[]( size_t size, kih::IAllocable* allocable, const char* filename, int line );
 
 // default delete
 void operator delete( void* ptr );
 void operator delete[]( void* ptr );
 
 // placement delete pairs
-void operator delete( void* ptr, kih::IAllocable* pAllocable );
-void operator delete[]( void* ptr, kih::IAllocable* pAllocable );
+void operator delete( void* ptr, kih::IAllocable* allocable );
+void operator delete[]( void* ptr, kih::IAllocable* allocable );
 
-void operator delete( void* ptr, kih::IAllocable* pAllocable, const char* filename, int line );
-void operator delete[]( void* ptr, kih::IAllocable* pAllocable, const char* filename, int line );
+void operator delete( void* ptr, kih::IAllocable* allocable, const char* filename, int line );
+void operator delete[]( void* ptr, kih::IAllocable* allocable, const char* filename, int line );
 
 
 #undef new
 
 #ifdef DEBUG_ALLOCATION
-#define NEW_DEBUG_ALLOCATION new( kih::GetGlobalAllocator(), __FILE__, __LINE__ )
-#define new NEW_DEBUG_ALLOCATION
+#define NEW_LFH_DEBUG new( kih::GetCurrentAllocator(), __FILE__, __LINE__ )
+#define new NEW_LFH_DEBUG
 #else
-#define NEW_LFH_STD new( kih::GetGlobalAllocator() )
+#define NEW_LFH_STD new( kih::GetCurrentAllocator() )
 #define new NEW_LFH_STD
-#endif
+#endif	// DEBUG_ALLOCATION
 
 #else
 

@@ -7,6 +7,9 @@
 #include <queue>
 
 
+#define thread_local		__declspec( thread )
+
+
 namespace kih
 {
 	/* using ThreadFunc
@@ -19,22 +22,22 @@ namespace kih
 	char f_interlockedexchange8( volatile char* target, char value );
 	short f_interlockedexchange16( volatile short* target, short value );
 	int f_interlockedexchange32( volatile int* target, int value );
-	__int64 f_interlockedexchange64( volatile __int64* target, __int64 value );
+	int64 f_interlockedexchange64( volatile int64* target, int64 value );
 
 	short f_interlockedincrement16( volatile short* target );
 	int f_interlockedincrement32( volatile int* target );
-	__int64 f_interlockedincrement64( volatile __int64* target );
+	int64 f_interlockedincrement64( volatile int64* target );
 
 	short f_interlockeddecrement16( volatile short* target );
 	int f_interlockeddecrement32( volatile int* target );
-	__int64 f_interlockeddecrement64( volatile __int64* target );
+	int64 f_interlockeddecrement64( volatile int64* target );
 
 	int f_interlockedadd32( volatile int* target, int value );
-	__int64 f_interlockedadd64( volatile __int64* target, __int64 value );
+	int64 f_interlockedadd64( volatile int64* target, int64 value );
 
 	short f_interlockedcompareexchange16( volatile short* destination, short exchange, short comparand );
 	int f_interlockedcompareexchange32( volatile int* destination, int exchange, int comparand );
-	__int64 f_interlockedcompareexchange64( volatile __int64* destination, __int64 exchange, __int64 comparand );
+	int64 f_interlockedcompareexchange64( volatile int64* destination, int64 exchange, int64 comparand );
 	
 	void* f_createevent( bool manualReset );
 	void f_setevent( void* handle );
@@ -89,7 +92,7 @@ namespace kih
 
 	DEFINE_INTERLOCK_FUNC( 16 );	// short
 	DEFINE_INTERLOCK_FUNC( 32 );	// int
-	DEFINE_INTERLOCK_FUNC( 64 );	// __int64
+	DEFINE_INTERLOCK_FUNC( 64 );	// int64
 
 
 	/* class Atomic
@@ -451,6 +454,8 @@ namespace kih
 		}
 
 		static bool IsInMainThread();
+
+		static unsigned int CurrentThreadID();
 		
 		static int HardwareConcurrency();
 

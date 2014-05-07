@@ -5,7 +5,7 @@
 #include <vector>
 
 
-//#define ALLOCATOR_OVERRIDE
+#define ALLOCATOR_OVERRIDE
 
 
 #ifdef ALLOCATOR_OVERRIDE

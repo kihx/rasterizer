@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "threading.h"
 #include "concommand.h"
+#include "profiler.h"
 
 #include <process.h>
 
@@ -25,7 +26,7 @@ namespace kih
 		return InterlockedExchange( ( volatile long* ) target, value );
 	}
 
-	__int64 f_interlockedexchange64( volatile __int64* target, __int64 value )
+	int64 f_interlockedexchange64( volatile int64* target, int64 value )
 	{
 		return InterlockedExchange64( target, value );
 	}
@@ -40,7 +41,7 @@ namespace kih
 		return InterlockedIncrement( ( volatile long* ) target );
 	}
 
-	__int64 f_interlockedincrement64( volatile __int64* target )
+	int64 f_interlockedincrement64( volatile int64* target )
 	{
 		return InterlockedIncrement64( target );
 	}
@@ -55,7 +56,7 @@ namespace kih
 		return InterlockedDecrement( ( volatile long* ) target );
 	}
 
-	__int64 f_interlockeddecrement64( volatile __int64* target )
+	int64 f_interlockeddecrement64( volatile int64* target )
 	{
 		return InterlockedDecrement64( target );
 	}
@@ -65,7 +66,7 @@ namespace kih
 		return InterlockedAdd( ( volatile long* ) target, value );
 	}
 
-	__int64 f_interlockedadd64( volatile __int64* target, __int64 value )
+	int64 f_interlockedadd64( volatile int64* target, int64 value )
 	{
 		return InterlockedAdd64( target, value );
 	}
@@ -80,7 +81,7 @@ namespace kih
 		return InterlockedCompareExchange( ( volatile long* ) destination, exchange, comparand );
 	}
 
-	__int64 f_interlockedcompareexchange64( volatile __int64* destination, __int64 exchange, __int64 comparand )
+	int64 f_interlockedcompareexchange64( volatile int64* destination, int64 exchange, int64 comparand )
 	{
 		return InterlockedCompareExchange64( destination, exchange, comparand );
 	}
@@ -181,11 +182,20 @@ namespace kih
 
 	/* class Thread
 	*/
-	static unsigned int s_MainThreadID = GetCurrentThreadId();
-
 	bool Thread::IsInMainThread()
 	{
+		static unsigned int s_MainThreadID = GetCurrentThreadId();
 		return GetCurrentThreadId() == s_MainThreadID;
+	}
+
+	unsigned int Thread::CurrentThreadID()
+	{
+		static thread_local unsigned int tls_ThreadID = 0;
+		if ( tls_ThreadID == 0 )
+		{
+			tls_ThreadID = GetCurrentThreadId();
+		}
+		return tls_ThreadID;
 	}
 
 	int Thread::HardwareConcurrency()
@@ -231,6 +241,8 @@ namespace kih
 		unsigned int Main()
 		{
 			Assert( m_owner );
+
+			Thread::CurrentThreadID();	// Initialize the TLS thread ID.
 
 			while ( !m_dying )
 			{
@@ -426,12 +438,12 @@ DEFINE_UNITTEST( atomic_test )
 		std::cout << "<OK> atomic: " << atomInt << ", " << a << std::endl;
 	}
 
-	Atomic<__int64> atomInt64( 32 );
+	Atomic<int64> atomInt64( 32 );
 	++atomInt64;
 	atomInt64.Exchange( 0xFFFFFFFFFFFF );
 	if ( atomInt64 == 0xFFFFFFFFFFFF )
 	{
-		__int64 a = atomInt64;
+		int64 a = atomInt64;
 		std::cout << "<OK> atomic: " << atomInt64 << ", " << a << std::endl;
 	}
 
@@ -464,16 +476,16 @@ DEFINE_UNITTEST( threadpool_test )
 
 	ThreadPool* threadPool = ThreadPool::GetInstance();
 
-	kih::ThreadFunc f0 = []() { std::cout << "f0" << std::endl;  };
+	kih::ThreadFunc f0 = []() { std::cout << "f0" << Thread::CurrentThreadID() << std::endl;  };
 
-	auto f1 = std::bind( []( int count ) { for ( int i = 0; i < count; ++i ); std::cout << "f1" << std::endl; }, 10000 );
+	auto f1 = std::bind( []( int count ) { for ( int i = 0; i < count; ++i ); std::cout << "f1" << Thread::CurrentThreadID() << std::endl; }, 10000 );
 
-	auto f2 = std::bind( []( const char* str ) { std::cout << "f2: " << str << std::endl; }, "parallel_bind" );
+	auto f2 = std::bind( []( const char* str ) { std::cout << "f2: " << str << Thread::CurrentThreadID() << std::endl; }, "parallel_bind" );
 
 	StlVector<int> data{ 0, 1, 2, 3, 4, 5 };
-	kih::ThreadFunc f3 = [=]() { std::cout << "f3: " << data[0] << std::endl; };
+	kih::ThreadFunc f3 = [=]() { std::cout << "f3: " << data[0] << Thread::CurrentThreadID() << std::endl; };
 
-	auto f4 = std::bind( []( StlVector<int> data ) { std::cout << "f4: " << data[0] << std::endl; }, data );
+	auto f4 = std::bind( []( StlVector<int> data ) { std::cout << "f4: " << data[0] << Thread::CurrentThreadID() << std::endl; }, data );
 
 	for ( int i = 0; i < 10; ++i )
 	{
