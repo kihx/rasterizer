@@ -22,6 +22,10 @@ public:
 	{
 		m_vertices.reserve(num);
 	}
+	size_t GetTotalVertexNum()
+	{
+		return m_vertices.size();
+	}
 	size_t GetVertexNum(size_t faceIndex) const
 	{
 		if (faceIndex >= m_faces.size())
@@ -33,6 +37,7 @@ public:
 	void SetFaceNum(int num)
 	{
 		m_faces.reserve(num);
+		m_indices.reserve(num * 3);
 	}
 	size_t GetFaceNum() const
 	{
@@ -73,6 +78,10 @@ public:
 	{
 		m_faces.push_back(face);
 	}
+	void PushIndex(int index)
+	{
+		m_indices.push_back(index);
+	}
 
 	void Release()
 	{
@@ -91,4 +100,5 @@ public:
 private:
 	std::vector<Vector3*> m_vertices;
 	std::vector<WPolyFace*> m_faces;
+	std::vector<int> m_indices;
 };

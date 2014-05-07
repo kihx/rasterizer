@@ -118,6 +118,7 @@ WPolyData* FileLoader::LoadPoly(const char* fileName)
 				int vertexID = 0;
 				stream >> vertexID;
 				face->m_indices.push_back(vertexID - 1);
+				poly->PushIndex(vertexID - 1);
 			}
 			poly->PushFace(face);
 		}
