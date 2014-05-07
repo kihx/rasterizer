@@ -59,9 +59,11 @@ void WWorker::Run()
 
 			_InterlockedDecrement(&m_pool.m_numActiveThread);
 		}
+		else
+		{
+			WaitForSingleObject(m_event, INFINITE);
+		}
 	}
-
-	WaitForSingleObject(m_event, INFINITE);
 }
 
 void WWorker::Stop()
@@ -74,7 +76,7 @@ WThreadPool::WThreadPool(size_t threadNum) : m_numActiveThread(0)
 {
 	InitializeCriticalSection(&m_queue_mutex);
 
-	m_event = CreateEvent(nullptr, TRUE, FALSE, L"wakeup_event");
+	m_event = CreateEvent(nullptr, FALSE, FALSE, L"wakeup_event");
 	m_threads.reserve(threadNum);
 
 	for (size_t i = 0; i < threadNum; ++i)
@@ -89,11 +91,9 @@ WThreadPool::WThreadPool(size_t threadNum) : m_numActiveThread(0)
 
 WThreadPool::~WThreadPool()
 {
-
 	for (size_t i = 0; i < m_threads.size(); ++i)
 	{
 		m_workers[i]->Stop();
-		WaitForSingleObject(m_threads[i], INFINITE);
 		delete m_workers[i];
 	}
 
@@ -113,6 +113,7 @@ void WThreadPool::Join()
 {
 	while (m_numActiveThread != 0 || !m_tasks.empty())
 	{
+		Sleep(1);
 	}
 }
 
