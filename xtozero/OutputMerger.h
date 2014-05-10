@@ -17,6 +17,8 @@ namespace xtozero
 		int m_width;
 
 		SpinLock m_lockObject;
+
+		bool m_isFirst;
 	public:
 		COutputMerger();
 		~COutputMerger();

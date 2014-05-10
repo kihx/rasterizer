@@ -234,18 +234,17 @@ namespace xtozero
 				endX = m_viewport.m_right;
 			}
 
-			float z;
-			float lerpRatio;
+			float z = startZ;
+			float zGradient = (endZ - startZ) / (endX - startX);
 			for ( int i = startX; i <= endX; ++i )
 			{
-				lerpRatio = static_cast<float>(i - startX) / (endX - startX);
-				z = Lerp( startZ, endZ, lerpRatio );
 				m_outputRS.emplace_back( i, scanline, z, facecolor );
+				z += zGradient;
 			}
 		}
 	}
 
-	float CRasterizer::GetIntersectXpos( int minY, int maxY, int scanlineY, float minX, float gradient ) const
+	inline float CRasterizer::GetIntersectXpos( int minY, int maxY, int scanlineY, float minX, float gradient ) const
 	{
 		if ( gradient > 0 )
 		{
@@ -291,32 +290,34 @@ namespace xtozero
 		{
 			if ( m_IsBack[i] && g_BackfaceCulling.GetBool( ) )
 			{
-				continue;
+				//Do Nothing
 			}
-
-			CreateEdgeTable( rsInput, i );
-
-			int scanline = m_edgeTable.begin( )->m_minY;
-
-			if ( scanline < m_viewport.m_top )
+			else
 			{
-				scanline = m_viewport.m_top;
-			}
+				CreateEdgeTable( rsInput, i );
 
-			//unsigned int facecolor = PIXEL_COLOR( 50, 204, 153 );
-			unsigned int facecolor = RAND_COLOR();
+				int scanline = m_edgeTable.begin( )->m_minY;
 
-			while ( !(m_edgeTable.empty( ) && m_activeEdgeTable.empty( )) )
-			{
-				UpdateActiveEdgeTable( scanline );
-
-				ProcessScanline( scanline, facecolor );
-
-				++scanline;
-
-				if ( scanline > m_viewport.m_bottom )
+				if ( scanline < m_viewport.m_top )
 				{
-					break;
+					scanline = m_viewport.m_top;
+				}
+
+				//unsigned int facecolor = PIXEL_COLOR( 50, 204, 153 );
+				unsigned int facecolor = RAND_COLOR( );
+
+				while ( !(m_edgeTable.empty( ) && m_activeEdgeTable.empty( )) )
+				{
+					UpdateActiveEdgeTable( scanline );
+
+					ProcessScanline( scanline, facecolor );
+
+					++scanline;
+
+					if ( scanline > m_viewport.m_bottom )
+					{
+						break;
+					}
 				}
 			}
 		}
@@ -382,40 +383,42 @@ namespace xtozero
 
 			if ( IsBackFace( rsInput, i ) && g_BackfaceCulling.GetBool( ) )
 			{
-				continue;
-			}
-
-			CreateEdgeTable( rsInput, i );
-
-			int scanline = m_edgeTable.begin( )->m_minY;
-
-			if ( scanline < m_viewport.m_top )
-			{
-				scanline = m_viewport.m_top;
-			}
-
-			unsigned int facecolor;
-			if ( g_RandColor.GetBool( ) )
-			{
-				facecolor = RAND_COLOR( );
+				//Do Nothing
 			}
 			else
 			{
-				facecolor = PIXEL_COLOR( 255, 204, 153 );
-			}
+				CreateEdgeTable( rsInput, i );
 
-			while ( !(m_edgeTable.empty( ) && m_activeEdgeTable.empty( )) )
-			{
-				if ( scanline > m_viewport.m_bottom )
+				int scanline = m_edgeTable.begin( )->m_minY;
+
+				if ( scanline < m_viewport.m_top )
 				{
-					break;
+					scanline = m_viewport.m_top;
 				}
 
-				UpdateActiveEdgeTable( scanline );
+				unsigned int facecolor;
+				if ( g_RandColor.GetBool( ) )
+				{
+					facecolor = RAND_COLOR( );
+				}
+				else
+				{
+					facecolor = PIXEL_COLOR( 255, 204, 153 );
+				}
 
-				ProcessScanline( scanline, facecolor );
+				while ( !(m_edgeTable.empty( ) && m_activeEdgeTable.empty( )) )
+				{
+					if ( scanline > m_viewport.m_bottom )
+					{
+						break;
+					}
 
-				++scanline;
+					UpdateActiveEdgeTable( scanline );
+
+					ProcessScanline( scanline, facecolor );
+
+					++scanline;
+				}
 			}
 		}
 
@@ -671,6 +674,103 @@ namespace xtozero
 		m_outputRS.reserve( (right - left) * (bottom - top) );
 	}
 
+	const std::vector<CPsElementDesc>& CBarycentricRasterizer::Process( CRsElementDesc& rsInput )
+	{
+		m_outputRS.clear();
+
+		if ( rsInput.m_coodinate == COORDINATE::OBJECT_COORDINATE )
+		{
+			for ( std::vector<Vector4>::iterator iter = rsInput.m_vertices.begin( ); iter != rsInput.m_vertices.end( ); ++iter )
+			{
+				Vector4& vertex = *iter;
+				vertex /= vertex.W;
+
+				vertex.X = (vertex.X * m_viewport.m_right * 0.5f) + m_viewport.m_right * 0.5f;
+				vertex.Y = -(vertex.Y * m_viewport.m_bottom * 0.5f) + m_viewport.m_bottom * 0.5f;
+			}
+		}
+
+		for ( unsigned int i = 0; i < rsInput.m_faces.size(); ++i )
+		{
+			if ( IsBackFace( rsInput, i ) && g_BackfaceCulling.GetBool( ) )
+			{
+				//Do Nothing
+			}
+			else
+			{
+				unsigned int facecolor;
+				if ( g_RandColor.GetBool( ) )
+				{
+					facecolor = RAND_COLOR( );
+				}
+				else
+				{
+					facecolor = PIXEL_COLOR( 255, 204, 153 );
+				}
+
+				std::vector<int>& face = rsInput.m_faces[i];
+
+				const Vector4& v0 = rsInput.m_vertices[face[0]];
+				const Vector4& v1 = rsInput.m_vertices[face[1]];
+				const Vector4& v2 = rsInput.m_vertices[face[2]];
+
+				//Bounding Area¸¦ °è»ê
+				int maxX = static_cast<int>( max( min( max( max( v0.X, v1.X ), v2.X ), m_viewport.m_right ), 0) );
+				int maxY = static_cast<int>( max( min( max( max( v0.Y, v1.Y ), v2.Y ), m_viewport.m_bottom ), 0 ) );
+				int minX = static_cast<int>( max( min( min( v0.X, v1.X ), v2.X ), 0 ) );
+				int minY = static_cast<int>( max( min( min( v0.Y, v1.Y ), v2.Y ), 0 ) );
+
+				Vector4 p;
+
+				for ( int i = minY; i <= maxY; ++i )
+				{
+					for ( int j = minX; j <= maxX; ++j )
+					{
+						p.X = static_cast<float>( j );
+						p.Y = static_cast<float>( i );
+
+						float s0 = CalcParallelogramArea( p, v0, v1 );
+						float s1 = CalcParallelogramArea( p, v1, v2 );
+						float s2 = CalcParallelogramArea( p, v2, v0 );
+
+						float u = s0 / ( s0 + s1 + s2 );
+						float v = s1 / ( s0 + s1 + s2 );
+						float w = s2 / ( s0 + s1 + s2 );
+
+						float z = v0.Z * u + v1.Z * v + v2.Z * w;
+
+						if ( s0 >= 0 && s1 >= 0 && s2 >= 0 )
+						{
+							m_outputRS.emplace_back( j, i, z, facecolor );
+						}
+					}
+				}
+			}
+		}
+
+		return m_outputRS;
+	}
+
+	void CBarycentricRasterizer::SetViewPort( int left, int top, int right, int bottom )
+	{
+		assert( left < right );
+		assert( top < bottom );
+		assert( left >= 0 );
+		assert( top >= 0 );
+
+		m_viewport.m_left = left;
+		m_viewport.m_top = top;
+		m_viewport.m_right = right - 1;
+		m_viewport.m_bottom = bottom - 1;
+
+		m_outputRS.reserve( (right - left) * (bottom - top) );
+	}
+
+	float CBarycentricRasterizer::CalcParallelogramArea( const Vector4& p, const Vector4& v0, const Vector4 v1 )
+	{
+		return (v1.X - v0.X) * (p.Y - v0.Y) - (v1.Y - v0.Y) * (p.X - v0.X);
+	}
+
 	bool IsBackFace( const CRsElementDesc& rsInput, const int facenumber )
 	{
 		const Vector4& v0 = rsInput.m_vertices[rsInput.m_faces[facenumber][0]];
@@ -712,46 +812,49 @@ namespace xtozero
 			{
 				continue;
 			}
-			edgeTable.clear();
-			activeEdgeTable.clear();
-			rasterizer->CreateEdgeTableParallel( *pRsArg->pRsElementDesc, i, edgeTable );
-
-			activeEdgeTable.reserve( edgeTable.size( ) );
-			horizontalLine.reserve( edgeTable.size( ) );
-
-			int scanline = edgeTable.begin( )->m_minY;
-
-			if ( scanline < viewport.m_top )
-			{
-				scanline = viewport.m_top;
-			}
-
-			unsigned int facecolor;
-			if ( g_RandColor.GetBool() )
-			{
-				facecolor = RAND_COLOR( );
-			}
 			else
 			{
-				facecolor = PIXEL_COLOR( 255, 204, 153 );
-			}
-			
-			while ( !(edgeTable.empty( ) && activeEdgeTable.empty( )) )
-			{
-				if ( scanline > viewport.m_bottom )
+				edgeTable.clear( );
+				activeEdgeTable.clear( );
+				rasterizer->CreateEdgeTableParallel( *pRsArg->pRsElementDesc, i, edgeTable );
+
+				activeEdgeTable.reserve( edgeTable.size( ) );
+				horizontalLine.reserve( edgeTable.size( ) );
+
+				int scanline = edgeTable.begin( )->m_minY;
+
+				if ( scanline < viewport.m_top )
 				{
-					break;
+					scanline = viewport.m_top;
 				}
 
-				rasterizer->UpdateActiveEdgeTableParallel( scanline, edgeTable, activeEdgeTable );
+				unsigned int facecolor;
+				if ( g_RandColor.GetBool( ) )
+				{
+					facecolor = RAND_COLOR( );
+				}
+				else
+				{
+					facecolor = PIXEL_COLOR( 255, 204, 153 );
+				}
 
-				rasterizer->ProcessScanlineParallel( scanline,
-					facecolor,
-					activeEdgeTable,
-					outputRS,
-					horizontalLine );
+				while ( !(edgeTable.empty( ) && activeEdgeTable.empty( )) )
+				{
+					if ( scanline > viewport.m_bottom )
+					{
+						break;
+					}
 
-				++scanline;
+					rasterizer->UpdateActiveEdgeTableParallel( scanline, edgeTable, activeEdgeTable );
+
+					rasterizer->ProcessScanlineParallel( scanline,
+						facecolor,
+						activeEdgeTable,
+						outputRS,
+						horizontalLine );
+
+					++scanline;
+				}
 			}
 		}
 

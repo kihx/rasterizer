@@ -397,12 +397,12 @@ namespace xtozero
 		return *this;
 	}
 
-	float Lerp( float start, float end, float ratio )
+	inline float Lerp( float start, float end, float ratio )
 	{
 		return start + (end - start) * ratio;
 	}
 
-	Vector4 Lerp( Vector4 start, Vector4 end, float ratio )
+	inline Vector4 Lerp( Vector4 start, Vector4 end, float ratio )
 	{
 		return start + (end - start) * ratio;
 	}

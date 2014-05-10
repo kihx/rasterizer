@@ -64,7 +64,7 @@ namespace xtozero
 		void UpdateActiveEdgeTable( int scanline );
 		void ProcessScanline( int scanline, unsigned int facecolor );
 
-		float GetIntersectXpos( int minY, int maxY, int scanlineY, float minX, float gradient ) const;
+		inline float GetIntersectXpos( int minY, int maxY, int scanlineY, float minX, float gradient ) const;
 	public:
 		std::vector<CPsElementDesc> m_outputRS;
 
@@ -91,6 +91,27 @@ namespace xtozero
 			return m_lockobject;
 		}
 		Rect& GetViewport()
+		{
+			return m_viewport;
+		}
+	};
+
+	class CBarycentricRasterizer
+	{
+	private:
+		Rect m_viewport;
+	public:
+		std::vector<CPsElementDesc> m_outputRS;
+
+		CBarycentricRasterizer( void ) {};
+		~CBarycentricRasterizer( void ) {};
+
+		const std::vector<CPsElementDesc>& Process( CRsElementDesc& rsInput );
+		float CalcParallelogramArea( const Vector4& p, const Vector4& v0, const Vector4 v1 );
+
+		void SetViewPort( int left, int top, int right, int bottom );
+
+		Rect& GetViewport( )
 		{
 			return m_viewport;
 		}

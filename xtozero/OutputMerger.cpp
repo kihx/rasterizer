@@ -3,10 +3,10 @@
 
 namespace xtozero
 {
-	const int depthPrecision = INT_MAX;
+	const int depthPrecision = 0xFFFFFF;
 
-	COutputMerger::COutputMerger( ) : m_dpp( 0 ), m_height( 0 ), m_width( 0 ),
-		m_pFrameBuffer( nullptr )
+	COutputMerger::COutputMerger() : m_dpp( 0 ), m_height( 0 ), m_width( 0 ),
+		m_pFrameBuffer( nullptr ), m_isFirst( true )
 	{
 	}
 
@@ -17,15 +17,17 @@ namespace xtozero
 
 	void COutputMerger::CreateDepthBuffer( const int width, const int height )
 	{
-		if ( m_pDepthBuffer.size() < static_cast<size_t>(width * height) )
+		if ( m_isFirst )
 		{
 			m_pDepthBuffer.resize( width * height );
+			m_isFirst = false;
 		}
 	}
 
 	void COutputMerger::ClearDepthBuffer()
 	{
-		for ( int i = 0; i < m_width * m_height; ++i )
+		int count = m_width * m_height;
+		for ( int i = 0; i < count; ++i )
 		{
 			m_pDepthBuffer[i] = INT_MAX;
 		}
@@ -51,9 +53,10 @@ namespace xtozero
 		int index = y * m_width + x;
 		assert( m_pDepthBuffer.size( ) >= static_cast<size_t>(index) );
 
-		if ( m_pDepthBuffer[index] >= depth * depthPrecision )
+		int pixelDepth = static_cast<int>(depth * depthPrecision);
+		if ( m_pDepthBuffer[index] >= pixelDepth )
 		{
-			m_pDepthBuffer[index] = static_cast<int>( depth * depthPrecision );
+			m_pDepthBuffer[index] = pixelDepth;
 			return true;
 		}
 

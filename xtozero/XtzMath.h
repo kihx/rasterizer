@@ -699,8 +699,8 @@ namespace xtozero
 		return CrossProduct(v3);
 	}
 
-	extern float Lerp( float start, float end, float ratio );
-	extern Vector4 Lerp( Vector4 start, Vector4 end, float ratio );
+	extern inline float Lerp( float start, float end, float ratio );
+	extern inline Vector4 Lerp( Vector4 start, Vector4 end, float ratio );
 }
 
 #endif

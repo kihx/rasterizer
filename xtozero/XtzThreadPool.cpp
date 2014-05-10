@@ -135,8 +135,6 @@ namespace xtozero
 
 	void CXtzThreadPool::DestroyThreadPool( )
 	{
-		WaitThread( );
-
 		for ( unsigned int i = 0; i < m_threads.size(); ++i )
 		{
 			CXtzThread* thread = m_threads[i].get();
@@ -145,18 +143,20 @@ namespace xtozero
 				thread->SetEnd( true );
 			}
 		}
+
+		WaitThread( );
 	}
 
 	void CXtzThreadPool::AddWork( WorkerFuntion worker, void* arg )
 	{
-		Lock<SpinLock> lock( m_lockObject );
-
 		if ( m_threadquere.empty() )
 		{
+			Lock<SpinLock> lock( m_lockObject );
 			m_workquere.emplace_back( worker, arg );
 		}
 		else
 		{
+			Lock<SpinLock> lock( m_lockObject );
 			CXtzThread* thread = m_threadquere.front( );
 			m_threadquere.pop_front( );
 			WORK threadWork( worker, arg );
