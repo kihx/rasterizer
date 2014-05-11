@@ -63,12 +63,14 @@ public:
 
 	inline Vector3 operator*(const Vector3& rhs) const;
 
+	inline Vector3 operator*(const Matrix4& rhs) const;
+
 	inline Vector3 operator*(float rhs) const;
 
 	inline Vector3 operator/(const Vector3& rhs) const;
 
 	inline Vector3 operator/(float rhs) const;
-
+	
 	// assignment operators
 	inline const Vector3& operator+=(const Vector3 &v);
 
@@ -408,6 +410,14 @@ inline Matrix4& Matrix4::operator=(const Matrix4& m)
 inline float* Matrix4::operator[](int row)
 {
 	return A[row];
+}
+
+inline Vector3 Vector3::operator*(const Matrix4& rhs) const
+{
+	return Vector3(
+		X * rhs.A[0][0] + Y * rhs.A[1][0] + Z * rhs.A[2][0] + rhs.A[3][0],
+		X * rhs.A[0][1] + Y * rhs.A[1][1] + Z * rhs.A[2][1] + rhs.A[3][1],
+		X * rhs.A[0][2] + Y * rhs.A[1][2] + Z * rhs.A[2][2] + rhs.A[3][2]);
 }
 
 

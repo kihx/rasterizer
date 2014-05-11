@@ -26,7 +26,9 @@ public:
 	void DrawFillInfo();
 
 	void VertexProcess(Matrix4& mat, Vector3& vertex);
-	bool BackFaceCull(const Vector3& v1, const Vector3& v2, const Vector3& v3, const Vector3& vCamPos);
+
+	// View space culling
+	bool BackFaceCull(const Vector3& v1, const Vector3& v2, const Vector3& v3, const Matrix4& matWV);
 
 private:
 	void DrawScanline(int lineIndex, const EdgeInfo& info);

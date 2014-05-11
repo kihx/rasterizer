@@ -91,6 +91,7 @@ void WPolygon::DrawSolidParallel(WModule* pModule)
 		{
 			WContext* pContext = pModule->GetContext();
 			Matrix4 wvp = world * view * proj;
+			Matrix4 wv = world * view;
 
 			for (size_t faceIndex = offset; faceIndex < end; ++faceIndex)
 			{
@@ -100,15 +101,25 @@ void WPolygon::DrawSolidParallel(WModule* pModule)
 				{
 					return;
 				}
-				Vector3 p1 = *m_data->GetVertex(faceIndex, numVert - 1);
-				pModule->VertexProcess(wvp, p1);
-				for (size_t vertexIndex = 0; vertexIndex < numVert; ++vertexIndex)
+
+				// face를 이루는 버텍스는 3개라고 가정
+				Vector3 p1 = *m_data->GetVertex(faceIndex, 0);
+				Vector3 p2 = *m_data->GetVertex(faceIndex, 1);
+				Vector3 p3 = *m_data->GetVertex(faceIndex, 2);
+
+				// backface cull
+				if (pContext->BackFaceCull(p1, p2, p3, wv))
 				{
-					Vector3 p2 = *m_data->GetVertex(faceIndex, vertexIndex);
-					pModule->VertexProcess(wvp, p2);
-					pContext->MakeLineInfo(&p1, &p2, color);
-					p1 = p2;
+					continue;
 				}
+
+				pModule->VertexProcess(wvp, p1);
+				pModule->VertexProcess(wvp, p2);
+				pModule->VertexProcess(wvp, p3);
+
+				pContext->MakeLineInfo(&p1, &p2, color);
+				pContext->MakeLineInfo(&p2, &p3, color);
+				pContext->MakeLineInfo(&p3, &p1, color);
 
 				// 여러번 겹치는 픽셀을 한번만 칠하도록 하는 것이 필요
 				pContext->SortFillInfo();

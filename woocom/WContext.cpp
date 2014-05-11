@@ -197,14 +197,18 @@ void WContext::VertexProcess(Matrix4& mat, Vector3& vertex)
 	vertex.Y = -vertex.Y * fHalfHeight + fHalfHeight;
 }
 
-bool WContext::BackFaceCull(const Vector3& v1, const Vector3& v2, const Vector3& v3, const Vector3& vCamPos)
+bool WContext::BackFaceCull(const Vector3& v1, const Vector3& v2, const Vector3& v3, const Matrix4& matWV)
 {
-	Vector3 edge1 = v3 - v1;
-	Vector3 edge2 = v3 - v2;
+	Vector3 point1 = v1 * matWV;
+	Vector3 point2 = v2 * matWV;
+	Vector3 point3 = v3 * matWV;
+
+	Vector3 edge1 = point1 - point2;
+	Vector3 edge2 = point1 - point3;
 	Vector3 normal = edge1.CrossProduct(edge2);
 
-	Vector3 camDir = vCamPos - v1;
-	if (camDir.DotProduct(normal) > 0)
+	Vector3 viewDir(0, 0, -1);
+	if (viewDir.DotProduct(normal) < 0)
 	{
 		return true;
 	}
