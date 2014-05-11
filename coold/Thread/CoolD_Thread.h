@@ -1,79 +1,73 @@
 #pragma once
 #include "..\Data\CoolD_Type.h"
 #include "..\Render\CoolD_RenderModule.h"
-
+#include <windows.h>
 namespace CoolD
 {
-	class InfoParam
-	{
-	public:
-		InfoParam() = default;
-		virtual ~InfoParam(){};
-	};
+#define  ENTER_LFS_LOCK_(lock)   while( InterlockedExchange( lock, 1 ) == 1 ){ Sleep( 1 ); }
+#define  EXIT_LFS_LOCK_(lock)    InterlockedExchange( lock, 0 );
 
-	class RenderInfoParam : public InfoParam
+	class Lock
+	{
+	
+	private:
+		volatile unsigned int* m_sLock;
+
+	public:
+		Lock(volatile unsigned int* slock)
+		{
+			m_sLock = slock;
+			ENTER_LFS_LOCK_(m_sLock)
+		}
+
+		~Lock()
+		{
+			EXIT_LFS_LOCK_(m_sLock)
+		}
+	};
+	
+	class RenderInfoParam
 	{
 	public:
 		RenderModule* renderer;
 		CustomMesh* pMesh;
 		RenderInfoParam(RenderModule* _pRenderer, CustomMesh* _pMesh)
 			:renderer(_pRenderer), pMesh(_pMesh)
-		{
-			
-		}
-	};
-
-	struct ThreadWorkInfo
-	{
-		ThreadType type;
-		InfoParam* pParam;
-
-		ThreadWorkInfo(ThreadType _type, InfoParam* _pParam)
-			:type(_type), pParam(_pParam)
 		{}
-	};
+	};	
 
-	class baseThread
+	class RenderThread
 	{
 	public:
-		baseThread();
-		virtual	~baseThread();
-
+		RenderThread();
+		~RenderThread();
+		
 	public:
-		virtual Dvoid Run() = 0;		
-		Dvoid Begin();
-		Dvoid SetStarted(Dbool isStarted);
-		Dbool JoinThread(Dbool isInfinite);
-		virtual Dbool GetWorkInfo(InfoParam* pParam) = 0;
-		inline ThreadType GetThreadType() const { return m_threadType; }
+		Dvoid	Run();
+		HANDLE	Begin();
+
+		Dvoid	MakeSignalEvent(EventType type);		
+		Dbool	CheckEventSignal(EventType type);
+
+		Dvoid	ReleaseHandles();
+		HANDLE	GetThreadHandle() const;
+		Dvoid	SetIsFree(Dbool isFree);
+		Dbool	GetIsFree();
+		Dvoid	SetWorkInfo(RenderInfoParam* pParam);
 
 	private:
 		static	Duint __stdcall HandleRunner( Dvoid* parameter );
-
+				
 	protected:
-		HANDLE		m_handleThread;	
-		ThreadType	m_threadType;
-		Dbool		m_isStarted;
-		Duint		m_threadID;
-	};
-		
-	class RenderThread : public baseThread
-	{	
-		friend class ThreadManager;
-	private:
-		RenderThread(void);
-		virtual ~RenderThread(void);
-
-	public:
-		virtual Dbool GetWorkInfo(InfoParam* pParam);
-		virtual void Run();
+		HANDLE	m_handleThread;	
+		Dbool	m_isFree;	
+		Duint	m_threadID;
+		array<HANDLE, TYPECOUNT> m_arrHandleWorkEvent;
 
 	private:
-		RenderModule m_renderer;
-		CustomMesh* m_pMesh;
+		RenderModule	m_renderer;
+		CustomMesh*		m_pMesh;		
 	};
-
-	
 };
 
 

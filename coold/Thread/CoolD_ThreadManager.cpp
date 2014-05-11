@@ -1,111 +1,106 @@
 #include "CoolD_ThreadManager.h"
 #include "..\Data\CoolD_Defines.h"
 #include "..\data\CoolD_Inlines.h"
-#include <process.h>
+
 
 namespace CoolD
 {
 	ThreadManager::ThreadManager() 
-		: m_activeAbleThreadCount( 1 )
+		: m_sContainerLock(0)
 	{
 		Initialize();
 	}
 
 	ThreadManager::~ThreadManager()
-	{
-		Join();		
-	}
-
-	Dvoid ThreadManager::Join()
 	{			
-		for( auto iter = begin(m_mapActiveThread); iter != end(m_mapActiveThread); )
-		{			
-			baseThread* thread = iter->second;
-			thread->JoinThread(true);
-			m_vecThreadPool.push_back(thread);
-
-			iter = m_mapActiveThread.erase(iter);
-		}
-	}
-
-	HANDLE ThreadManager::Spawn(Duint(__stdcall *startAddress)(Dvoid*), Dvoid* parameter, Duint* threadID)
-	{
-		HANDLE threadHandle;
-		threadHandle = (HANDLE)_beginthreadex(NULL, NULL, startAddress, parameter, 0, threadID);
-
-		return threadHandle;
+		CleanThreads();
 	}
 
 	Dbool ThreadManager::Initialize(Dint threadCount)
-	{
-		lock_guard<mutex> lock(m_containerSafeMutex);
-		Join();
-
-		Safe_Delete_VecList(m_vecThreadPool);
-		Safe_Delete_Map(m_mapActiveThread);
-
+	{	
+		Lock lock(&m_sContainerLock);
 		if( threadCount == 0 )
-		{
+		{	//전달 값이 0 일 경우 PC의 기본 코어수 만큼 쓰레드 갯수 설정 
 			SYSTEM_INFO sysinfo;
 			GetSystemInfo(&sysinfo);
-			m_activeAbleThreadCount = sysinfo.dwNumberOfProcessors;
-		}
-		else
-		{
-			m_activeAbleThreadCount = threadCount;
-		}
+			threadCount = sysinfo.dwNumberOfProcessors;
+		}		
 		
-		for (Duint i = 0; i < m_activeAbleThreadCount; i++)
-		{	//쓰레드 요소가 추가될 때 마다 여기에 생성 추가한다.
-			baseThread* pWorkThread = new RenderThread();
-
-			m_vecThreadPool.push_back( pWorkThread );
+		for( Dint i = 0; i < threadCount; i++ )
+		{	
+			m_vecThreadPool.push_back( new RenderThread() );
+			m_vecThreadHandle.push_back( m_vecThreadPool[ i ]->Begin() );
 		}
 
 		return true;
-	}	
-
-	Dbool ThreadManager::WorkAllocation( ThreadWorkInfo info )
-	{				
-		if (m_mapActiveThread.size() >= m_activeAbleThreadCount)	//지정한 스레드 갯수를 초과하면 다른 쓰레드가 완료될때까지 대기
-		{
-			ClassificaionJoin(info.type, false);
-			return false;
-		}
-
-		lock_guard<mutex> lock(m_containerSafeMutex);
-		auto findedThreadIter = find_if(begin(m_vecThreadPool), end(m_vecThreadPool), [ info ](const baseThread* thread){ return	thread->GetThreadType() == info.type; });
-
-		if( findedThreadIter != end(m_vecThreadPool) )
-		{
-			baseThread* thread = (*findedThreadIter);
-			if( thread->GetWorkInfo( info.pParam ) )
-			{
-				m_vecThreadPool.erase(findedThreadIter);
-				m_mapActiveThread.insert({ info.type, thread });
-				thread->Begin();
-				return true;
-			}								
-		}	
-
-		LOG("Param casting failed");
-		return false;
 	}
-																	
-	Dvoid ThreadManager::ClassificaionJoin(ThreadType type, bool isInfinite)
+
+	//각각의 쓰레드에 작업 할당
+	Dvoid ThreadManager::AssignWork(RenderInfoParam* info)
 	{
-		lock_guard<mutex> lock(m_containerSafeMutex);
-		for (auto iter = begin(m_mapActiveThread); iter != end(m_mapActiveThread);)
-		{
-			if( iter->first == type )
+		Lock lock(&m_sContainerLock);
+		for( ; ; )
+		{			
+			for( auto thread : m_vecThreadPool )
 			{
-				baseThread* thread = iter->second;
-				if (thread->JoinThread(isInfinite))
+				if( thread->GetIsFree() == true )
 				{
-					m_vecThreadPool.push_back(thread);
-					iter = m_mapActiveThread.erase(iter);
+					thread->SetIsFree(false);
+					thread->SetWorkInfo(info);
+					thread->MakeSignalEvent(WORK);
+					return;
+				}
+			}
+		}
+	}	
+	
+
+	//프레임 동기화를 위해서 작업이 할당된 모든 쓰레드의 작업 종료를 기다린다
+	Dvoid ThreadManager::WaitAllThreadWorking()
+	{
+		Lock lock(&m_sContainerLock);
+		Dbool isLoop = true;
+
+		for ( ; isLoop ; )
+		{
+			isLoop = false;
+			for( auto thread : m_vecThreadPool )
+			{
+				if( thread->CheckEventSignal(WORK) )
+				{	//작업중인 쓰레드가 있기 때문에 대기
+					isLoop = true;
+					break;
 				}				
 			}
 		}
+	}
+
+	Dvoid ThreadManager::ResetThreads(Dint threadCount)
+	{
+		CleanThreads();
+		Initialize(threadCount);
+	}
+
+	Dvoid ThreadManager::CleanThreads()
+	{
+		Lock lock(&m_sContainerLock);
+
+		if( m_vecThreadPool.empty() )
+			return;
+
+		for( auto thread : m_vecThreadPool )
+		{
+			thread->MakeSignalEvent(SHUTDOWN);
+		}
+
+		WaitForMultipleObjects(m_vecThreadHandle.size(), m_vecThreadHandle.data(), TRUE, INFINITE);
+		
+		for( auto thread : m_vecThreadPool )
+		{
+			thread->ReleaseHandles();
+		}
+
+		Safe_Delete_VecList(m_vecThreadPool);
+		m_vecThreadHandle.clear();				
 	}
 };

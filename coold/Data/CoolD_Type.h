@@ -28,9 +28,9 @@ typedef unsigned char	Duchar;
 typedef unsigned long	Dulong;
 
 using namespace std;
-using namespace Concurrency;
-typedef chrono::system_clock::time_point TimeForm;
+using namespace Concurrency;	//ppl namespace
 
+//공간 변환 인덱스
 enum TransType
 {
 	WORLD,
@@ -40,6 +40,8 @@ enum TransType
 	TRANSFORM_END
 };
 
+//MSH : 월드, 뷰, 원근까지 이미 적용 되어 있는 타입
+//PLY : 로컬 좌표 메쉬 타입
 enum MeshType
 {
 	MSH,
@@ -47,16 +49,20 @@ enum MeshType
 	MESHTYPE_END
 };
 
+//BackSpace 컬링 종류
 enum class BSCullType
 {
-	CW,
-	CCW,
+	CW,		//시계방향으로 그려진 Face 컬링
+	CCW,	//반시계
 	ALL
 };
 
-enum class ThreadType
+//Thread 작업을 결정하는 EventH
+enum EventType
 {
-	BASE,
-	RENDER,
-	END
+	WORK,		//그리는 작업
+	SHUTDOWN,	//종료 작업
+	TYPECOUNT
 };
+
+using Func_void_initList = void(*)(initializer_list<string>);	//c++11 using syntax

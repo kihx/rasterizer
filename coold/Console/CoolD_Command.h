@@ -54,18 +54,17 @@ namespace CoolD
 		Dfloat	m_Float;
 	};
 
-	using FP = void (*)(initializer_list<string>);	//c++11 using syntax
 	
 	class FunctionCommand : public Command
 	{			
 	public:
-		FunctionCommand(const string& Name, FP func = nullptr );
+		FunctionCommand(const string& Name, Func_void_initList func = nullptr);
 		virtual ~FunctionCommand();
 	public:
 		virtual void Execute(initializer_list<string> strs);
 		virtual void ShowCommand();
 
 	private:
-		FP m_Func;
+		Func_void_initList m_Func;
 	};
 };

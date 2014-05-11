@@ -11,27 +11,27 @@ namespace CoolD
 	class ThreadManager : public CSingleton<ThreadManager>
 	{
 		friend class CSingleton<ThreadManager>;	
-
 	private:
-		ThreadManager();
 		ThreadManager(const ThreadManager&) = delete;
 		ThreadManager& operator=(const ThreadManager&) = delete;
 
 	public:
+		ThreadManager();
 		virtual	~ThreadManager(void);
 
-	public:
+	public: //초기화	및 정리 관련	
 		Dbool	Initialize(Dint threadCount = 0);
-		Dvoid	Join();
-		Dvoid	ClassificaionJoin(ThreadType type, bool isInfinite);		//특정타입에 대해서만 join
-		HANDLE	Spawn(Duint(__stdcall *startAddress)(Dvoid*), Dvoid* parameter, Duint* threadID);			
-		Dbool	WorkAllocation( ThreadWorkInfo info );
+		Dvoid	ResetThreads(Dint threadCount);
+		Dvoid	CleanThreads();
+
+	public: //쓰레드 매니저의 역활 및 기능
+		Dvoid	AssignWork(RenderInfoParam* info);
+		Dvoid	WaitAllThreadWorking();
 
 	private:
-		mutex	m_containerSafeMutex;
-		Duint	m_activeAbleThreadCount;
-		vector<baseThread*> m_vecThreadPool;
-		multimap<ThreadType, baseThread*> m_mapActiveThread;
+		vector<HANDLE>	m_vecThreadHandle;
+		vector<RenderThread*> m_vecThreadPool;
+		volatile unsigned int m_sContainerLock;		
 	};
 };
 

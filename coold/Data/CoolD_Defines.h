@@ -1,6 +1,5 @@
 #pragma once
 
-
 //------------Output FileName & LineNumber Show-----------------
 #define STR2(x) #x
 #define STR(x) STR2(x)
@@ -30,4 +29,5 @@
 #define ITER_CONVERT(Iter, IteratorValue) auto* Iter = IteratorValue;
 
 #define LOG( msg )	{ printf( "[Log] %s\n", msg); }
+
 

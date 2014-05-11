@@ -14,6 +14,7 @@ namespace CoolD
 	{
 
 	}
+
 //---------------------------------------------------------------
 	VariableCommand::VariableCommand(const string& Name, const string& value)
 		: Command(Name)
@@ -23,7 +24,6 @@ namespace CoolD
 
 	VariableCommand::~VariableCommand()
 	{
-
 	}
 
 	void VariableCommand::SetValue(const string& Str)
@@ -77,9 +77,8 @@ namespace CoolD
 		cout << "-----------------------------------------" << endl;
 	}
 
-	//---------------------------------------------------------------
-
-	FunctionCommand::FunctionCommand(const string& Name, FP func /*= nullptr */)
+//---------------------------------------------------------------
+	FunctionCommand::FunctionCommand(const string& Name, Func_void_initList func /*= nullptr */)
 		: Command(Name)
 	{
 		m_Func = func;
@@ -87,7 +86,6 @@ namespace CoolD
 
 	FunctionCommand::~FunctionCommand()
 	{
-
 	}
 
 	void FunctionCommand::Execute(initializer_list<string> strs)

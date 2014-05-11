@@ -107,7 +107,7 @@ namespace
 	typedef void( *FnSetTransform)( int transformType, const float* matrix4x4 );
 	typedef void( *FnSetViewFactor)(float* eye, float* lookat, float* up);
 	typedef void( *FnSetPerspectiveFactor)(float fovY, float aspect, float zn, float zf);
-	
+	typedef void( *FnDetachModuleClear)();
 
 
 	// 지정된 모듈로부터 함수 주소 얻어오기
@@ -143,7 +143,8 @@ namespace
 			m_fnRenderToBuffer( nullptr ),
 			m_fnSetTransform( nullptr ),
 			m_fnSetViewFactor( nullptr ),
-			m_fnSetPerspectiveFactor( nullptr )
+			m_fnSetPerspectiveFactor( nullptr ),
+			m_fnDetachModuleClear(nullptr)
 		{
 		}
 
@@ -215,6 +216,14 @@ namespace
 			}
 		}
 
+		void DetachModuleClear()
+		{
+			if( m_fnDetachModuleClear )
+			{
+				m_fnDetachModuleClear();
+			}
+		}
+
 		void ExecuteCommand( const char* cmd )
 		{
 			if ( m_fnExecuteCommand )
@@ -237,6 +246,7 @@ namespace
 		SETUP_FUNC( SetTransform );
 		SETUP_FUNC( SetViewFactor );
 		SETUP_FUNC( SetPerspectiveFactor);
+		SETUP_FUNC( DetachModuleClear );
 
 	private:
 		void AssignOrReplace( HMODULE h )
@@ -248,6 +258,7 @@ namespace
 			
 			if ( m_hModule )
 			{
+				DetachModuleClear();
 				Release();
 			}
 			m_hModule = h;
@@ -261,6 +272,7 @@ namespace
 			m_fnSetTransform = nullptr;
             m_fnSetViewFactor = nullptr;
 			m_fnSetPerspectiveFactor = nullptr;
+			m_fnDetachModuleClear = nullptr;
 			FreeLibrary( m_hModule );
 		}
 
@@ -272,6 +284,7 @@ namespace
 		FnSetTransform m_fnSetTransform;
 		FnSetViewFactor m_fnSetViewFactor;
 		FnSetPerspectiveFactor m_fnSetPerspectiveFactor;
+		FnDetachModuleClear m_fnDetachModuleClear;
 	};
 
 	ModuleContext g_ModuleContext;
@@ -295,7 +308,7 @@ static void LoadModuleKihx()
 	g_ModuleContext.InstallFunctionLoadMeshFromFile( "kiLoadMeshFromFile" );
 	g_ModuleContext.InstallFunctionRenderToBuffer( "kiRenderToBuffer" );
 	g_ModuleContext.InstallFunctionSetTransform( "kiSetTransform" );
-	g_ModuleContext.InstallFunctionExecuteCommand( "kiExecuteCommand" );
+	g_ModuleContext.InstallFunctionExecuteCommand( "kiExecuteCommand" );	
 
 	printf( "\n<kihx>\n\n" );
 }
@@ -364,7 +377,7 @@ static void LoadModuleCoolD()
 	g_ModuleContext.InstallFunctionSetViewFactor("coold_SetViewFactor");
 	g_ModuleContext.InstallFunctionSetPerspectiveFactor("coold_SetPerspectiveFactor");
 	g_ModuleContext.InstallFunctionExecuteCommand("coold_ExecuteCommand");
-	
+	g_ModuleContext.InstallFunctionDetachModuleClear("coold_DetachModuleClear");
 
 	printf( "\n<CoolD>\n\n" );
 }

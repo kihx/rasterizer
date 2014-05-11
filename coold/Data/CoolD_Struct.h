@@ -15,9 +15,8 @@ public:
 	vector<Duint>	vecIndex;	//msh 메쉬만 없으면 array<Duint, 3>으로 변경가능	
 
 	BaseFace(){};
-	BaseFace(const BaseFace& baseFace)
-		:color(baseFace.color), vecIndex(baseFace.vecIndex)
-	{}
+	BaseFace(const BaseFace& baseFace) 
+		: color(baseFace.color), vecIndex(baseFace.vecIndex){}
 };
 
 struct EdgeNode
@@ -30,12 +29,12 @@ struct EdgeNode
 	Dfloat reverseSlope;
 
 	EdgeNode() : x_min(0.0f), y_min(0.0f), y_max(0.0f), min_depth(0.0f), max_depth(0.0f), reverseSlope(0.0f){}
-
 	EdgeNode(Dfloat _x_min, Dfloat _y_min, Dfloat _y_max, Dfloat _min_depth, Dfloat _max_depth, Dfloat _reverseSlope)
 		:x_min(_x_min), y_min(_y_min), y_max(_y_max), min_depth(_min_depth), max_depth(_max_depth), reverseSlope(_reverseSlope)	{}
 
 	EdgeNode(const EdgeNode& edgeNode)
-		:x_min(edgeNode.x_min), y_min(edgeNode.y_min), y_max(edgeNode.y_max), min_depth(edgeNode.min_depth), max_depth(edgeNode.max_depth), reverseSlope(edgeNode.reverseSlope)	{}	
+		:x_min(edgeNode.x_min), y_min(edgeNode.y_min), y_max(edgeNode.y_max), 
+		 min_depth(edgeNode.min_depth), max_depth(edgeNode.max_depth), reverseSlope(edgeNode.reverseSlope)	{}	
 };
 
 struct LineKey
@@ -87,12 +86,12 @@ struct Line
 
 	Line() = default;
 	Line(LineKey _lineKey, Vector3 _beginVertex, Vector3 _endVertex, Dbool _isOneCount = false)
-		:lineKey(_lineKey.beginIndex, _lineKey.endIndex), beginVertex(_beginVertex), endVertex(_endVertex), isOneCount(_isOneCount)
-	{}
+		:lineKey(_lineKey.beginIndex, _lineKey.endIndex), beginVertex(_beginVertex),
+		 endVertex(_endVertex), isOneCount(_isOneCount){}
 
 	Line(const Line& _line)
-		:lineKey(_line.lineKey), beginVertex(_line.beginVertex), endVertex(_line.endVertex), isOneCount(_line.isOneCount)
-	{}
+		:lineKey(_line.lineKey), beginVertex(_line.beginVertex), 
+		 endVertex(_line.endVertex), isOneCount(_line.isOneCount){}
 
 	Dfloat& GetMinY()
 	{
@@ -121,8 +120,6 @@ struct ActiveLine
 	ActiveLine(const Dint& _height, const vector<Line> _currentLine)
 		:height(_height), currentLine(_currentLine)	{}
 };
-
-
 
 template <typename T>
 class RandomGenerator

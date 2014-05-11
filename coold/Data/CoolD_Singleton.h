@@ -16,10 +16,10 @@ namespace CoolD
 	public:
 		static T& GetInstance()
 		{
-			std::call_once(m_onceFlag,
-				[] {
-				m_instance.reset(new T);
-			});
+			std::call_once(m_onceFlag,	[] 
+										{
+											m_instance.reset(new T);
+										});
 
 			return *m_instance.get();
 		}		

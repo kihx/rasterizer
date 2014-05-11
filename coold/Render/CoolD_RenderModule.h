@@ -96,7 +96,6 @@ namespace CoolD
 		Dbool DepthTest(Dint x, Dint y, Dfloat depth);
 
 	private:		
-		mutex	m_depthMutex;
 		Dint	m_width;
 		Dfloat* m_DepthBuffer;	//±Ì¿Ã πˆ∆€
 	};

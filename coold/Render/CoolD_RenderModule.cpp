@@ -3,6 +3,7 @@
 #include "CoolD_CustomMesh.h"
 #include "CoolD_Transform.h"
 #include "..\Console\CoolD_Command.h"
+#include "..\Thread\CoolD_Thread.h"
 
 namespace CoolD
 {
@@ -459,11 +460,9 @@ namespace CoolD
 
 		vecLine.emplace_back(lineKey, beginVertex, endVertex);
 	}		
+	
+	//------------------------------------------------------------------------------------------------
 
-	
-
-	
-	
 	DepthBuffer::DepthBuffer()
 		:m_width(-1), m_DepthBuffer(nullptr)
 	{
@@ -490,10 +489,9 @@ namespace CoolD
 
 	Dbool DepthBuffer::DepthTest( Dint x, Dint y, Dfloat depth)
 	{
-		lock_guard<mutex> lock(m_depthMutex);
-
+		//
 		Dfloat opDepth = 1.0f - depth;
-				
+
 		Dfloat* buffer = &m_DepthBuffer[y * m_width + x];
 		if (*buffer < opDepth)
 		{

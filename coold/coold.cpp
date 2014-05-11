@@ -23,10 +23,16 @@ Matrix44 g_matWorld;
 Matrix44 g_matView;
 Matrix44 g_matPers;
 
-mutex	 g_mutex;
-
-//Dbool WINAPI DllMain( HINSTANCE hInstDll, DWORD fdwReason, LPVOID fImpLoad )
+//Dbool WINAPI DllMain(HINSTANCE hInstDll, DWORD fdwReason, LPVOID fImpLoad)
 //{
+//	switch( fdwReason )
+//	{
+//	case DLL_THREAD_ATTACH:
+//	case DLL_THREAD_DETACH:		
+//	case DLL_PROCESS_ATTACH:
+//	case DLL_PROCESS_DETACH:
+//		break;
+//	}	
 //	return true;
 //}
 
@@ -58,7 +64,7 @@ EXTERN_FORM DLL_API Dvoid __cdecl coold_LoadMeshFromFile( const Dchar* filename 
 	//-----------------------------------------------------------
 }
 
-static VariableCommand use_thread("use_thread", "0");
+Dbool	g_threadUse = true;
 ThreadManager* g_pThreadManager = &GETSINGLE(ThreadManager);
 EXTERN_FORM DLL_API Dvoid __cdecl coold_RenderToBuffer(Dvoid* buffer, Dint width, Dint height, Dint bpp)
 {	
@@ -67,28 +73,23 @@ EXTERN_FORM DLL_API Dvoid __cdecl coold_RenderToBuffer(Dvoid* buffer, Dint width
 	g_renderModule->SetTransform(WORLD, g_matWorld);
 	g_renderModule->SetTransform(VIEW, g_matView);
 	g_renderModule->SetTransform(PERSPECTIVE, g_matPers);
-	g_renderModule->SetTransform(VIEWPORT, TransformHelper::CreateViewport(0, 0, width, height));		
-		
-	for (auto& Mesh : GETSINGLE(MeshManager).GetMapMesh())
-	{
-		if (use_thread.Bool())
-		{
-			RenderInfoParam param(g_renderModule, Mesh.second);
-			ThreadWorkInfo info(ThreadType::RENDER, &param);
+	g_renderModule->SetTransform(VIEWPORT, TransformHelper::CreateViewport(0, 0, width, height));
 
-			while (!g_pThreadManager->WorkAllocation(info))
-			{
-			}
+	for( auto& Mesh : GETSINGLE(MeshManager).GetMapMesh() )
+	{
+		if( g_threadUse )
+		{
+			RenderInfoParam param( g_renderModule, Mesh.second );
+			g_pThreadManager->AssignWork(&param);
 		}
 		else
 		{
 			g_renderModule->RenderBegin(Mesh.second);
 			g_renderModule->RenderEnd();
 		}
-			
-	}	
-
-	g_pThreadManager->ClassificaionJoin(ThreadType::RENDER, true); //한 프레임
+	}
+	
+	g_pThreadManager->WaitAllThreadWorking();
 }
 
 static VariableCommand cc_x_move("cc_x_move", "0");
@@ -134,6 +135,11 @@ EXTERN_FORM DLL_API Dvoid __cdecl coold_ExecuteCommand(const Dchar* cmd)
 	GETSINGLE(ConsoleManager).CommandExecute(cmd);
 }
 
+EXTERN_FORM DLL_API Dvoid __cdecl coold_DetachModuleClear()
+{
+	GETSINGLE(ThreadManager).CleanThreads();
+}
+
 //-----------------------------------------------------------------------------------------------------------------------------
 static FunctionCommand fc_bsculltype("fc_bsculltype", [] (initializer_list<string> strs)
 {
@@ -150,5 +156,24 @@ static FunctionCommand fc_bsculltype("fc_bsculltype", [] (initializer_list<strin
 
 static FunctionCommand fc_thread_count("fc_thread_count", [](initializer_list<string> strs)
 {
-	GETSINGLE(ThreadManager).Initialize( stoi(*strs.begin()) );
+	GETSINGLE(ThreadManager).ResetThreads( stoi(*strs.begin()) );
+});
+
+static FunctionCommand fc_thread_use("fc_thread_use", [] (initializer_list<string> strs)
+{
+	if( strs.size() == 1 )
+	{
+		Dbool isUse;
+
+		if( stoi(*strs.begin()) != 0 )
+			isUse = true;
+		else
+			isUse = false;
+
+		if( g_threadUse != isUse )
+		{
+			GETSINGLE(ThreadManager).ResetThreads(0);
+			g_threadUse = isUse;
+		}		
+	}
 });
