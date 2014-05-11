@@ -1,5 +1,8 @@
 #include "stdafx.h"
 #include "XtzThreadPool.h"
+#include "Concommand.h"
+
+#include <Windows.h>
 
 namespace xtozero
 {
@@ -98,6 +101,10 @@ namespace xtozero
 
 	CXtzThreadPool::CXtzThreadPool( ) : m_nThread( 0 )
 	{
+		SYSTEM_INFO sysInfo;
+		GetSystemInfo( &sysInfo );
+
+		CreateThreadPool( sysInfo.dwNumberOfProcessors );
 	}
 
 	CXtzThreadPool::~CXtzThreadPool( )
@@ -149,14 +156,13 @@ namespace xtozero
 
 	void CXtzThreadPool::AddWork( WorkerFuntion worker, void* arg )
 	{
+		Lock<SpinLock> lock( m_lockObject );
 		if ( m_threadquere.empty() )
 		{
-			Lock<SpinLock> lock( m_lockObject );
 			m_workquere.emplace_back( worker, arg );
 		}
 		else
 		{
-			Lock<SpinLock> lock( m_lockObject );
 			CXtzThread* thread = m_threadquere.front( );
 			m_threadquere.pop_front( );
 			WORK threadWork( worker, arg );

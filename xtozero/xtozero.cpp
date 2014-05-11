@@ -15,6 +15,15 @@ std::unique_ptr<xtozero::CPixelShader> gPixelShader( new xtozero::CPixelShader()
 std::unique_ptr<xtozero::COutputMerger> gOutputMerger( new xtozero::COutputMerger() );
 std::unique_ptr<xtozero::CBarycentricRasterizer> gBarycentricRasterizer( new xtozero::CBarycentricRasterizer( ) );
 
+DECLARE_CONCOMMAND( SetThread )
+{
+	if ( cmd::CConcommandExecutor::GetInstance()->ArgC() > 1 )
+	{
+		std::string threadNumber = cmd::CConcommandExecutor::GetInstance()->ArgV( 1 );
+		gThreadPool->CreateThreadPool( atoi( threadNumber.c_str( ) ) );
+	}
+}
+
 void TestThreadFunc( LPVOID arg )
 {
 	std::cout << (int)arg << std::endl;
@@ -52,13 +61,10 @@ void RendererThreadWork( LPVOID arg )
 	delete pArg;
 }
 
-cmd::CConvar g_threadNumber( "threadNumber", "2" );
-
 XTZ_API void XtzRenderToBuffer( void* buffer, int width, int height, int dpp )
 {
 	if ( buffer )
 	{
-		gThreadPool->CreateThreadPool( g_threadNumber.GetInt() );
 		//gRasterizer->SetViewPort( 0, 0, width, height );
 		gBarycentricRasterizer->SetViewPort( 0, 0, width, height );
 		gOutputMerger->CreateDepthBuffer( width, height );
@@ -78,7 +84,6 @@ XTZ_API void XtzRenderToBuffer3StageParallel( void* buffer, int width, int heigh
 {
 	if ( buffer )
 	{
-		gThreadPool->CreateThreadPool( g_threadNumber.GetInt( ) );
 		gOutputMerger->CreateDepthBuffer( width, height );
 		gOutputMerger->ClearDepthBuffer( );
 		gOutputMerger->SetFrameBuffer( buffer, dpp, width, height );

@@ -76,6 +76,9 @@ namespace cmd
 
 		CConcommandExecutor( );
 		~CConcommandExecutor( );
+		
+		const int ArgC( ) const;
+		const std::string& ArgV( int index ) const;
 	};
 };
 

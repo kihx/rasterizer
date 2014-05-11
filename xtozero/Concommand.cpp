@@ -173,6 +173,16 @@ namespace cmd
 			std::cout << iter->first << std::endl;
 		}
 	}
+
+	const int CConcommandExecutor::ArgC( ) const
+	{
+		return m_tokenizer.ArgC();
+	}
+
+	const std::string& CConcommandExecutor::ArgV( int index ) const
+	{
+		return m_tokenizer.ArgV( index );
+	}
 }
 
 DECLARE_CONCOMMAND( exit )

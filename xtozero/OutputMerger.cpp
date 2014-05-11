@@ -26,11 +26,7 @@ namespace xtozero
 
 	void COutputMerger::ClearDepthBuffer()
 	{
-		int count = m_width * m_height;
-		for ( int i = 0; i < count; ++i )
-		{
-			m_pDepthBuffer[i] = INT_MAX;
-		}
+		::ZeroMemory( &m_pDepthBuffer[0], m_pDepthBuffer.size() * sizeof(int) );
 	}
 
 	void COutputMerger::ClearFrameBuffer( )
@@ -53,8 +49,11 @@ namespace xtozero
 		int index = y * m_width + x;
 		assert( m_pDepthBuffer.size( ) >= static_cast<size_t>(index) );
 
-		int pixelDepth = static_cast<int>(depth * depthPrecision);
-		if ( m_pDepthBuffer[index] >= pixelDepth )
+		float InvDepth = (1.0f - depth);
+		InvDepth = ( InvDepth < 0 ) ? 0.0f : InvDepth;
+
+		int pixelDepth = static_cast<int>( InvDepth * depthPrecision );
+		if ( m_pDepthBuffer[index] < pixelDepth )
 		{
 			m_pDepthBuffer[index] = pixelDepth;
 			return true;
