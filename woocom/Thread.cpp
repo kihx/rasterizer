@@ -113,7 +113,7 @@ void WThreadPool::Join()
 {
 	while (m_numActiveThread != 0 || !m_tasks.empty())
 	{
-		Sleep(1);
+		Sleep(0);
 	}
 }
 

@@ -37,7 +37,7 @@ void WContext::MakeLineInfo(const Vector3* v1, const Vector3* v2, const unsigned
 	}
 	else if (dy == 0.0f)
 	{
-		if (v1->Y < m_height && v1->Y > 0)
+		if ((size_t)Float2Int(v1->Y) < m_height && v1->Y > 0)
 		{
 			InsertLineDepthInfo(Float2Int(v1->Y), Float2Int(v1->X), v1->Z, color);
 			InsertLineDepthInfo(Float2Int(v2->Y), Float2Int(v2->X), v2->Z, color);

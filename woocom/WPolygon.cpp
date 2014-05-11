@@ -165,7 +165,7 @@ void WPolygon::InsertLineInfo(WModule* pPainter, const Vector3* v1, const Vector
 	}
 	else if ( dy == 0.0f )
 	{
-		if (v1->Y < pPainter->GetHeight() && v1->Y > 0)
+		if (Float2Int(v1->Y) < pPainter->GetHeight() && v1->Y > 0)
 		{
 			pPainter->InsertLineDepthInfo(Float2Int(v1->Y), Float2Int(v1->X), v1->Z, color);
 			pPainter->InsertLineDepthInfo(Float2Int(v2->Y), Float2Int(v2->X), v2->Z, color);

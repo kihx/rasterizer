@@ -27,6 +27,7 @@ public:
 	int GetWidth(){ return m_screenWidth; }
 
 	void Render();
+	void RenderScene();
 	void Clear( void* pImage, int width, int height, unsigned int clearColor );
 	void PaintPixel( int x, int y, const unsigned char* rgb);
 	void ZBufferPaintPixel(int x, int y, float z, const unsigned char* rgb);

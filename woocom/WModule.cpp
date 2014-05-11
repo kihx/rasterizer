@@ -24,22 +24,17 @@ std::shared_ptr<WThreadPool> g_pool;
 
 
 typedef void(*RenderFunc)(WModule*);
-RenderFunc g_RenderFunction;
+RenderFunc g_RenderFunction = nullptr;
+bool g_isGridScene = false;
 
 void SingleThreadRendering(WModule* pModule)
-{
-	if (g_pDrawObj)
-	{
-		g_pDrawObj->DrawSolid(pModule);
-	}
+{	
+	g_pDrawObj->DrawSolid(pModule);
 }
 
 void MultiThreadRendering(WModule* pModule)
 {
-	if (g_pDrawObj)
-	{
-		g_pDrawObj->DrawSolidParallel(pModule);
-	}
+	g_pDrawObj->DrawSolidParallel(pModule);
 }
 
 DECLARE_CONCOMMAND(toggle_rendering)
@@ -54,6 +49,11 @@ DECLARE_CONCOMMAND(toggle_rendering)
 		g_RenderFunction = SingleThreadRendering;
 		std::cout << "SingleThreading." << std::endl;
 	}
+}
+
+DECLARE_CONCOMMAND(grid_scene)
+{
+	g_isGridScene = !g_isGridScene;
 }
 
 WModule::WModule() : m_isInit(false), m_depthBuffer(nullptr)
@@ -297,6 +297,51 @@ void WModule::DrawScanline(int lineIndex, const EdgeInfo& info)
 	}
 }
 
+void WModule::RenderScene()
+{
+	if (g_pDrawObj == nullptr)
+	{
+		return;
+	}
+
+	if (g_isGridScene)
+	{
+		float scale = 0.1f;
+		Matrix4 matScale;
+		matScale.Scaling(scale, scale, scale);
+
+		Matrix4 matWorld = GetWorld();
+		Matrix4 matTranslate;
+
+		float cellWidth = 0.7f;
+		float cellHeight = 0.7f;
+		float cellNum = 5.0f;
+		float totalWidth = cellWidth * cellNum;
+		float totalHeight = cellHeight * cellNum;
+
+		float halfWidth = totalWidth / 2.0f;
+		float halfHeight = totalHeight / 2.0f;
+
+		for (float cellX = -halfWidth; cellX < halfWidth; cellX += cellWidth)
+		{
+			for (float cellZ = -halfHeight; cellZ < halfHeight; cellZ += cellHeight)
+			{
+				// translate
+				matTranslate.Translate(cellX, 0, cellZ);
+
+				matTranslate = matScale * matWorld * matTranslate;
+				SetTransform(0, matTranslate);
+				
+				g_RenderFunction(this);
+			}
+		}
+	}
+	else
+	{
+		g_RenderFunction(this);
+	}
+}
+
 void WModule::VertexProcess( Matrix4& mat, Vector3& vertex)
 {
 	vertex.Transform(mat);
@@ -380,7 +425,7 @@ void WRender(void* buffer, int width, int height, int colorDepth)
 	//g_pPainter->Render();
 	g_pPainter->Clear(buffer, width, height, 0x000000);
 	
-	g_RenderFunction(g_pPainter.get());
+	g_pPainter->RenderScene();
 	
 }
 
