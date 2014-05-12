@@ -61,6 +61,29 @@ void RendererThreadWork( LPVOID arg )
 	delete pArg;
 }
 
+void RendererThreadWorkByBarycentric( LPVOID arg )
+{
+	RendererThreadArg*		pArg = static_cast<RendererThreadArg*>(arg);
+
+	xtozero::CBarycentricRasterizer	rs;
+	xtozero::CPixelShader			ps;
+	COutputMerger*					om = pArg->pOm;
+
+	const Rect& vp = pArg->viewport;
+
+	//Rasterizer
+	rs.SetViewPort( vp.m_left, vp.m_top, vp.m_right, vp.m_bottom );
+	const std::vector<CPsElementDesc>& rsOut = rs.ProcessFaceRange( *pArg->rsInput, pArg->startIdx, pArg->endIdx );
+
+	//PixelShader
+	const std::vector<COmElementDesc>& psOut = ps.Process( rsOut );
+
+	//OutputMerger
+	om->ProcessParallel( psOut );
+
+	delete pArg;
+}
+
 XTZ_API void XtzRenderToBuffer( void* buffer, int width, int height, int dpp )
 {
 	if ( buffer )
@@ -134,6 +157,62 @@ XTZ_API void XtzRenderToBuffer3StageParallel( void* buffer, int width, int heigh
 		gThreadPool->WaitThread();
 	}
 }
+
+XTZ_API void XtzRenderToBufferBarycentricParallel( void* buffer, int width, int height, int dpp )
+{
+	if ( buffer )
+	{
+		gOutputMerger->CreateDepthBuffer( width, height );
+		gOutputMerger->ClearDepthBuffer( );
+		gOutputMerger->SetFrameBuffer( buffer, dpp, width, height );
+		gOutputMerger->ClearFrameBuffer( );
+		CRsElementDesc& vsOut = gVertexShader->ProcessParallel( gMeshManager->LoadRecentMesh( ), gThreadPool.get( ) );
+
+		if ( vsOut.m_coodinate == COORDINATE::OBJECT_COORDINATE )
+		{
+			for ( std::vector<Vector4>::iterator iter = vsOut.m_vertices.begin( ); iter != vsOut.m_vertices.end( ); ++iter )
+			{
+				Vector4& vertex = *iter;
+				vertex /= vertex.W;
+
+				vertex.X = (vertex.X * width * 0.5f) + width * 0.5f;
+				vertex.Y = -(vertex.Y * height * 0.5f) + height * 0.5f;
+			}
+		}
+
+		int threadFace = static_cast<int>(vsOut.m_faces.size( ) / gThreadPool->GetThreadNumber( ));
+		int extra = vsOut.m_faces.size( ) % gThreadPool->GetThreadNumber( );
+		if ( extra != 0 )
+		{
+			threadFace++;
+		}
+
+		for ( unsigned int i = 0; i < gThreadPool->GetThreadNumber( ); ++i )
+		{
+			RendererThreadArg* pRthreadArg = new RendererThreadArg;
+
+			pRthreadArg->rsInput = &vsOut;
+			pRthreadArg->pOm = gOutputMerger.get( );
+			pRthreadArg->startIdx = i * threadFace;
+			pRthreadArg->endIdx = pRthreadArg->startIdx + threadFace;
+
+			if ( pRthreadArg->endIdx > vsOut.m_faces.size( ) )
+			{
+				pRthreadArg->endIdx = vsOut.m_faces.size( );
+			}
+
+			pRthreadArg->viewport.m_left = 0;
+			pRthreadArg->viewport.m_right = width;
+			pRthreadArg->viewport.m_top = 0;
+			pRthreadArg->viewport.m_bottom = height;
+
+			gThreadPool->AddWork( RendererThreadWorkByBarycentric, (LPVOID)pRthreadArg );
+		}
+
+		gThreadPool->WaitThread( );
+	}
+}
+
 
 XTZ_API void XtzLoadMeshFromFile( const char* pfilename )
 {

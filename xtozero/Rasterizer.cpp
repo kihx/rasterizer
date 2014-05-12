@@ -790,6 +790,104 @@ namespace xtozero
 		return m_outputRS;
 	}
 
+	const std::vector<CPsElementDesc>& CBarycentricRasterizer::ProcessFaceRange( CRsElementDesc& rsInput, unsigned int startface, unsigned int endface )
+	{
+		m_outputRS.clear( );
+
+		for ( unsigned int i = startface; i < endface; ++i )
+		{
+			if ( IsBackFace( rsInput, i ) && g_BackfaceCulling.GetBool( ) )
+			{
+				//Do Nothing
+			}
+			else
+			{
+				unsigned int facecolor;
+				if ( g_RandColor.GetBool( ) )
+				{
+					facecolor = RAND_COLOR( );
+				}
+				else
+				{
+					facecolor = PIXEL_COLOR( 255, 204, 153 );
+				}
+
+				std::vector<int>& face = rsInput.m_faces[i];
+
+				const Vector4& v0 = rsInput.m_vertices[face[0]];
+				const Vector4& v1 = rsInput.m_vertices[face[1]];
+				const Vector4& v2 = rsInput.m_vertices[face[2]];
+
+				//Bounding Area를 계산
+				int maxX = static_cast<int>(max( min( max( max( v0.X, v1.X ), v2.X ), m_viewport.m_right ), 0 ));
+				int maxY = static_cast<int>(max( min( max( max( v0.Y, v1.Y ), v2.Y ), m_viewport.m_bottom ), 0 ));
+				int minX = static_cast<int>(max( min( min( v0.X, v1.X ), v2.X ), 0 ));
+				int minY = static_cast<int>(max( min( min( v0.Y, v1.Y ), v2.Y ), 0 ));
+
+				Vector4 p;
+
+				bool IsInOnce;
+
+				// 외적 공식에 의해서 한 점이 한 축으로 증가했을때 다음과 같이 증가한다.
+				float s0IncX = v0.Y - v1.Y;
+				float s1IncX = v1.Y - v2.Y;
+				float s2IncX = v2.Y - v0.Y;
+				float s0IncY = v1.X - v0.X;
+				float s1IncY = v2.X - v1.X;
+				float s2IncY = v0.X - v2.X;
+
+				p.X = static_cast<float>(minX);
+				p.Y = static_cast<float>(minY);
+
+				float s0 = CalcParallelogramArea( p, v0, v1 );
+				float s1 = CalcParallelogramArea( p, v1, v2 );
+				float s2 = CalcParallelogramArea( p, v2, v0 );
+
+				for ( int i = minY; i <= maxY; ++i )
+				{
+					IsInOnce = false;
+
+					float tempS0 = s0;
+					float tempS1 = s1;
+					float tempS2 = s2;
+
+					for ( int j = minX; j <= maxX; ++j )
+					{
+						if ( tempS0 >= 0 && tempS1 >= 0 && tempS2 >= 0 )
+						{
+							IsInOnce = true;
+
+							float denominator = 1.0f / (tempS0 + tempS1 + tempS2);
+							float tempU = tempS1 * denominator;
+							float tempV = tempS2 * denominator;
+							float tempW = tempS0 * denominator;
+
+							float z = v0.Z * tempU + v1.Z * tempV + v2.Z * tempW;
+
+							m_outputRS.emplace_back( j, i, z, facecolor );
+						}
+						else if ( IsInOnce == true )
+						{
+							// 삼각형에서 한번 삼각형 내부에 들어간 다음 외부로 나왔을 때
+							// 다시 내부로 들어가는 일은 없다.
+							break;
+						}
+
+						tempS0 += s0IncX;
+						tempS1 += s1IncX;
+						tempS2 += s2IncX;
+					}
+
+					s0 += s0IncY;
+					s1 += s1IncY;
+					s2 += s2IncY;
+				}
+			}
+		}
+
+		return m_outputRS;
+	}
+
 	void CBarycentricRasterizer::SetViewPort( int left, int top, int right, int bottom )
 	{
 		assert( left < right );

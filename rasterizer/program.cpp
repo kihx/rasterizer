@@ -328,7 +328,7 @@ static void LoadModuleXTZ()
 	}
 	
 	g_ModuleContext.InstallFunctionLoadMeshFromFile( "XtzLoadMeshFromFile" );
-	g_ModuleContext.InstallFunctionRenderToBuffer( "XtzRenderToBuffer" );
+	g_ModuleContext.InstallFunctionRenderToBuffer( "XtzRenderToBufferBarycentricParallel" );
 	g_ModuleContext.InstallFunctionSetTransform( "XtzSetTransform" );
 	g_ModuleContext.InstallFunctionExecuteCommand( "XtzExecuteCommand" );
 

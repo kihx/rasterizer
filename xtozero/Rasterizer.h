@@ -107,6 +107,7 @@ namespace xtozero
 		~CBarycentricRasterizer( void ) {};
 
 		const std::vector<CPsElementDesc>& Process( CRsElementDesc& rsInput );
+		const std::vector<CPsElementDesc>& ProcessFaceRange( CRsElementDesc& rsInput, unsigned int startface, unsigned int endface );
 		float CalcParallelogramArea( const Vector4& p, const Vector4& v0, const Vector4 v1 );
 
 		void SetViewPort( int left, int top, int right, int bottom );
