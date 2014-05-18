@@ -19,6 +19,7 @@ namespace xtozero
 			}
 
 			m_vsOutput.m_vertices.emplace_back( position );
+			m_vsOutput.m_texCoords.emplace_back( 0.0f, 0.0f ); //임시 코드
 		}
 		
 		unsigned int key = 0;
@@ -37,7 +38,7 @@ namespace xtozero
 			}
 		}
 
-		m_vsOutput.m_coodinate = pMesh->m_coordinate;
+		m_vsOutput.m_coordinate = pMesh->m_coordinate;
 
 		return m_vsOutput;
 	}
@@ -57,6 +58,7 @@ namespace xtozero
 			pArg->pVs = this;
 			pArg->pMesh = pMesh;
 
+			m_vsOutput.m_texCoords.emplace_back( 0.0f, 0.0f ); //임시 코드
 			threadPool->AddWork( VsThreadWork, (LPVOID)pArg );
 		}
 
@@ -76,7 +78,7 @@ namespace xtozero
 			}
 		}
 
-		m_vsOutput.m_coodinate = pMesh->m_coordinate;
+		m_vsOutput.m_coordinate = pMesh->m_coordinate;
 
 		threadPool->WaitThread( );
 

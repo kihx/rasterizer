@@ -7,6 +7,62 @@ namespace xtozero
 	// class Matrix4
 	//------------------------------------------------------------------
 
+	Matrix4::Matrix4()
+	{
+		Identify();
+	}
+
+	Matrix4::Matrix4( const Matrix4& m )
+	{
+		Assign( m );
+	}
+
+	Matrix4::Matrix4( float _11, float _12, float _13, float _14,
+		float _21, float _22, float _23, float _24,
+		float _31, float _32, float _33, float _34,
+		float _41, float _42, float _43, float _44 )
+	{
+		A[0][0] = _11; A[1][1] = _22; A[2][2] = _33; A[3][3] = _44;
+		A[0][1] = _12; A[1][2] = _23; A[2][3] = _34; A[3][0] = _41;
+		A[0][2] = _13; A[1][3] = _24; A[2][0] = _31; A[3][1] = _42;
+		A[0][3] = _14; A[1][0] = _21; A[2][1] = _32; A[3][2] = _43;
+	}
+
+	Matrix4::~Matrix4()
+	{
+	}
+
+	void Matrix4::Identify( void )
+	{
+		A[0][0] = A[1][1] = A[2][2] = A[3][3] = 1;
+		A[0][1] = A[1][2] = A[2][3] = A[3][0] = 0;
+		A[0][2] = A[1][3] = A[2][0] = A[3][1] = 0;
+		A[0][3] = A[1][0] = A[2][1] = A[3][2] = 0;
+	}
+
+	void Matrix4::Assign( const Matrix4& m )
+	{
+		for ( int i = 0; i < 4; ++i )
+		{
+			for ( int j = 0; j < 4; ++j )
+			{
+				A[i][j] = m.A[i][j];
+			}
+		};
+	}
+
+	Matrix4& Matrix4::operator=(const Matrix4& m)
+	{
+		Assign( m );
+
+		return *this;
+	}
+
+	float* Matrix4::operator[]( int row )
+	{
+		return A[row];
+	}
+
 	Matrix4& Matrix4::Transpose( void )
 	{
 		float f;
@@ -362,6 +418,42 @@ namespace xtozero
 		return *this;
 	}
 
+	Matrix4 Matrix4::operator*(const Matrix4& rhs) const
+	{
+		Matrix4 result;
+		float f;
+
+		for ( int i = 0; i < 4; ++i )
+		{
+			for ( int j = 0; j < 4; ++j )
+			{
+				f = A[i][0] * rhs.A[0][j];
+				f += A[i][1] * rhs.A[1][j];
+				f += A[i][2] * rhs.A[2][j];
+				f += A[i][3] * rhs.A[3][j];
+
+				result.A[i][j] = f;
+			}
+		}
+
+		return result;
+	}
+
+	Matrix4 Matrix4::operator*(float rhs) const
+	{
+		Matrix4 result;
+
+		for ( int i = 0; i < 4; ++i )
+		{
+			for ( int j = 0; j < 4; ++j )
+			{
+				result.A[i][j] = result.A[i][j] * rhs;
+			}
+		}
+
+		return result;
+	}
+
 	Matrix4& Matrix4::operator*=(const Matrix4&rhs)
 	{
 		Matrix4 result;
@@ -397,13 +489,461 @@ namespace xtozero
 		return *this;
 	}
 
-	inline float Lerp( float start, float end, float ratio )
+	Vector2::Vector2() : m_u( 0 ), m_v( 0 )
 	{
-		return start + (end - start) * ratio;
+
 	}
 
-	inline Vector4 Lerp( Vector4 start, Vector4 end, float ratio )
+	Vector2::Vector2( float u, float v ) : m_u( u ), m_v( v )
 	{
-		return start + (end - start) * ratio;
+
+	}
+
+	Vector2::~Vector2()
+	{
+
+	}
+
+	const Vector2 Vector2::operator+(const Vector2& vector) const
+	{
+		return Vector2( m_u + vector.GetU(), m_v + vector.GetV() );
+	}
+
+	const Vector2 Vector2::operator+(const float scalar) const
+	{
+		return Vector2( m_u + scalar, m_v + scalar );
+	}
+
+	const Vector2 Vector2::operator-(const Vector2& vector) const
+	{
+		return Vector2( m_u - vector.GetU(), m_v - vector.GetV() );
+	}
+
+	const Vector2 Vector2::operator-(const float scalar) const
+	{
+		return Vector2( m_u - scalar, m_v - scalar );
+	}
+
+	const Vector2 Vector2::operator*(const Vector2& vector) const
+	{
+		return Vector2( m_u * vector.GetU(), m_v * vector.GetV() );
+	}
+
+	const Vector2 Vector2::operator*(const float scalar) const
+	{
+		return Vector2( m_u * scalar, m_v * scalar );
+	}
+
+	const Vector2 Vector2::operator/(const Vector2& vector) const
+	{
+		return Vector2( m_u / vector.GetU(), m_v / vector.GetV() );
+	}
+
+	const Vector2 Vector2::operator/(const float scalar) const
+	{
+		return Vector2( m_u / scalar, m_v / scalar );
+	}
+
+	Vector2& Vector2::operator+=(const Vector2& vector)
+	{
+		m_u += vector.GetU();
+		m_v += vector.GetV();
+		return *this;
+	}
+
+	Vector2& Vector2::operator+=(const float scalar)
+	{
+		m_u += scalar;
+		m_v += scalar;
+		return *this;
+	}
+
+	Vector2& Vector2::operator-=(const Vector2& vector)
+	{
+		m_u -= vector.GetU();
+		m_v -= vector.GetV();
+		return *this;
+	}
+
+	Vector2& Vector2::operator-=(const float scalar)
+	{
+		m_u -= scalar;
+		m_v -= scalar;
+		return *this;
+	}
+
+	Vector2& Vector2::operator*=(const Vector2& vector)
+	{
+		m_u *= vector.GetU();
+		m_v *= vector.GetV();
+		return *this;
+	}
+
+	Vector2& Vector2::operator*=(const float scalar)
+	{
+		m_u *= scalar;
+		m_v *= scalar;
+		return *this;
+	}
+
+	Vector2& Vector2::operator/=(const Vector2& vector)
+	{
+		m_u /= vector.GetU();
+		m_v /= vector.GetV();;
+		return *this;
+	}
+
+	Vector2& Vector2::operator/=(const float scalar)
+	{
+		m_u /= scalar; 
+		m_v /= scalar;
+		return *this;
+	}
+
+	Vector3::Vector3( void )
+	{
+		Set( 0, 0, 0 );
+	}
+
+	Vector3::Vector3( float x, float y, float z )
+	{
+		Set( x, y, z );
+	}
+
+	Vector3::~Vector3( void )
+	{
+	}
+
+
+	void Vector3::Set( float x, float y, float z )
+	{
+		X = x;
+		Y = y;
+		Z = z;
+	}
+
+	float Vector3::Length( void )
+	{
+		return sqrt( X * X + Y * Y + Z * Z );
+	}
+
+	void Vector3::Normalize( void )
+	{
+		*this /= Length();
+	}
+
+	Vector3 Vector3::operator+(const Vector3& rhs) const
+	{
+		return Vector3( X + rhs.X,
+			Y + rhs.Y,
+			Z + rhs.Z );
+	}
+
+	Vector3 Vector3::operator+(float rhs) const
+	{
+		return Vector3( X + rhs,
+			Y + rhs,
+			Z + rhs );
+	}
+
+	Vector3 Vector3::operator-(const Vector3& rhs) const
+	{
+		return Vector3( X - rhs.X,
+			Y - rhs.Y,
+			Z - rhs.Z );
+	}
+
+	Vector3 Vector3::operator-(float rhs) const
+	{
+		return Vector3( X - rhs,
+			Y - rhs,
+			Z - rhs );
+	}
+
+	Vector3 Vector3::operator*(const Vector3& rhs) const
+	{
+		return Vector3( X * rhs.X,
+			Y * rhs.Y,
+			Z * rhs.Z );
+	}
+
+	Vector3 Vector3::operator*(float rhs) const
+	{
+		return Vector3( X * rhs,
+			Y * rhs,
+			Z * rhs );
+	}
+
+	Vector3 Vector3::operator/(const Vector3& rhs) const
+	{
+		return Vector3( X / rhs.X,
+			Y / rhs.Y,
+			Z / rhs.Z );
+	}
+
+	Vector3 Vector3::operator/(float rhs) const
+	{
+		return Vector3( X / rhs,
+			Y / rhs,
+			Z / rhs );
+	}
+
+	const Vector3& Vector3::operator+=(const Vector3 &v)
+	{
+		X += v.X;
+		Y += v.Y;
+		Z += v.Z;
+
+		return *this;
+	}
+
+	const Vector3& Vector3::operator-=(const Vector3 &v)
+	{
+		X -= v.X;
+		Y -= v.Y;
+		Z -= v.Z;
+
+		return *this;
+	}
+
+	const Vector3& Vector3::operator/=(float offset)
+	{
+		X /= offset;
+		Y /= offset;
+		Z /= offset;
+
+		return *this;
+	}
+
+	const Vector3& Vector3::operator*=(float offset)
+	{
+		X *= offset;
+		Y *= offset;
+		Z *= offset;
+
+		return *this;
+	}
+
+	const Vector3& Vector3::operator=(const Vector3& rhs)
+	{
+		X = rhs.X;
+		Y = rhs.Y;
+		Z = rhs.Z;
+
+		return *this;
+	}
+
+	float Vector3::DotProduct( const Vector3& v3 )
+	{
+		return X * v3.X + Y * v3.Y + Z * v3.Z;
+	}
+
+
+	float Vector3::operator^(const Vector3& v3)
+	{
+		return DotProduct( v3 );
+	}
+
+	Vector3 Vector3::CrossProduct( const Vector3& v3 )
+	{
+		return Vector3( Y * v3.Z - Z * v3.Y,
+			Z * v3.X - X * v3.Z,
+			X * v3.Y - Y * v3.X );
+	}
+
+	Vector3 Vector3::operator%(const Vector3& v3)
+	{
+		return CrossProduct( v3 );
+	}
+
+	Vector3& Vector3::Transform( Matrix4& mat )
+	{
+		Vector3 tmp;
+		tmp.X = mat.A[0][0] * X + mat.A[1][0] * Y + mat.A[2][0] * Z + mat.A[3][0];
+		tmp.Y = mat.A[0][1] * X + mat.A[1][1] * Y + mat.A[2][1] * Z + mat.A[3][1];
+		tmp.Z = mat.A[0][2] * X + mat.A[1][2] * Y + mat.A[2][2] * Z + mat.A[3][2];
+		float w = mat.A[0][3] * X + mat.A[1][3] * Y + mat.A[2][3] * Z + mat.A[3][3];
+
+		tmp.X /= w;
+		tmp.Y /= w;
+		tmp.Z /= w;
+
+		*this = tmp;
+
+		return *this;
+	}
+
+	Vector4::Vector4( void )
+	{
+		Set( 0.0f, 0.0f, 0.0f, 1.0f );
+	}
+
+	Vector4::Vector4( float x, float y, float z, float w )
+	{
+		Set( x, y, z, w );
+	}
+
+	Vector4::~Vector4( void )
+	{
+	}
+
+	void Vector4::Set( float x, float y, float z, float w )
+	{
+		X = x;
+		Y = y;
+		Z = z;
+		W = w;
+	}
+
+	float Vector4::Length( void )
+	{
+		return sqrt( X * X + Y * Y + Z * Z );
+	}
+
+	void Vector4::Normalize( void )
+	{
+		*this /= Length();
+	}
+
+	Vector4 Vector4::operator+(const Vector4& rhs) const
+	{
+		return Vector4( X + rhs.X,
+			Y + rhs.Y,
+			Z + rhs.Z );
+	}
+
+	Vector4 Vector4::operator+(float rhs) const
+	{
+		return Vector4( X + rhs,
+			Y + rhs,
+			Z + rhs );
+	}
+
+	Vector4 Vector4::operator-(const Vector4& rhs) const
+	{
+		return Vector4( X - rhs.X,
+			Y - rhs.Y,
+			Z - rhs.Z );
+	}
+
+	Vector4 Vector4::operator-(float rhs) const
+	{
+		return Vector4( X - rhs,
+			Y - rhs,
+			Z - rhs );
+	}
+
+	Vector4 Vector4::operator*(const Vector4& rhs) const
+	{
+		return Vector4( X * rhs.X,
+			Y * rhs.Y,
+			Z * rhs.Z );
+	}
+
+	Vector4 Vector4::operator*(float rhs) const
+	{
+		return Vector4( X * rhs,
+			Y * rhs,
+			Z * rhs );
+	}
+
+	Vector4 Vector4::operator/(const Vector4& rhs) const
+	{
+		return Vector4( X / rhs.X,
+			Y / rhs.Y,
+			Z / rhs.Z,
+			W / rhs.W );
+	}
+
+	Vector4 Vector4::operator/(float rhs) const
+	{
+		return Vector4( X / rhs,
+			Y / rhs,
+			Z / rhs,
+			W / rhs );
+	}
+
+	const Vector4& Vector4::operator+=(const Vector4 &v)
+	{
+		X += v.X;
+		Y += v.Y;
+		Z += v.Z;
+
+		return *this;
+	}
+
+	const Vector4& Vector4::operator-=(const Vector4 &v)
+	{
+		X -= v.X;
+		Y -= v.Y;
+		Z -= v.Z;
+
+		return *this;
+	}
+
+	const Vector4& Vector4::operator/=(float offset)
+	{
+		X /= offset;
+		Y /= offset;
+		Z /= offset;
+		W /= offset;
+
+		return *this;
+	}
+
+	const Vector4& Vector4::operator*=(float offset)
+	{
+		X *= offset;
+		Y *= offset;
+		Z *= offset;
+
+		return *this;
+	}
+
+	const Vector4& Vector4::operator=(const Vector4& rhs)
+	{
+		X = rhs.X;
+		Y = rhs.Y;
+		Z = rhs.Z;
+
+		return *this;
+	}
+
+	float Vector4::DotProduct( const Vector4& v3 )
+	{
+		return X * v3.X + Y * v3.Y + Z * v3.Z;
+	}
+
+	float Vector4::operator^(const Vector4& v3)
+	{
+		return DotProduct( v3 );
+	}
+
+	Vector4 Vector4::CrossProduct( const Vector4& v3 )
+	{
+		return Vector4( Y * v3.Z - Z * v3.Y,
+			Z * v3.X - X * v3.Z,
+			X * v3.Y - Y * v3.X );
+	}
+
+	Vector4 Vector4::operator%(const Vector4& v3)
+	{
+		return CrossProduct( v3 );
+	}
+
+	Vector4& Vector4::Transform( const Matrix4& mat )
+	{
+		Vector4 tmp;
+		tmp.X = mat.A[0][0] * X + mat.A[1][0] * Y + mat.A[2][0] * Z + mat.A[3][0];
+		tmp.Y = mat.A[0][1] * X + mat.A[1][1] * Y + mat.A[2][1] * Z + mat.A[3][1];
+		tmp.Z = mat.A[0][2] * X + mat.A[1][2] * Y + mat.A[2][2] * Z + mat.A[3][2];
+		tmp.W = mat.A[0][3] * X + mat.A[1][3] * Y + mat.A[2][3] * Z + mat.A[3][3];
+
+		X = tmp.X;
+		Y = tmp.Y;
+		Z = tmp.Z;
+		W = tmp.W;
+
+		return *this;
 	}
 }

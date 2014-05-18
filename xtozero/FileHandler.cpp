@@ -2,11 +2,11 @@
 #include "FileHandler.h"
 
 
-CFileHandler::CFileHandler( const char* pfilepath )
+CFileHandler::CFileHandler( const char* pfilepath, std::ios::openmode mode )
 {
 	try
 	{
-		m_file.open( pfilepath );
+		m_file.open( pfilepath, mode );
 	}
 	catch ( std::exception e )
 	{

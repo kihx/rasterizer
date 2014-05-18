@@ -5,10 +5,21 @@
 #include "xtozero.h"
 #include "Concommand.h"
 
+#include "Mesh.h"
+#include "Texture.h"
+#include "Rasterizer.h"
+#include "VertexShader.h"
+#include "PixelShader.h"
+#include "OutputMerger.h"
+#include "XtzThreadPool.h"
+#include "Concommand.h"
+
+
 using namespace xtozero;
 
 std::unique_ptr<xtozero::CXtzThreadPool> gThreadPool( new xtozero::CXtzThreadPool( ) );
 std::unique_ptr<xtozero::CMeshManager> gMeshManager( new xtozero::CMeshManager( ) );
+std::unique_ptr<xtozero::CTextureManager> gTextureManager( new xtozero::CTextureManager( ) );
 std::unique_ptr<xtozero::CVertexShader> gVertexShader( new xtozero::CVertexShader( ) );
 std::unique_ptr<xtozero::CRasterizer> gRasterizer( new xtozero::CRasterizer( ) );
 std::unique_ptr<xtozero::CPixelShader> gPixelShader( new xtozero::CPixelShader() );
@@ -21,6 +32,24 @@ DECLARE_CONCOMMAND( SetThread )
 	{
 		std::string threadNumber = cmd::CConcommandExecutor::GetInstance()->ArgV( 1 );
 		gThreadPool->CreateThreadPool( atoi( threadNumber.c_str( ) ) );
+	}
+}
+
+DECLARE_CONCOMMAND( LoadTexture )
+{
+	if ( cmd::CConcommandExecutor::GetInstance( )->ArgC( ) > 1 )
+	{
+		std::string fileName = cmd::CConcommandExecutor::GetInstance( )->ArgV( 1 );
+		std::shared_ptr<CTexture> texture = gTextureManager->Load( fileName.c_str( ) );
+
+		if ( texture )
+		{
+			std::cout << "텍스쳐 로드 성공" << std::endl;
+		}
+		else
+		{
+			std::cout << "텍스쳐 로드 실패" << std::endl;
+		}
 	}
 }
 
@@ -113,7 +142,7 @@ XTZ_API void XtzRenderToBuffer3StageParallel( void* buffer, int width, int heigh
 		gOutputMerger->ClearFrameBuffer( );
 		CRsElementDesc& vsOut = gVertexShader->ProcessParallel( gMeshManager->LoadRecentMesh( ), gThreadPool.get( ) );
 		
-		if ( vsOut.m_coodinate == COORDINATE::OBJECT_COORDINATE )
+		if ( vsOut.m_coordinate == COORDINATE::OBJECT_COORDINATE )
 		{
 			for ( std::vector<Vector4>::iterator iter = vsOut.m_vertices.begin( ); iter != vsOut.m_vertices.end( ); ++iter )
 			{
@@ -168,7 +197,7 @@ XTZ_API void XtzRenderToBufferBarycentricParallel( void* buffer, int width, int 
 		gOutputMerger->ClearFrameBuffer( );
 		CRsElementDesc& vsOut = gVertexShader->ProcessParallel( gMeshManager->LoadRecentMesh( ), gThreadPool.get( ) );
 
-		if ( vsOut.m_coodinate == COORDINATE::OBJECT_COORDINATE )
+		if ( vsOut.m_coordinate == COORDINATE::OBJECT_COORDINATE )
 		{
 			for ( std::vector<Vector4>::iterator iter = vsOut.m_vertices.begin( ); iter != vsOut.m_vertices.end( ); ++iter )
 			{

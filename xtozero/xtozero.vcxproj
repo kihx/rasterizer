@@ -95,6 +95,7 @@
     <ClInclude Include="Rasterizer.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="Texture.h" />
     <ClInclude Include="VertexShader.h" />
     <ClInclude Include="xtozero.h" />
     <ClInclude Include="pipelineElements.h" />
@@ -114,6 +115,7 @@
     <ClCompile Include="FileHandler.cpp" />
     <ClCompile Include="OutputMerger.cpp" />
     <ClCompile Include="PixelShader.cpp" />
+    <ClCompile Include="Texture.cpp" />
     <ClCompile Include="XtzMath.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="Rasterizer.cpp" />

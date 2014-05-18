@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Mesh.h"
+#include "Texture.h"
 
 namespace xtozero
 {
@@ -22,7 +23,7 @@ namespace xtozero
 
 	bool CMesh::LoadFromMsh( const char* pfilename )
 	{
-		CFileHandler meshfile( pfilename );
+		CFileHandler meshfile( pfilename, 0 );
 		if ( meshfile.is_open( ) )
 		{
 			char token[256] = { 0 };
@@ -105,7 +106,7 @@ namespace xtozero
 
 	bool CMesh::LoadFromPly( const char* pfilename )
 	{
-		CFileHandler meshfile( pfilename );
+		CFileHandler meshfile( pfilename, 0 );
 		if ( meshfile.is_open( ) )
 		{
 			char token[256] = { 0 };
@@ -176,8 +177,8 @@ namespace xtozero
 					}
 				}
 			}
-			return true;
 			m_coordinate = COORDINATE::OBJECT_COORDINATE;
+			return true;
 		}
 		else
 		{

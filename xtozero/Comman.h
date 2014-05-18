@@ -18,9 +18,10 @@ namespace xtozero
 	{
 	private:
 		static T* m_instance;
-		CSingletonBase( const CSingletonBase<T>& );
-		CSingletonBase<T>& operator=(const CSingletonBase<T>&);
 	public:
+		CSingletonBase( const CSingletonBase<T>& ) = delete;
+		CSingletonBase<T>& operator=(const CSingletonBase<T>&) = delete;
+
 		static T* GetInstance( )
 		{
 			if ( m_instance == nullptr )

@@ -13,6 +13,7 @@
 #include <vector>
 #include <set>
 #include <algorithm>
+#include <tuple>
 
 #define PIXEL_COLOR(r, g, b)  ( ( b << 16 ) + ( g << 8 ) + r )
 #define RAND_COLOR() PIXEL_COLOR( ( rand()%255 + 1 ), ( rand()%255 + 1 ), ( rand()%255 + 1 ) )
@@ -44,10 +45,14 @@ namespace xtozero
 		float m_startZ;
 		float m_endZ;
 		float m_gradient;
+		Vector2 m_startUV;
+		Vector2 m_endUV;
 
-		Edge( int minY, int maxY, float minX, float maxX, float startZ, float endZ, float gradient )
+		Edge( int minY, int maxY, float minX, float maxX, float startZ, float endZ, float gradient,
+			const Vector2& startUV, const Vector2& endUV)
 			: m_minY( minY ), m_maxY( maxY ), m_minX( minX ), m_maxX( maxX ), 
-			m_startZ(startZ), m_endZ(endZ), m_gradient( gradient ) {}
+			m_startZ( startZ ), m_endZ( endZ ), m_gradient( gradient ),
+			m_startUV( startUV ), m_endUV( endUV ) {}
 		~Edge() {}
 	};
 
@@ -56,7 +61,7 @@ namespace xtozero
 	private:
 		std::vector<Edge> m_edgeTable;
 		std::vector<Edge> m_activeEdgeTable;
-		std::vector<std::pair<int, float>> m_horizontalLine;
+		std::vector<std::tuple<int, float, Vector2>> m_horizontalLine;
 		SpinLock m_lockobject;
 		Rect m_viewport;
 
@@ -82,7 +87,7 @@ namespace xtozero
 			std::vector<Edge>& edgeTable );
 		void UpdateActiveEdgeTableParallel( int scanline, std::vector<Edge>& edgeTable, std::vector<Edge>& activeEdgeTable );
 		void ProcessScanlineParallel( int scanline, unsigned int facecolor, std::vector<Edge>& activeEdgeTable, 
-			std::vector<CPsElementDesc>& outputRS, std::vector<std::pair<int, float>>& horizontalLine );
+			std::vector<CPsElementDesc>& outputRS, std::vector<std::tuple<int, float, Vector2>>& horizontalLine );
 
 		void SetViewPort( int left, int top, int right, int bottom );
 

@@ -7,14 +7,6 @@
 #define XTZ_API extern "C" __declspec(dllimport)
 #endif
 
-#include "Mesh.h"
-#include "Rasterizer.h"
-#include "VertexShader.h"
-#include "PixelShader.h"
-#include "OutputMerger.h"
-#include "XtzThreadPool.h"
-#include "Concommand.h"
-
 XTZ_API void XtzRenderToBuffer( void* buffer, int width, int height, int dpp );
 
 XTZ_API void XtzRenderToBuffer3StageParallel( void* buffer, int width, int height, int dpp );

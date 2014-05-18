@@ -91,7 +91,7 @@ namespace cmd
 	CConcommand::CConcommand( const char* name, const CommandFunc func ) : m_name( name ), m_pFunc( func )
 	{
 		assert( name );
-		CConcommandExecutor::GetInstance()->AddConcommad( m_name, *this );
+		CConcommandExecutor::GetInstance()->AddConcommand( m_name, *this );
 	}
 	CConcommand::~CConcommand()
 	{
@@ -114,7 +114,7 @@ namespace cmd
 	{
 	}
 
-	void CConcommandExecutor::AddConcommad( const std::string& cmd, const CConcommand& cmdFuc )
+	void CConcommandExecutor::AddConcommand( const std::string& cmd, const CConcommand& cmdFuc )
 	{
 		m_cmdMap.emplace(  cmd, cmdFuc );
 	}
@@ -154,7 +154,7 @@ namespace cmd
 			}
 			else
 			{
-				std::cout << "Invaild Convar/Concommad" << std::endl;
+				std::cout << "Invaild Convar/Concommand" << std::endl;
 			}
 		}
 	}

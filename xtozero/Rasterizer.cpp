@@ -39,6 +39,8 @@ namespace xtozero
 			{
 				const Vector4& start = rsInput.m_vertices[faces.at( i )];
 				const Vector4& end = rsInput.m_vertices[faces.at( i + 1 )];
+				const Vector2& startUV = rsInput.m_texCoords[faces.at( i )];;
+				const Vector2& endUV = rsInput.m_texCoords[faces.at( i + 1 )];;
 
 				//기울기를 구함
 				dy = end.Y - start.Y;
@@ -80,7 +82,8 @@ namespace xtozero
 				m_edgeTable.emplace_back( 
 					minY, maxY, 
 					minX, maxX, 
-					startZ, endZ, gradient );
+					startZ, endZ, gradient,
+					startUV, endUV);
 			}
 		}
 		//m_edgeTable을 minY로 정렬
@@ -181,8 +184,9 @@ namespace xtozero
 				}
 
 				float z = Lerp( edge.m_startZ, edge.m_endZ, lerpRatio );
+				Vector2 texcoord = Lerp( edge.m_startUV, edge.m_endUV, lerpRatio );
 
-				m_horizontalLine.emplace_back( static_cast<int>( intersectX ), z );
+				m_horizontalLine.emplace_back( static_cast<int>(intersectX), z, texcoord );
 			}
 		}
 
@@ -190,13 +194,15 @@ namespace xtozero
 		int endX;
 		float startZ;
 		float endZ;
-		for ( std::vector<std::pair<int, float>>::iterator iter = m_horizontalLine.begin(); iter != m_horizontalLine.end(); iter += 2 )
+		Vector2 startUV;
+		Vector2 endUV;
+		for ( std::vector<std::tuple<int, float, Vector2>>::iterator iter = m_horizontalLine.begin(); iter != m_horizontalLine.end(); iter += 2 )
 		{
-			std::pair<int, float>& posXZ = *iter;
+			std::tuple<int, float, Vector2>& posXZ_UV = *iter;
 
 			if ( (iter + 1) == m_horizontalLine.end() )
 			{
-				int x = posXZ.first;
+				int x = std::get<0>( posXZ_UV );
 				if ( x < m_viewport.m_left )
 				{
 					x = m_viewport.m_left;
@@ -206,22 +212,26 @@ namespace xtozero
 					x = m_viewport.m_right;
 				}
 
-				m_outputRS.emplace_back( x, scanline, posXZ.second, facecolor );
+				m_outputRS.emplace_back( x, scanline, std::get<1>( posXZ_UV ), facecolor, std::get<2>( posXZ_UV ) );
 				break;
 			}
 
-			std::pair<int, float>& posNextXZ = *(iter + 1);
+			std::tuple<int, float, Vector2>& posNextXZ_UV = *(iter + 1);
 
-			startX = posXZ.first;
-			endX = posNextXZ.first;
-			startZ = posXZ.second;
-			endZ = posNextXZ.second;
+			startX = std::get<0>( posXZ_UV );
+			endX = std::get<0>( posNextXZ_UV );
+			startZ = std::get<1>( posXZ_UV );
+			endZ = std::get<1>( posNextXZ_UV );
+			startUV = std::get<2>( posXZ_UV );
+			endUV = std::get<2>( posNextXZ_UV );
 			if ( startX > endX )
 			{
-				startX = posNextXZ.first;
-				endX = posXZ.first;
-				startZ = posNextXZ.second;
-				endZ = posXZ.second;
+				startX = std::get<0>( posNextXZ_UV );
+				endX = std::get<0>( posXZ_UV );
+				startZ = std::get<1>( posNextXZ_UV );
+				endZ = std::get<1>( posXZ_UV );
+				startUV = std::get<2>( posNextXZ_UV );
+				endUV = std::get<2>( posXZ_UV );
 			}
 
 			if ( startX < m_viewport.m_left )
@@ -235,11 +245,15 @@ namespace xtozero
 			}
 
 			float z = startZ;
+			Vector2 texcoord = startUV;
+			
 			float zGradient = (endZ - startZ) / (endX - startX);
+			Vector2 uvGradient = (endUV - startUV) / ( static_cast<float>(endX - startX) );
 			for ( int i = startX; i <= endX; ++i )
 			{
-				m_outputRS.emplace_back( i, scanline, z, facecolor );
+				m_outputRS.emplace_back( i, scanline, z, facecolor, texcoord );
 				z += zGradient;
+				texcoord += uvGradient;
 			}
 		}
 	}
@@ -274,7 +288,7 @@ namespace xtozero
 			}
 		}
 
-		if ( rsInput.m_coodinate == COORDINATE::OBJECT_COORDINATE )
+		if ( rsInput.m_coordinate == COORDINATE::OBJECT_COORDINATE )
 		{
 			for ( std::vector<Vector4>::iterator iter = rsInput.m_vertices.begin( ); iter != rsInput.m_vertices.end( ); ++iter )
 			{
@@ -329,7 +343,7 @@ namespace xtozero
 	{
 		m_outputRS.clear( );
 
-		if ( rsInput.m_coodinate == COORDINATE::OBJECT_COORDINATE )
+		if ( rsInput.m_coordinate == COORDINATE::OBJECT_COORDINATE )
 		{
 			for ( std::vector<Vector4>::iterator iter = rsInput.m_vertices.begin( ); iter != rsInput.m_vertices.end( ); ++iter )
 			{
@@ -458,6 +472,8 @@ namespace xtozero
 			{
 				const Vector4& start = rsInput.m_vertices[faces.at( i )];
 				const Vector4& end = rsInput.m_vertices[faces.at( i + 1 )];
+				const Vector2& startUV = rsInput.m_texCoords[faces.at( i )];
+				const Vector2& endUV = rsInput.m_texCoords[faces.at( i + 1 )];
 
 				//기울기를 구함
 				dy = end.Y - start.Y;
@@ -499,7 +515,8 @@ namespace xtozero
 				edgeTable.emplace_back(
 					minY, maxY,
 					minX, maxX,
-					startZ, endZ, gradient );
+					startZ, endZ, gradient,
+					startUV, endUV);
 			}
 		}
 		//edgeTable을 minY로 정렬
@@ -549,8 +566,8 @@ namespace xtozero
 		}
 	}
 
-	void CRasterizer::ProcessScanlineParallel( int scanline, unsigned int facecolor, std::vector<Edge>& activeEdgeTable, 
-		std::vector<CPsElementDesc>& outputRS, std::vector<std::pair<int, float>>& horizontalLine )//정점 보간하면 컬러 넘겨주지 않을 예정...
+	void CRasterizer::ProcessScanlineParallel( int scanline, unsigned int facecolor, std::vector<Edge>& activeEdgeTable,
+		std::vector<CPsElementDesc>& outputRS, std::vector < std::tuple < int, float, Vector2 >> &horizontalLine )//정점 보간하면 컬러 넘겨주지 않을 예정...
 	{
 		if ( activeEdgeTable.empty() )
 		{
@@ -592,8 +609,9 @@ namespace xtozero
 				}
 
 				float z = Lerp( edge.m_startZ, edge.m_endZ, lerpRatio );
+				Vector2 texcoord = Lerp( edge.m_startUV, edge.m_endUV, lerpRatio );
 
-				horizontalLine.emplace_back( static_cast<int>(intersectX), z );
+				horizontalLine.emplace_back( static_cast<int>(intersectX), z, texcoord );
 			}
 		}
 
@@ -601,13 +619,15 @@ namespace xtozero
 		int endX;
 		float startZ;
 		float endZ;
+		Vector2 startUV;
+		Vector2 endUV;
 		for ( unsigned int i = 0; i < horizontalLine.size(); i += 2 )
 		{
-			std::pair<int, float>& posXZ = horizontalLine[i];
+			std::tuple<int, float, Vector2>& posXZ_UV = horizontalLine[i];
 
 			if ( (i + 1) == horizontalLine.size( ) )
 			{
-				int x = posXZ.first;
+				int x = std::get<0>( posXZ_UV );
 				if ( x < m_viewport.m_left )
 				{
 					x = m_viewport.m_left;
@@ -617,23 +637,27 @@ namespace xtozero
 					x = m_viewport.m_right;
 				}
 
-				outputRS.emplace_back( x, scanline, posXZ.second, facecolor );
+				outputRS.emplace_back( x, scanline, std::get<1>( posXZ_UV ), facecolor, std::get<2>( posXZ_UV ) );
 
 				break;
 			}
 
-			std::pair<int, float>& posNextXZ = horizontalLine[i + 1];
+			std::tuple<int, float, Vector2>& posNextXZ_UV = horizontalLine[i + 1];
 
-			startX = posXZ.first;
-			endX = posNextXZ.first;
-			startZ = posXZ.second;
-			endZ = posNextXZ.second;
+			startX = std::get<0>( posXZ_UV );
+			endX = std::get<0>( posNextXZ_UV );
+			startZ = std::get<1>( posXZ_UV );
+			endZ = std::get<1>( posNextXZ_UV );
+			startUV = std::get<2>( posXZ_UV );
+			endUV = std::get<2>( posNextXZ_UV );
 			if ( startX > endX )
 			{
-				startX = posNextXZ.first;
-				endX = posXZ.first;
-				startZ = posNextXZ.second;
-				endZ = posXZ.second;
+				startX = std::get<0>( posNextXZ_UV );
+				endX = std::get<0>( posXZ_UV );
+				startZ = std::get<1>( posNextXZ_UV );
+				endZ = std::get<1>( posXZ_UV );
+				startUV = std::get<2>( posNextXZ_UV );
+				endUV = std::get<2>( posXZ_UV );
 			}
 
 			if ( startX < m_viewport.m_left )
@@ -647,14 +671,14 @@ namespace xtozero
 			}
 
 			float z = startZ;
-			//float lerpRatio;
+			Vector2 texcoord = startUV;
 			float zGradient = (endZ - startZ) / (endX - startX);
+			Vector2 uvGradient = (endUV - startUV) / ( static_cast<float>( endX - startX ) );
 			for ( int i = startX; i <= endX; ++i )
 			{
-				//lerpRatio = static_cast<float>(i - startX) / (endX - startX);
-				//z = Lerp( startZ, endZ, lerpRatio );
-				outputRS.emplace_back( i, scanline, z, facecolor );
+				outputRS.emplace_back( i, scanline, z, facecolor, texcoord );
 				z += zGradient;
+				texcoord += uvGradient;
 			}
 		}
 	}
@@ -678,7 +702,7 @@ namespace xtozero
 	{
 		m_outputRS.clear();
 
-		if ( rsInput.m_coodinate == COORDINATE::OBJECT_COORDINATE )
+		if ( rsInput.m_coordinate == COORDINATE::OBJECT_COORDINATE )
 		{
 			for ( std::vector<Vector4>::iterator iter = rsInput.m_vertices.begin( ); iter != rsInput.m_vertices.end( ); ++iter )
 			{
@@ -714,109 +738,9 @@ namespace xtozero
 				const Vector4& v1 = rsInput.m_vertices[face[1]];
 				const Vector4& v2 = rsInput.m_vertices[face[2]];
 
-				//Bounding Area를 계산
-				int maxX = static_cast<int>( max( min( max( max( v0.X, v1.X ), v2.X ), m_viewport.m_right ), 0) );
-				int maxY = static_cast<int>( max( min( max( max( v0.Y, v1.Y ), v2.Y ), m_viewport.m_bottom ), 0 ) );
-				int minX = static_cast<int>( max( min( min( v0.X, v1.X ), v2.X ), 0 ) );
-				int minY = static_cast<int>( max( min( min( v0.Y, v1.Y ), v2.Y ), 0 ) );
-
-				Vector4 p;
-
-				bool IsInOnce;
-
-				// 외적 공식에 의해서 한 점이 한 축으로 증가했을때 다음과 같이 증가한다.
-				float s0IncX = v0.Y - v1.Y;
-				float s1IncX = v1.Y - v2.Y;
-				float s2IncX = v2.Y - v0.Y;
-				float s0IncY = v1.X - v0.X;
-				float s1IncY = v2.X - v1.X;
-				float s2IncY = v0.X - v2.X;
-
-				p.X = static_cast<float>(minX);
-				p.Y = static_cast<float>(minY);
-
-				float s0 = CalcParallelogramArea( p, v0, v1 );
-				float s1 = CalcParallelogramArea( p, v1, v2 );
-				float s2 = CalcParallelogramArea( p, v2, v0 );
-
-				float denominator = 1 / (s0 + s1 + s2);
-				float u = s0 * denominator;
-				float v = s1 * denominator;
-				float w = s2 * denominator;
-
-				// 깊이도 마찬가지로 증가한다.
-				float z = v0.Z * u + v1.Z * v + v2.Z * w;
-				float zIncX = s0IncX * u + s1IncX * v + s2IncX * w;
-				float zIncY = s0IncY * u + s1IncY * v + s2IncY * w;
-
-				for ( int i = minY; i <= maxY; ++i )
-				{
-					IsInOnce = false;
-
-					float tempS0 = s0;
-					float tempS1 = s1;
-					float tempS2 = s2;
-					float tempZ = z;
-
-					for ( int j = minX; j <= maxX; ++j )
-					{
-						if ( tempS0 >= 0 && tempS1 >= 0 && tempS2 >= 0 )
-						{
-							IsInOnce = true;
-
-							m_outputRS.emplace_back( j, i, tempZ, facecolor );
-						}
-						else if ( IsInOnce == true ) 
-						{
-							// 삼각형에서 한번 삼각형 내부에 들어간 다음 외부로 나왔을 때
-							// 다시 내부로 들어가는 일은 없다.
-							break;
-						}
-
-						tempS0 += s0IncX;
-						tempS1 += s1IncX;
-						tempS2 += s2IncX;
-						tempZ += zIncX;
-					}
-
-					s0 += s0IncY;
-					s1 += s1IncY;
-					s2 += s2IncY;
-					z += zIncY;
-				}
-			}
-		}
-
-		return m_outputRS;
-	}
-
-	const std::vector<CPsElementDesc>& CBarycentricRasterizer::ProcessFaceRange( CRsElementDesc& rsInput, unsigned int startface, unsigned int endface )
-	{
-		m_outputRS.clear( );
-
-		for ( unsigned int i = startface; i < endface; ++i )
-		{
-			if ( IsBackFace( rsInput, i ) && g_BackfaceCulling.GetBool( ) )
-			{
-				//Do Nothing
-			}
-			else
-			{
-				unsigned int facecolor;
-				if ( g_RandColor.GetBool( ) )
-				{
-					facecolor = RAND_COLOR( );
-				}
-				else
-				{
-					facecolor = PIXEL_COLOR( 255, 204, 153 );
-				}
-
-				std::vector<int>& face = rsInput.m_faces[i];
-
-				const Vector4& v0 = rsInput.m_vertices[face[0]];
-				const Vector4& v1 = rsInput.m_vertices[face[1]];
-				const Vector4& v2 = rsInput.m_vertices[face[2]];
+				const Vector2& texCoord0 = rsInput.m_texCoords[face[0]];
+				const Vector2& texCoord1 = rsInput.m_texCoords[face[1]];
+				const Vector2& texCoord2 = rsInput.m_texCoords[face[2]];
 
 				//Bounding Area를 계산
 				int maxX = static_cast<int>(max( min( max( max( v0.X, v1.X ), v2.X ), m_viewport.m_right ), 0 ));
@@ -863,8 +787,112 @@ namespace xtozero
 							float tempW = tempS0 * denominator;
 
 							float z = v0.Z * tempU + v1.Z * tempV + v2.Z * tempW;
+							Vector2 texcoord = texCoord0 * tempU + texCoord1 * tempV + texCoord2 * tempW;
 
-							m_outputRS.emplace_back( j, i, z, facecolor );
+							m_outputRS.emplace_back( j, i, z, facecolor, texcoord );
+						}
+						else if ( IsInOnce == true )
+						{
+							// 삼각형에서 한번 삼각형 내부에 들어간 다음 외부로 나왔을 때
+							// 다시 내부로 들어가는 일은 없다.
+							break;
+						}
+
+						tempS0 += s0IncX;
+						tempS1 += s1IncX;
+						tempS2 += s2IncX;
+					}
+
+					s0 += s0IncY;
+					s1 += s1IncY;
+					s2 += s2IncY;
+				}
+			}
+		}
+
+		return m_outputRS;
+	}
+
+	const std::vector<CPsElementDesc>& CBarycentricRasterizer::ProcessFaceRange( CRsElementDesc& rsInput, unsigned int startface, unsigned int endface )
+	{
+		m_outputRS.clear( );
+
+		for ( unsigned int i = startface; i < endface; ++i )
+		{
+			if ( IsBackFace( rsInput, i ) && g_BackfaceCulling.GetBool( ) )
+			{
+				//Do Nothing
+			}
+			else
+			{
+				unsigned int facecolor;
+				if ( g_RandColor.GetBool( ) )
+				{
+					facecolor = RAND_COLOR( );
+				}
+				else
+				{
+					facecolor = PIXEL_COLOR( 255, 204, 153 );
+				}
+
+				std::vector<int>& face = rsInput.m_faces[i];
+
+				const Vector4& v0 = rsInput.m_vertices[face[0]];
+				const Vector4& v1 = rsInput.m_vertices[face[1]];
+				const Vector4& v2 = rsInput.m_vertices[face[2]];
+
+				const Vector2& texCoord0 = rsInput.m_texCoords[face[0]];
+				const Vector2& texCoord1 = rsInput.m_texCoords[face[1]];
+				const Vector2& texCoord2 = rsInput.m_texCoords[face[2]];
+
+				//Bounding Area를 계산
+				int maxX = static_cast<int>(max( min( max( max( v0.X, v1.X ), v2.X ), m_viewport.m_right ), 0 ));
+				int maxY = static_cast<int>(max( min( max( max( v0.Y, v1.Y ), v2.Y ), m_viewport.m_bottom ), 0 ));
+				int minX = static_cast<int>(max( min( min( v0.X, v1.X ), v2.X ), 0 ));
+				int minY = static_cast<int>(max( min( min( v0.Y, v1.Y ), v2.Y ), 0 ));
+
+				Vector4 p;
+
+				bool IsInOnce;
+
+				// 외적 공식에 의해서 한 점이 한 축으로 증가했을때 다음과 같이 증가한다.
+				float s0IncX = v0.Y - v1.Y;
+				float s1IncX = v1.Y - v2.Y;
+				float s2IncX = v2.Y - v0.Y;
+				float s0IncY = v1.X - v0.X;
+				float s1IncY = v2.X - v1.X;
+				float s2IncY = v0.X - v2.X;
+
+				p.X = static_cast<float>(minX);
+				p.Y = static_cast<float>(minY);
+
+				float s0 = CalcParallelogramArea( p, v0, v1 );
+				float s1 = CalcParallelogramArea( p, v1, v2 );
+				float s2 = CalcParallelogramArea( p, v2, v0 );
+
+				for ( int i = minY; i <= maxY; ++i )
+				{
+					IsInOnce = false;
+
+					float tempS0 = s0;
+					float tempS1 = s1;
+					float tempS2 = s2;
+
+					for ( int j = minX; j <= maxX; ++j )
+					{
+						if ( tempS0 >= 0 && tempS1 >= 0 && tempS2 >= 0 )
+						{
+							IsInOnce = true;
+
+							float denominator = 1.0f / (tempS0 + tempS1 + tempS2);
+							float tempU = tempS1 * denominator;
+							float tempV = tempS2 * denominator;
+							float tempW = tempS0 * denominator;
+
+							float z = v0.Z * tempU + v1.Z * tempV + v2.Z * tempW;
+							Vector2 texcoord = texCoord0 * tempU + texCoord1 * tempV + texCoord2 * tempW;
+
+							m_outputRS.emplace_back( j, i, z, facecolor, texcoord );
 						}
 						else if ( IsInOnce == true )
 						{
@@ -936,7 +964,7 @@ namespace xtozero
 		std::vector<Edge> edgeTable;
 		std::vector<Edge> activeEdgeTable;
 		std::vector<CPsElementDesc> outputRS;
-		std::vector<std::pair<int, float>> horizontalLine;
+		std::vector<std::tuple<int, float, Vector2>> horizontalLine;
 
 		Rect& viewport = rasterizer->GetViewport();
 		int nResv = static_cast<int>( rasterizer->m_outputRS.capacity() * 0.25 );

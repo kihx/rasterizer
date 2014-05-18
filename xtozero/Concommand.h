@@ -68,7 +68,7 @@ namespace cmd
 		std::unordered_map<std::string, CConvar*>		m_cvarMap;
 		CTokenizer							m_tokenizer;
 	public:
-		void AddConcommad( const std::string& cmd, const CConcommand& cmdFuc );
+		void AddConcommand( const std::string& cmd, const CConcommand& cmdFuc );
 		void AddConvar( const std::string& var, CConvar* cmdVar );
 		void ExcuteConcommand( );
 		void DoTokenizing( const char* cmd );

@@ -6,7 +6,7 @@
 class CFileHandler
 {
 public:
-	explicit CFileHandler( const char* pfilepath );
+	explicit CFileHandler( const char* pfilepath, std::ios::openmode mode );
 	~CFileHandler( void );
 
 	bool is_open()
@@ -31,10 +31,27 @@ public:
 		return m_file;
 	}
 
+	std::ifstream& operator>>(long& buffer)
+	{
+		m_file >> buffer;
+		return m_file;
+	}
+
 	std::ifstream& operator>>(float& buffer)
 	{
 		m_file >> buffer;
 		return m_file;
+	}
+
+	std::ifstream& operator>>(unsigned char& buffer)
+	{
+		m_file >> buffer;
+		return m_file;
+	}
+
+	void read( char* pBuffer, std::streamsize size )
+	{
+		m_file.read( pBuffer, size );
 	}
 
 private:

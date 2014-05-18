@@ -53,6 +53,7 @@ namespace xtozero
 	{
 	public:
 		std::vector<Vector4> m_vertices;
+		std::vector<Vector2> m_texCoords;
 		std::vector<Face> m_faces;
 
 		int m_nfaces;

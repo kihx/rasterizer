@@ -21,6 +21,9 @@ namespace xtozero
 		CRITICAL_SECTION m_cs;
 
 	public:
+		CriticalSection( const CriticalSection& cs ) = delete;
+		CriticalSection& operator= (const CriticalSection& cs) = delete;
+
 		explicit CriticalSection()
 		{
 			InitializeCriticalSection( &m_cs );
@@ -29,11 +32,6 @@ namespace xtozero
 		~CriticalSection()
 		{
 			DeleteCriticalSection( &m_cs );
-		}
-
-		CriticalSection( const CriticalSection& cs ) : m_cs( cs.m_cs )
-		{
-
 		}
 
 		void Lock()
@@ -52,9 +50,10 @@ namespace xtozero
 	private:
 		volatile unsigned int m_Islock;
 
-		SpinLock( const SpinLock& spinlock );
-		SpinLock& operator= (const SpinLock& spinlock);
 	public:
+		SpinLock( const SpinLock& spinlock ) = delete;
+		SpinLock& operator= (const SpinLock& spinlock) = delete;
+
 		explicit SpinLock( ) : m_Islock( 0 )
 		{
 			
@@ -85,9 +84,10 @@ namespace xtozero
 	private:
 		T& m_lock;
 
-		Lock& operator=(const T& lock);
-		Lock( const T& lock );
 	public:
+		Lock& operator=(const T& lock) = delete;
+		Lock( const T& lock ) = delete;
+
 		explicit Lock( T& lock ) : m_lock( lock )
 		{
 			m_lock.Lock( );
