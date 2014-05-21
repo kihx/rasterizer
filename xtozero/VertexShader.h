@@ -18,6 +18,7 @@ namespace xtozero
 		Matrix4 m_viewMatrix;
 		Matrix4 m_projectionMatrix;
 		Matrix4 m_wvpMatrix;
+
 	public:
 		CVertexShader() {}
 		~CVertexShader() {}
@@ -46,6 +47,10 @@ namespace xtozero
 		Vector4& GetOutputVertex(int index)
 		{
 			return m_vsOutput.m_vertices[index];
+		}
+		Vector2& GetOutputTexCoord( int index )
+		{
+			return m_vsOutput.m_texCoords[index];
 		}
 	};
 
