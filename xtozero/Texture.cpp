@@ -68,9 +68,9 @@ namespace xtozero
 							for ( int j = 0; j < m_bitmapInfoHeader.biWidth; ++j )
 							{
 								int index = i * m_bitmapInfoHeader.biWidth + j;
-								bitmapFile >> m_texture[index].m_color[BLUE]
-									>> m_texture[index].m_color[GREEN]
-									>> m_texture[index].m_color[RED]; // bmp는 bgr 순서로 저장되어 있다.
+								bitmapFile.read( reinterpret_cast<char*>(&m_texture[index].m_color[BLUE]), sizeof(unsigned char) );
+								bitmapFile.read( reinterpret_cast<char*>(&m_texture[index].m_color[GREEN]), sizeof(unsigned char) );
+								bitmapFile.read( reinterpret_cast<char*>(&m_texture[index].m_color[RED]), sizeof(unsigned char) );// bmp는 bgr 순서로 저장되어 있다.
 							}
 						}
 					}
@@ -133,6 +133,37 @@ namespace xtozero
 		else
 		{
 			return findedTex->second;
+		}
+	}
+
+	unsigned int CBitmap::GetTexel( const float u, const float v )
+	{
+		int texX = static_cast<int>( u * ( m_bitmapInfoHeader.biWidth - 1 ) );
+		int texY = static_cast<int>( v * ( m_bitmapInfoHeader.biHeight - 1 ) );
+
+		int index = ( texY * m_bitmapInfoHeader.biWidth ) + texX;
+
+		return PIXEL_COLOR( m_texture[index].m_color[RED],
+							m_texture[index].m_color[GREEN],
+							m_texture[index].m_color[BLUE] );
+	}
+
+	void CBitmap::DrawTexture( void* buffer, int width, int height, int dpp )
+	{
+		size_t size = dpp / 8;
+
+		unsigned char* frameBuffer = static_cast<unsigned char*>(buffer);
+
+		for ( int i = 0; i < m_bitmapInfoHeader.biWidth; ++i )
+		{
+			for ( int j = 0; j < m_bitmapInfoHeader.biHeight; ++j )
+			{
+				unsigned char* pixel = frameBuffer + ((width * j) + i) * size;
+				int index = j * m_bitmapInfoHeader.biWidth + i;
+				pixel[0] = m_texture[index].m_color[RED];
+				pixel[1] = m_texture[index].m_color[GREEN];
+				pixel[2] = m_texture[index].m_color[BLUE];
+			}
 		}
 	}
 }

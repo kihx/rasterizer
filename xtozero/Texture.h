@@ -27,6 +27,16 @@ namespace xtozero
 		unsigned int		m_height;
 	protected:
 		std::vector<TEXEL>	m_texture;
+
+		const unsigned int GetWidth() const
+		{
+			return m_width;
+		}
+
+		const unsigned int GetHeight() const
+		{
+			return m_height;
+		}
 	public:
 		CTexture( const unsigned int width, const unsigned int height );
 		CTexture( );
@@ -35,6 +45,8 @@ namespace xtozero
 		void SetSize( const unsigned int width, const unsigned int height );
 
 		virtual void Load( const char *pfileName ) = 0;
+		virtual unsigned int  GetTexel( const float u, const float v ) = 0;
+		virtual void DrawTexture( void* buffer, int width, int height, int dpp ) = 0;
 	};
 
 	class CBitmap : public CTexture
@@ -48,6 +60,8 @@ namespace xtozero
 		virtual ~CBitmap( );
 
 		virtual void Load( const char *pfileName );
+		virtual unsigned int  GetTexel( const float u, const float v );
+		virtual void DrawTexture( void* buffer, int width, int height, int dpp );
 	};
 
 	class CTextureManager

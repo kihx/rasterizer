@@ -16,7 +16,7 @@ namespace xtozero
 		normalizeVertex.Normalize();
 
 		//http://en.wikipedia.org/wiki/UV_mapping#Finding_UV_on_a_sphere
-		return Vector2( 0.5f + (atan2( normalizeVertex.Z, normalizeVertex.X ) * 0.5f * INV_PI)
+		return Vector2( 0.5f + (atan2( normalizeVertex.Z, normalizeVertex.X ) * (0.5f * INV_PI))
 			, 0.5f - (asin( normalizeVertex.Y ) * INV_PI) );
 	}
 

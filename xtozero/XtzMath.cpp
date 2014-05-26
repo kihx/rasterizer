@@ -797,12 +797,16 @@ namespace xtozero
 
 	float Vector4::Length( void )
 	{
-		return sqrt( X * X + Y * Y + Z * Z );
+		return sqrt( (X * X) + (Y * Y) + (Z * Z) );
 	}
 
 	void Vector4::Normalize( void )
 	{
-		*this /= Length();
+		float length = Length();
+
+		this->X /= length;
+		this->Y /= length;
+		this->Z /= length;
 	}
 
 	Vector4 Vector4::operator+(const Vector4& rhs) const

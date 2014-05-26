@@ -24,6 +24,8 @@ namespace xtozero
 		float gradient = 0.0f;
 		float dx = 0.0f;
 		float dy = 0.0f;
+		Vector2 startUV;
+		Vector2 endUV;
 		const std::vector<int>& faces = rsInput.m_faces[faceNumber];
 
 		int nfaces = faces.size();
@@ -39,8 +41,8 @@ namespace xtozero
 			{
 				const Vector4& start = rsInput.m_vertices[faces.at( i )];
 				const Vector4& end = rsInput.m_vertices[faces.at( i + 1 )];
-				const Vector2& startUV = rsInput.m_texCoords[faces.at( i )];;
-				const Vector2& endUV = rsInput.m_texCoords[faces.at( i + 1 )];;
+				const Vector2& _startUV = rsInput.m_texCoords[faces.at( i )];;
+				const Vector2& _endUV = rsInput.m_texCoords[faces.at( i + 1 )];;
 
 				//기울기를 구함
 				dy = end.Y - start.Y;
@@ -69,12 +71,16 @@ namespace xtozero
 				maxX = end.X;
 				startZ = start.Z;
 				endZ = end.Z;
+				startUV = _startUV;
+				endUV = _endUV;
 				if ( minX > maxX )
 				{
 					minX = end.X;
 					maxX = start.X;
 					startZ = end.Z;
 					endZ = start.Z;
+					startUV = _endUV;
+					endUV = _startUV;
 				}
 
 				//edgeTable에 삽입

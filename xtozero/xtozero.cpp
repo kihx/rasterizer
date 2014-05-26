@@ -40,7 +40,7 @@ DECLARE_CONCOMMAND( LoadTexture )
 	if ( cmd::CConcommandExecutor::GetInstance( )->ArgC( ) > 1 )
 	{
 		std::string fileName = cmd::CConcommandExecutor::GetInstance( )->ArgV( 1 );
-		std::shared_ptr<CTexture> texture = gTextureManager->Load( fileName.c_str( ) );
+		std::shared_ptr<xtozero::CTexture> texture = gTextureManager->Load( fileName.c_str( ) );
 
 		if ( texture )
 		{
@@ -71,11 +71,14 @@ void RendererThreadWork( LPVOID arg )
 {
 	RendererThreadArg*		pArg = static_cast<RendererThreadArg*>(arg);
 
+	std::shared_ptr<xtozero::CTexture> texture = gTextureManager->Load( "texture.bmp" );
+
 	xtozero::CRasterizer	rs;
 	xtozero::CPixelShader	ps;
 	COutputMerger*			om = pArg->pOm;
 
 	const Rect& vp = pArg->viewport;
+	ps.PSSetTexture( 0, texture.get() );
 
 	//Rasterizer
 	rs.SetViewPort( vp.m_left, vp.m_top, vp.m_right, vp.m_bottom );
@@ -94,11 +97,14 @@ void RendererThreadWorkByBarycentric( LPVOID arg )
 {
 	RendererThreadArg*		pArg = static_cast<RendererThreadArg*>(arg);
 
+	std::shared_ptr<xtozero::CTexture> texture = gTextureManager->Load( "texture.bmp" );
+
 	xtozero::CBarycentricRasterizer	rs;
 	xtozero::CPixelShader			ps;
 	COutputMerger*					om = pArg->pOm;
 
 	const Rect& vp = pArg->viewport;
+	ps.PSSetTexture( 0, texture.get( ) );
 
 	//Rasterizer
 	rs.SetViewPort( vp.m_left, vp.m_top, vp.m_right, vp.m_bottom );

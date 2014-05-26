@@ -31,6 +31,12 @@ public:
 		return m_file;
 	}
 
+	std::ifstream& operator>>(unsigned int& buffer)
+	{
+		m_file >> buffer;
+		return m_file;
+	}
+
 	std::ifstream& operator>>(long& buffer)
 	{
 		m_file >> buffer;
