@@ -5,6 +5,7 @@
 #include <map>
 #include <string>
 #include <memory>
+#include "XtzMath.h"
 
 namespace xtozero
 {
@@ -46,6 +47,7 @@ namespace xtozero
 
 		virtual void Load( const char *pfileName ) = 0;
 		virtual unsigned int  GetTexel( const float u, const float v ) = 0;
+		virtual unsigned int  GetTexel( const Vector2& texCoord ) = 0;
 		virtual void DrawTexture( void* buffer, int width, int height, int dpp ) = 0;
 	};
 
@@ -61,6 +63,7 @@ namespace xtozero
 
 		virtual void Load( const char *pfileName );
 		virtual unsigned int  GetTexel( const float u, const float v );
+		virtual unsigned int  GetTexel( const Vector2& texCoord );
 		virtual void DrawTexture( void* buffer, int width, int height, int dpp );
 	};
 

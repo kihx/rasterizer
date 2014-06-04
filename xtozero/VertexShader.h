@@ -48,9 +48,9 @@ namespace xtozero
 		{
 			return m_vsOutput.m_vertices[index];
 		}
-		Vector2& GetOutputTexCoord( int index )
+		Vector3& GetOutputLocalVertex( int index )
 		{
-			return m_vsOutput.m_texCoords[index];
+			return m_vsOutput.m_localVertices[index];
 		}
 	};
 

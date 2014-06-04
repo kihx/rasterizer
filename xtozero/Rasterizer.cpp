@@ -24,8 +24,8 @@ namespace xtozero
 		float gradient = 0.0f;
 		float dx = 0.0f;
 		float dy = 0.0f;
-		Vector2 startUV;
-		Vector2 endUV;
+		Vector3 startLocalVertex;
+		Vector3 endLocalVertex;
 		const std::vector<int>& faces = rsInput.m_faces[faceNumber];
 
 		int nfaces = faces.size();
@@ -41,8 +41,8 @@ namespace xtozero
 			{
 				const Vector4& start = rsInput.m_vertices[faces.at( i )];
 				const Vector4& end = rsInput.m_vertices[faces.at( i + 1 )];
-				const Vector2& _startUV = rsInput.m_texCoords[faces.at( i )];;
-				const Vector2& _endUV = rsInput.m_texCoords[faces.at( i + 1 )];;
+				const Vector3& _startLocalVertex = rsInput.m_localVertices[faces.at( i )];;
+				const Vector3& _endLocalVertex = rsInput.m_localVertices[faces.at( i + 1 )];;
 
 				//기울기를 구함
 				dy = end.Y - start.Y;
@@ -71,16 +71,16 @@ namespace xtozero
 				maxX = end.X;
 				startZ = start.Z;
 				endZ = end.Z;
-				startUV = _startUV;
-				endUV = _endUV;
+				startLocalVertex = _startLocalVertex;
+				endLocalVertex = _endLocalVertex;
 				if ( minX > maxX )
 				{
 					minX = end.X;
 					maxX = start.X;
 					startZ = end.Z;
 					endZ = start.Z;
-					startUV = _endUV;
-					endUV = _startUV;
+					startLocalVertex = _endLocalVertex;
+					endLocalVertex = _startLocalVertex;
 				}
 
 				//edgeTable에 삽입
@@ -89,7 +89,7 @@ namespace xtozero
 					minY, maxY, 
 					minX, maxX, 
 					startZ, endZ, gradient,
-					startUV, endUV);
+					startLocalVertex, endLocalVertex );
 			}
 		}
 		//m_edgeTable을 minY로 정렬
@@ -190,9 +190,9 @@ namespace xtozero
 				}
 
 				float z = Lerp( edge.m_startZ, edge.m_endZ, lerpRatio );
-				Vector2 texcoord = Lerp( edge.m_startUV, edge.m_endUV, lerpRatio );
+				Vector3 localVertex = Lerp( edge.m_startLocalVertex, edge.m_endLocalVertex, lerpRatio );
 
-				m_horizontalLine.emplace_back( static_cast<int>(intersectX), z, texcoord );
+				m_horizontalLine.emplace_back( static_cast<int>(intersectX), z, localVertex );
 			}
 		}
 
@@ -200,15 +200,15 @@ namespace xtozero
 		int endX;
 		float startZ;
 		float endZ;
-		Vector2 startUV;
-		Vector2 endUV;
-		for ( std::vector<std::tuple<int, float, Vector2>>::iterator iter = m_horizontalLine.begin(); iter != m_horizontalLine.end(); iter += 2 )
+		Vector3 startLocalVertex;
+		Vector3 endLocalVertex;
+		for ( std::vector<std::tuple<int, float, Vector3>>::iterator iter = m_horizontalLine.begin(); iter != m_horizontalLine.end(); iter += 2 )
 		{
-			std::tuple<int, float, Vector2>& posXZ_UV = *iter;
+			std::tuple<int, float, Vector3>& posXZ_LocalVertex = *iter;
 
 			if ( (iter + 1) == m_horizontalLine.end() )
 			{
-				int x = std::get<0>( posXZ_UV );
+				int x = std::get<0>( posXZ_LocalVertex );
 				if ( x < m_viewport.m_left )
 				{
 					x = m_viewport.m_left;
@@ -218,26 +218,26 @@ namespace xtozero
 					x = m_viewport.m_right;
 				}
 
-				m_outputRS.emplace_back( x, scanline, std::get<1>( posXZ_UV ), facecolor, std::get<2>( posXZ_UV ) );
+				m_outputRS.emplace_back( x, scanline, std::get<1>( posXZ_LocalVertex ), facecolor, std::get<2>( posXZ_LocalVertex ) );
 				break;
 			}
 
-			std::tuple<int, float, Vector2>& posNextXZ_UV = *(iter + 1);
+			std::tuple<int, float, Vector3>& posNextXZ_LocalVertex = *(iter + 1);
 
-			startX = std::get<0>( posXZ_UV );
-			endX = std::get<0>( posNextXZ_UV );
-			startZ = std::get<1>( posXZ_UV );
-			endZ = std::get<1>( posNextXZ_UV );
-			startUV = std::get<2>( posXZ_UV );
-			endUV = std::get<2>( posNextXZ_UV );
+			startX = std::get<0>( posXZ_LocalVertex );
+			endX = std::get<0>( posNextXZ_LocalVertex );
+			startZ = std::get<1>( posXZ_LocalVertex );
+			endZ = std::get<1>( posNextXZ_LocalVertex );
+			startLocalVertex = std::get<2>( posXZ_LocalVertex );
+			endLocalVertex = std::get<2>( posNextXZ_LocalVertex );
 			if ( startX > endX )
 			{
-				startX = std::get<0>( posNextXZ_UV );
-				endX = std::get<0>( posXZ_UV );
-				startZ = std::get<1>( posNextXZ_UV );
-				endZ = std::get<1>( posXZ_UV );
-				startUV = std::get<2>( posNextXZ_UV );
-				endUV = std::get<2>( posXZ_UV );
+				startX = std::get<0>( posNextXZ_LocalVertex );
+				endX = std::get<0>( posXZ_LocalVertex );
+				startZ = std::get<1>( posNextXZ_LocalVertex );
+				endZ = std::get<1>( posXZ_LocalVertex );
+				startLocalVertex = std::get<2>( posNextXZ_LocalVertex );
+				endLocalVertex = std::get<2>( posXZ_LocalVertex );
 			}
 
 			if ( startX < m_viewport.m_left )
@@ -251,15 +251,15 @@ namespace xtozero
 			}
 
 			float z = startZ;
-			Vector2 texcoord = startUV;
+			Vector3 localVertex = startLocalVertex;
 			
 			float zGradient = (endZ - startZ) / (endX - startX);
-			Vector2 uvGradient = (endUV - startUV) / ( static_cast<float>(endX - startX) );
+			Vector3 localVertexGradient = (endLocalVertex - startLocalVertex) / (static_cast<float>(endX - startX));
 			for ( int i = startX; i <= endX; ++i )
 			{
-				m_outputRS.emplace_back( i, scanline, z, facecolor, texcoord );
+				m_outputRS.emplace_back( i, scanline, z, facecolor, localVertex );
 				z += zGradient;
-				texcoord += uvGradient;
+				localVertex += localVertexGradient;
 			}
 		}
 	}
@@ -462,6 +462,8 @@ namespace xtozero
 		float gradient = 0.0f;
 		float dx = 0.0f;
 		float dy = 0.0f;
+		Vector3 startLocalVertex;
+		Vector3 endLocalVertex;
 		const std::vector<int>& faces = rsInput.m_faces[faceNumber];
 
 		int nfaces = faces.size( );
@@ -478,8 +480,8 @@ namespace xtozero
 			{
 				const Vector4& start = rsInput.m_vertices[faces.at( i )];
 				const Vector4& end = rsInput.m_vertices[faces.at( i + 1 )];
-				const Vector2& startUV = rsInput.m_texCoords[faces.at( i )];
-				const Vector2& endUV = rsInput.m_texCoords[faces.at( i + 1 )];
+				const Vector3& _startLocalVertex = rsInput.m_localVertices[faces.at( i )];
+				const Vector3& _endLocalVertex = rsInput.m_localVertices[faces.at( i + 1 )];
 
 				//기울기를 구함
 				dy = end.Y - start.Y;
@@ -508,12 +510,16 @@ namespace xtozero
 				maxX = end.X;
 				startZ = start.Z;
 				endZ = end.Z;
+				startLocalVertex = _startLocalVertex;
+				endLocalVertex = _endLocalVertex;
 				if ( minX > maxX )
 				{
 					minX = end.X;
 					maxX = start.X;
 					startZ = end.Z;
 					endZ = start.Z;
+					startLocalVertex = _endLocalVertex;
+					endLocalVertex = _startLocalVertex;
 				}
 
 				//edgeTable에 삽입
@@ -522,7 +528,7 @@ namespace xtozero
 					minY, maxY,
 					minX, maxX,
 					startZ, endZ, gradient,
-					startUV, endUV);
+					startLocalVertex, endLocalVertex );
 			}
 		}
 		//edgeTable을 minY로 정렬
@@ -573,7 +579,7 @@ namespace xtozero
 	}
 
 	void CRasterizer::ProcessScanlineParallel( int scanline, unsigned int facecolor, std::vector<Edge>& activeEdgeTable,
-		std::vector<CPsElementDesc>& outputRS, std::vector < std::tuple < int, float, Vector2 >> &horizontalLine )//정점 보간하면 컬러 넘겨주지 않을 예정...
+		std::vector<CPsElementDesc>& outputRS, std::vector < std::tuple < int, float, Vector3 >> &horizontalLine )//정점 보간하면 컬러 넘겨주지 않을 예정...
 	{
 		if ( activeEdgeTable.empty() )
 		{
@@ -615,9 +621,9 @@ namespace xtozero
 				}
 
 				float z = Lerp( edge.m_startZ, edge.m_endZ, lerpRatio );
-				Vector2 texcoord = Lerp( edge.m_startUV, edge.m_endUV, lerpRatio );
+				Vector3 localVertex = Lerp( edge.m_startLocalVertex, edge.m_endLocalVertex, lerpRatio );
 
-				horizontalLine.emplace_back( static_cast<int>(intersectX), z, texcoord );
+				horizontalLine.emplace_back( static_cast<int>(intersectX), z, localVertex );
 			}
 		}
 
@@ -625,15 +631,15 @@ namespace xtozero
 		int endX;
 		float startZ;
 		float endZ;
-		Vector2 startUV;
-		Vector2 endUV;
+		Vector3 startLocalVertex;
+		Vector3 endLocalVertex;
 		for ( unsigned int i = 0; i < horizontalLine.size(); i += 2 )
 		{
-			std::tuple<int, float, Vector2>& posXZ_UV = horizontalLine[i];
+			std::tuple<int, float, Vector3>& posXZ_LocalVertex = horizontalLine[i];
 
 			if ( (i + 1) == horizontalLine.size( ) )
 			{
-				int x = std::get<0>( posXZ_UV );
+				int x = std::get<0>( posXZ_LocalVertex );
 				if ( x < m_viewport.m_left )
 				{
 					x = m_viewport.m_left;
@@ -643,27 +649,27 @@ namespace xtozero
 					x = m_viewport.m_right;
 				}
 
-				outputRS.emplace_back( x, scanline, std::get<1>( posXZ_UV ), facecolor, std::get<2>( posXZ_UV ) );
+				outputRS.emplace_back( x, scanline, std::get<1>( posXZ_LocalVertex ), facecolor, std::get<2>( posXZ_LocalVertex ) );
 
 				break;
 			}
 
-			std::tuple<int, float, Vector2>& posNextXZ_UV = horizontalLine[i + 1];
+			std::tuple<int, float, Vector3>& posNextXZ_LocalVertex = horizontalLine[i + 1];
 
-			startX = std::get<0>( posXZ_UV );
-			endX = std::get<0>( posNextXZ_UV );
-			startZ = std::get<1>( posXZ_UV );
-			endZ = std::get<1>( posNextXZ_UV );
-			startUV = std::get<2>( posXZ_UV );
-			endUV = std::get<2>( posNextXZ_UV );
+			startX = std::get<0>( posXZ_LocalVertex );
+			endX = std::get<0>( posNextXZ_LocalVertex );
+			startZ = std::get<1>( posXZ_LocalVertex );
+			endZ = std::get<1>( posNextXZ_LocalVertex );
+			startLocalVertex = std::get<2>( posXZ_LocalVertex );
+			endLocalVertex = std::get<2>( posNextXZ_LocalVertex );
 			if ( startX > endX )
 			{
-				startX = std::get<0>( posNextXZ_UV );
-				endX = std::get<0>( posXZ_UV );
-				startZ = std::get<1>( posNextXZ_UV );
-				endZ = std::get<1>( posXZ_UV );
-				startUV = std::get<2>( posNextXZ_UV );
-				endUV = std::get<2>( posXZ_UV );
+				startX = std::get<0>( posNextXZ_LocalVertex );
+				endX = std::get<0>( posXZ_LocalVertex );
+				startZ = std::get<1>( posNextXZ_LocalVertex );
+				endZ = std::get<1>( posXZ_LocalVertex );
+				startLocalVertex = std::get<2>( posNextXZ_LocalVertex );
+				endLocalVertex = std::get<2>( posXZ_LocalVertex );
 			}
 
 			if ( startX < m_viewport.m_left )
@@ -677,14 +683,14 @@ namespace xtozero
 			}
 
 			float z = startZ;
-			Vector2 texcoord = startUV;
+			Vector3 localVertex = startLocalVertex;
 			float zGradient = (endZ - startZ) / (endX - startX);
-			Vector2 uvGradient = (endUV - startUV) / ( static_cast<float>( endX - startX ) );
+			Vector3 localVertexGradient = (endLocalVertex - startLocalVertex) / (static_cast<float>(endX - startX));
 			for ( int i = startX; i <= endX; ++i )
 			{
-				outputRS.emplace_back( i, scanline, z, facecolor, texcoord );
+				outputRS.emplace_back( i, scanline, z, facecolor, localVertex );
 				z += zGradient;
-				texcoord += uvGradient;
+				localVertex += localVertexGradient;
 			}
 		}
 	}
@@ -744,9 +750,9 @@ namespace xtozero
 				const Vector4& v1 = rsInput.m_vertices[face[1]];
 				const Vector4& v2 = rsInput.m_vertices[face[2]];
 
-				const Vector2& texCoord0 = rsInput.m_texCoords[face[0]];
-				const Vector2& texCoord1 = rsInput.m_texCoords[face[1]];
-				const Vector2& texCoord2 = rsInput.m_texCoords[face[2]];
+				const Vector3& localVertex0 = rsInput.m_localVertices[face[0]];
+				const Vector3& localVertex1 = rsInput.m_localVertices[face[1]];
+				const Vector3& localVertex2 = rsInput.m_localVertices[face[2]];
 
 				//Bounding Area를 계산
 				int maxX = static_cast<int>(max( min( max( max( v0.X, v1.X ), v2.X ), m_viewport.m_right ), 0 ));
@@ -793,9 +799,9 @@ namespace xtozero
 							float tempW = tempS0 * denominator;
 
 							float z = v0.Z * tempU + v1.Z * tempV + v2.Z * tempW;
-							Vector2 texcoord = texCoord0 * tempU + texCoord1 * tempV + texCoord2 * tempW;
+							Vector3 localVertex = localVertex0 * tempU + localVertex1 * tempV + localVertex2 * tempW;
 
-							m_outputRS.emplace_back( j, i, z, facecolor, texcoord );
+							m_outputRS.emplace_back( j, i, z, facecolor, localVertex );
 						}
 						else if ( IsInOnce == true )
 						{
@@ -847,9 +853,9 @@ namespace xtozero
 				const Vector4& v1 = rsInput.m_vertices[face[1]];
 				const Vector4& v2 = rsInput.m_vertices[face[2]];
 
-				const Vector2& texCoord0 = rsInput.m_texCoords[face[0]];
-				const Vector2& texCoord1 = rsInput.m_texCoords[face[1]];
-				const Vector2& texCoord2 = rsInput.m_texCoords[face[2]];
+				const Vector3& localVertex0 = rsInput.m_localVertices[face[0]];
+				const Vector3& localVertex1 = rsInput.m_localVertices[face[1]];
+				const Vector3& localVertex2 = rsInput.m_localVertices[face[2]];
 
 				//Bounding Area를 계산
 				int maxX = static_cast<int>(max( min( max( max( v0.X, v1.X ), v2.X ), m_viewport.m_right ), 0 ));
@@ -896,9 +902,9 @@ namespace xtozero
 							float tempW = tempS0 * denominator;
 
 							float z = v0.Z * tempU + v1.Z * tempV + v2.Z * tempW;
-							Vector2 texcoord = texCoord0 * tempU + texCoord1 * tempV + texCoord2 * tempW;
+							Vector3 localVertex = localVertex0 * tempU + localVertex1 * tempV + localVertex2 * tempW;
 
-							m_outputRS.emplace_back( j, i, z, facecolor, texcoord );
+							m_outputRS.emplace_back( j, i, z, facecolor, localVertex );
 						}
 						else if ( IsInOnce == true )
 						{
@@ -970,7 +976,7 @@ namespace xtozero
 		std::vector<Edge> edgeTable;
 		std::vector<Edge> activeEdgeTable;
 		std::vector<CPsElementDesc> outputRS;
-		std::vector<std::tuple<int, float, Vector2>> horizontalLine;
+		std::vector<std::tuple<int, float, Vector3>> horizontalLine;
 
 		Rect& viewport = rasterizer->GetViewport();
 		int nResv = static_cast<int>( rasterizer->m_outputRS.capacity() * 0.25 );

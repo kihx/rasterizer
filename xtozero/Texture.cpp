@@ -141,11 +141,26 @@ namespace xtozero
 		int texX = static_cast<int>( u * ( m_bitmapInfoHeader.biWidth - 1 ) );
 		int texY = static_cast<int>( v * ( m_bitmapInfoHeader.biHeight - 1 ) );
 
-		int index = ( texY * m_bitmapInfoHeader.biWidth ) + texX;
+		int index = texY * m_bitmapInfoHeader.biWidth + texX;
 
 		return PIXEL_COLOR( m_texture[index].m_color[RED],
 							m_texture[index].m_color[GREEN],
 							m_texture[index].m_color[BLUE] );
+	}
+
+	unsigned int CBitmap::GetTexel( const Vector2& texCoord )
+	{
+		int texX = static_cast<int>(texCoord.GetU() * (m_bitmapInfoHeader.biWidth - 1));
+		int texY = static_cast<int>(texCoord.GetV() * (m_bitmapInfoHeader.biHeight - 1));
+
+		int index = texY * m_bitmapInfoHeader.biWidth + texX;
+
+		index = (index >= m_texture.size()) ? m_texture.size() - 1 : index;
+		index = (index < 0) ? 0 : index;
+
+		return PIXEL_COLOR( m_texture[index].m_color[RED],
+			m_texture[index].m_color[GREEN],
+			m_texture[index].m_color[BLUE] );
 	}
 
 	void CBitmap::DrawTexture( void* buffer, int width, int height, int dpp )

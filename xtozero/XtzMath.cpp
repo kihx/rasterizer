@@ -804,9 +804,9 @@ namespace xtozero
 	{
 		float length = Length();
 
-		this->X /= length;
-		this->Y /= length;
-		this->Z /= length;
+		X /= length;
+		Y /= length;
+		Z /= length;
 	}
 
 	Vector4 Vector4::operator+(const Vector4& rhs) const
