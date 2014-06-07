@@ -14,7 +14,6 @@ BOOL APIENTRY DllMain( HMODULE,
 	case DLL_THREAD_DETACH:
 		break;
 	case DLL_PROCESS_DETACH:
-		cmd::CConcommandExecutor::GetInstance()->ReleaseInstance();
 		break;
 	}
 	return TRUE;

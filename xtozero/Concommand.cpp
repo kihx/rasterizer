@@ -45,7 +45,7 @@ namespace cmd
 
 	CConvar::CConvar( const char* name, const char* value ) : m_name( name ), m_value(value)
 	{
-		CConcommandExecutor::GetInstance( )->AddConvar( m_name, this );
+		CConcommandExecutor::GetInstance().AddConvar( m_name, this );
 		m_float = static_cast<float>(atof( m_value.c_str( ) ) );
 		m_int = static_cast<int>(m_float);
 		m_bool = ( m_int > 0 ) ? true : false;
@@ -91,7 +91,7 @@ namespace cmd
 	CConcommand::CConcommand( const char* name, const CommandFunc func ) : m_name( name ), m_pFunc( func )
 	{
 		assert( name );
-		CConcommandExecutor::GetInstance()->AddConcommand( m_name, *this );
+		CConcommandExecutor::GetInstance().AddConcommand( m_name, *this );
 	}
 	CConcommand::~CConcommand()
 	{
@@ -193,5 +193,5 @@ DECLARE_CONCOMMAND( exit )
 DECLARE_CONCOMMAND( show_command )
 {
 	using namespace cmd;
-	CConcommandExecutor::GetInstance()->PrintCommand();
+	CConcommandExecutor::GetInstance().PrintCommand();
 }

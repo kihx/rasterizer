@@ -61,13 +61,15 @@ namespace cmd
 		}
 	};
 
-	class CConcommandExecutor : public xtozero::CSingletonBase<CConcommandExecutor>
+	class CConcommandExecutor : private xtozero::CSingletonBase<CConcommandExecutor>
 	{
 	private:
 		std::unordered_map<std::string, CConcommand>	m_cmdMap;
 		std::unordered_map<std::string, CConvar*>		m_cvarMap;
 		CTokenizer							m_tokenizer;
 	public:
+		using xtozero::CSingletonBase<CConcommandExecutor>::GetInstance;
+
 		void AddConcommand( const std::string& cmd, const CConcommand& cmdFuc );
 		void AddConvar( const std::string& var, CConvar* cmdVar );
 		void ExcuteConcommand( );

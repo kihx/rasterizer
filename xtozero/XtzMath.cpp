@@ -489,12 +489,12 @@ namespace xtozero
 		return *this;
 	}
 
-	Vector2::Vector2() : m_u( 0 ), m_v( 0 )
+	Vector2::Vector2() : U( 0 ), V( 0 )
 	{
 
 	}
 
-	Vector2::Vector2( float u, float v ) : m_u( u ), m_v( v )
+	Vector2::Vector2( float u, float v ) : U( u ), V( v )
 	{
 
 	}
@@ -506,97 +506,97 @@ namespace xtozero
 
 	const Vector2 Vector2::operator+(const Vector2& vector) const
 	{
-		return Vector2( m_u + vector.GetU(), m_v + vector.GetV() );
+		return Vector2( U + vector.U, V + vector.V );
 	}
 
 	const Vector2 Vector2::operator+(const float scalar) const
 	{
-		return Vector2( m_u + scalar, m_v + scalar );
+		return Vector2( U + scalar, V + scalar );
 	}
 
 	const Vector2 Vector2::operator-(const Vector2& vector) const
 	{
-		return Vector2( m_u - vector.GetU(), m_v - vector.GetV() );
+		return Vector2( U - vector.U, V - vector.V );
 	}
 
 	const Vector2 Vector2::operator-(const float scalar) const
 	{
-		return Vector2( m_u - scalar, m_v - scalar );
+		return Vector2( U - scalar, V - scalar );
 	}
 
 	const Vector2 Vector2::operator*(const Vector2& vector) const
 	{
-		return Vector2( m_u * vector.GetU(), m_v * vector.GetV() );
+		return Vector2( U * vector.U, V * vector.V );
 	}
 
 	const Vector2 Vector2::operator*(const float scalar) const
 	{
-		return Vector2( m_u * scalar, m_v * scalar );
+		return Vector2( U * scalar, V * scalar );
 	}
 
 	const Vector2 Vector2::operator/(const Vector2& vector) const
 	{
-		return Vector2( m_u / vector.GetU(), m_v / vector.GetV() );
+		return Vector2( U / vector.U, V / vector.V );
 	}
 
 	const Vector2 Vector2::operator/(const float scalar) const
 	{
-		return Vector2( m_u / scalar, m_v / scalar );
+		return Vector2( U / scalar, V / scalar );
 	}
 
 	Vector2& Vector2::operator+=(const Vector2& vector)
 	{
-		m_u += vector.GetU();
-		m_v += vector.GetV();
+		U += vector.U;
+		V += vector.V;
 		return *this;
 	}
 
 	Vector2& Vector2::operator+=(const float scalar)
 	{
-		m_u += scalar;
-		m_v += scalar;
+		U += scalar;
+		V += scalar;
 		return *this;
 	}
 
 	Vector2& Vector2::operator-=(const Vector2& vector)
 	{
-		m_u -= vector.GetU();
-		m_v -= vector.GetV();
+		U -= vector.U;
+		V -= vector.V;
 		return *this;
 	}
 
 	Vector2& Vector2::operator-=(const float scalar)
 	{
-		m_u -= scalar;
-		m_v -= scalar;
+		U -= scalar;
+		V -= scalar;
 		return *this;
 	}
 
 	Vector2& Vector2::operator*=(const Vector2& vector)
 	{
-		m_u *= vector.GetU();
-		m_v *= vector.GetV();
+		U *= vector.U;
+		V *= vector.V;
 		return *this;
 	}
 
 	Vector2& Vector2::operator*=(const float scalar)
 	{
-		m_u *= scalar;
-		m_v *= scalar;
+		U *= scalar;
+		V *= scalar;
 		return *this;
 	}
 
 	Vector2& Vector2::operator/=(const Vector2& vector)
 	{
-		m_u /= vector.GetU();
-		m_v /= vector.GetV();;
+		U /= vector.U;
+		V /= vector.V;
 		return *this;
 	}
 
 	Vector2& Vector2::operator/=(const float scalar)
 	{
-		m_u /= scalar; 
-		m_v /= scalar;
+		U /= scalar; 
+		V /= scalar;
 		return *this;
 	}
 
@@ -629,7 +629,12 @@ namespace xtozero
 
 	void Vector3::Normalize( void )
 	{
-		*this /= Length();
+		float lenth = Length();
+
+		if ( lenth != 0 )
+		{
+			*this /= Length( );
+		}
 	}
 
 	Vector3 Vector3::operator+(const Vector3& rhs) const

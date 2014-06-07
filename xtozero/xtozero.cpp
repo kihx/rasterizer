@@ -28,18 +28,18 @@ std::unique_ptr<xtozero::CBarycentricRasterizer> gBarycentricRasterizer( new xto
 
 DECLARE_CONCOMMAND( SetThread )
 {
-	if ( cmd::CConcommandExecutor::GetInstance()->ArgC() > 1 )
+	if ( cmd::CConcommandExecutor::GetInstance().ArgC() > 1 )
 	{
-		std::string threadNumber = cmd::CConcommandExecutor::GetInstance()->ArgV( 1 );
+		std::string threadNumber = cmd::CConcommandExecutor::GetInstance().ArgV( 1 );
 		gThreadPool->CreateThreadPool( atoi( threadNumber.c_str( ) ) );
 	}
 }
 
 DECLARE_CONCOMMAND( LoadTexture )
 {
-	if ( cmd::CConcommandExecutor::GetInstance( )->ArgC( ) > 1 )
+	if ( cmd::CConcommandExecutor::GetInstance( ).ArgC( ) > 1 )
 	{
-		std::string fileName = cmd::CConcommandExecutor::GetInstance( )->ArgV( 1 );
+		std::string fileName = cmd::CConcommandExecutor::GetInstance( ).ArgV( 1 );
 		std::shared_ptr<xtozero::CTexture> texture = gTextureManager->Load( fileName.c_str( ) );
 
 		if ( texture )
@@ -78,7 +78,15 @@ void RendererThreadWork( LPVOID arg )
 	COutputMerger*			om = pArg->pOm;
 
 	const Rect& vp = pArg->viewport;
-	ps.PSSetTexture( 0, texture.get() );
+
+	SAMPLER_DESC sampleDesc {
+		TEXTURE_ADDRESS_BORDER,
+		TEXTURE_ADDRESS_BORDER,
+		PIXEL_COLOR( 255, 0, 0 )
+	};
+
+	ps.PSSetTexture( 0, texture );
+	ps.PSSetSampler( 0, std::make_shared<CSampler>( sampleDesc ) );
 
 	//Rasterizer
 	rs.SetViewPort( vp.m_left, vp.m_top, vp.m_right, vp.m_bottom );
@@ -104,7 +112,14 @@ void RendererThreadWorkByBarycentric( LPVOID arg )
 	COutputMerger*					om = pArg->pOm;
 
 	const Rect& vp = pArg->viewport;
-	ps.PSSetTexture( 0, texture.get( ) );
+	SAMPLER_DESC sampleDesc{
+		TEXTURE_ADDRESS_BORDER,
+		TEXTURE_ADDRESS_BORDER,
+		PIXEL_COLOR( 255, 0, 0 )
+	};
+
+	ps.PSSetTexture( 0, texture );
+	ps.PSSetSampler( 0, std::make_shared<CSampler>( sampleDesc ) );
 
 	//Rasterizer
 	rs.SetViewPort( vp.m_left, vp.m_top, vp.m_right, vp.m_bottom );
@@ -272,6 +287,6 @@ XTZ_API void XtzSetTransform(int transformType, const float* matrix4x4)
 
 XTZ_API void XtzExecuteCommand( const char* cmd )
 {
-	cmd::CConcommandExecutor::GetInstance()->DoTokenizing( cmd );
-	cmd::CConcommandExecutor::GetInstance()->ExcuteConcommand( );
+	cmd::CConcommandExecutor::GetInstance().DoTokenizing( cmd );
+	cmd::CConcommandExecutor::GetInstance().ExcuteConcommand( );
 }

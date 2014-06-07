@@ -6,6 +6,198 @@
 
 namespace xtozero
 {
+	CFilter::CFilter()
+	{
+
+	}
+
+	CFilter::~CFilter()
+	{
+
+	}
+
+	CSampler::CSampler( const SAMPLER_DESC& samplerDesc ) :
+		m_addressModeU( samplerDesc.m_addressModeU ),
+		m_addressModeV( samplerDesc.m_addressModeV ),
+		m_borderColor( samplerDesc.m_borderColor )
+	{
+
+	}
+	CSampler::CSampler( const CSampler& sampler ) : m_addressModeU( sampler.m_addressModeU ),
+	m_addressModeV( sampler.m_addressModeV ),
+	m_borderColor( sampler.m_borderColor )
+	{
+		
+	}
+	CSampler::~CSampler( )
+	{
+
+	}
+
+	inline void CSampler::CalcTextureAddress( Vector2& texcoord )
+	{
+		int integer = 0;
+
+		switch ( m_addressModeU )
+		{
+		case TEXTURE_ADDRESS_WRAP:
+			integer = static_cast<int>(texcoord.U);
+			texcoord.U -= static_cast<float>(integer);
+			if ( texcoord.U < 0.0f )
+			{
+				texcoord.U = 1.0f + texcoord.U;
+			}
+			break;
+		case TEXTURE_ADDRESS_MIRROR:
+			integer = static_cast<int>(texcoord.U );
+			texcoord.U -= static_cast<float>(integer);
+			if ( integer & 0x00000001 ) //홀수 일 경우
+			{
+				if ( integer >= 0 )
+				{
+					texcoord.U = 1.0f - texcoord.U;
+				}
+				else
+				{
+					texcoord.U = 1.0f + texcoord.U;
+				}
+			}
+			else
+			{
+				if ( integer >= 0 )
+				{
+					//Do Nothing
+				}
+				else
+				{
+					texcoord.U = -texcoord.U;
+				}
+			}
+			break;
+		case TEXTURE_ADDRESS_CLAMP:
+			if ( texcoord.U > 1.0f )
+			{
+				texcoord.U = 1.0f;
+			}
+			else if ( texcoord.U < 0.0f )
+			{
+				texcoord.U = 0.0f;
+			}
+			break;
+		case TEXTURE_ADDRESS_BORDER:
+			if ( texcoord.U > 1.0f || texcoord.U < 0.0f )
+			{
+				//유효하지 않은 좌표값을 설정.
+				//유효하지 않은 좌표값일 경우 BORDER COLOR를 색상으로 하도록 한다.
+				texcoord.U = 1.1f;
+			}
+			break;
+		case TEXTURE_ADDRESS_MIRROR_ONCE:
+			integer = static_cast<int>(texcoord.U);
+			texcoord.U -= static_cast<float>(integer);
+			if ( integer == 1 )
+			{
+				texcoord.U = 1.0f - texcoord.U;
+			}
+			else if ( integer >= 2 )
+			{
+				texcoord.U = 0.0f;
+			}
+			else if ( integer < -1 )
+			{
+				texcoord.U = 1.0f;
+			}
+			else if ( integer < 0 )
+			{
+				texcoord.U = -texcoord.U;
+			}
+			break;
+		}
+
+		switch ( m_addressModeV )
+		{
+		case TEXTURE_ADDRESS_WRAP:
+			integer = static_cast<int>(texcoord.V);
+			texcoord.V -= static_cast<float>(integer);
+			if ( texcoord.V < 0.0f )
+			{
+				texcoord.V = 1.0f + texcoord.V;
+			}
+			break;
+		case TEXTURE_ADDRESS_MIRROR:
+			integer = static_cast<int>(texcoord.V);
+			texcoord.V -= static_cast<float>(integer);
+			if ( integer & 0x00000001 )
+			{
+				if ( integer >= 0 )
+				{
+					texcoord.V = 1.0f - texcoord.V;
+				}
+				else
+				{
+					texcoord.V = 1.0f + texcoord.V;
+				}
+			}
+			else
+			{
+				if ( integer >= 0 )
+				{
+					//Do Nothing
+				}
+				else
+				{
+					texcoord.V = -texcoord.V;
+				}
+			}
+			break;
+		case TEXTURE_ADDRESS_CLAMP:
+			if ( texcoord.V > 1.0f )
+			{
+				texcoord.V = 1.0f;
+			}
+			else if ( texcoord.V < 0.0f )
+			{
+				texcoord.V = 0.0f;
+			}
+			break;
+		case TEXTURE_ADDRESS_BORDER:
+			if ( texcoord.V > 1.0f || texcoord.V < 0.0f )
+			{
+				texcoord.V = 1.1f;
+			}
+			break;
+		case TEXTURE_ADDRESS_MIRROR_ONCE:
+			integer = static_cast<int>(texcoord.V);
+			texcoord.V -= static_cast<float>(integer);
+			if ( integer == 1 )
+			{
+				texcoord.V = 1.0f - texcoord.V;
+			}
+			else if ( integer >= 2 )
+			{
+				texcoord.V = 0.0f;
+			}
+			else if ( integer < -1 )
+			{
+				texcoord.V = 1.0f;
+			}
+			else if ( integer < 0 )
+			{
+				texcoord.V = -texcoord.V;
+			}
+			break;
+		}
+	}
+
+	const unsigned int CSampler::GetBorderColor() const
+	{
+		return m_borderColor;
+	}
+	void CSampler::SetBorderColor( const int r, const int g, const int b )
+	{
+		m_borderColor = PIXEL_COLOR( r, g, b );
+	}
+
 	CTexture::CTexture( const unsigned int width, const unsigned int height )
 		: m_width( width ), m_height( height )
 	{
@@ -99,6 +291,8 @@ namespace xtozero
 
 	std::shared_ptr<CTexture> CTextureManager::Load( const char *pfileName )
 	{
+		Lock<SpinLock> lock( m_lockObject );
+
 		std::string fileName( pfileName );
 
 		std::map<std::string, std::shared_ptr<CTexture> >::iterator findedTex = m_textureMap.find( fileName );
@@ -136,10 +330,19 @@ namespace xtozero
 		}
 	}
 
-	unsigned int CBitmap::GetTexel( const float u, const float v )
+	const unsigned int CBitmap::Sample( const float u, const float v, std::shared_ptr<CSampler> sampler ) const
 	{
-		int texX = static_cast<int>( u * ( m_bitmapInfoHeader.biWidth - 1 ) );
-		int texY = static_cast<int>( v * ( m_bitmapInfoHeader.biHeight - 1 ) );
+		Vector2 texCoord( u, v );
+
+		sampler->CalcTextureAddress( texCoord );
+
+		if ( texCoord.U > 1.0f  || texCoord.V > 1.0f  )
+		{
+			return sampler->GetBorderColor();
+		}
+
+		int texX = static_cast<int>(texCoord.U * (m_bitmapInfoHeader.biWidth - 1));
+		int texY = static_cast<int>(texCoord.V * (m_bitmapInfoHeader.biHeight - 1));
 
 		int index = texY * m_bitmapInfoHeader.biWidth + texX;
 
@@ -148,22 +351,28 @@ namespace xtozero
 							m_texture[index].m_color[BLUE] );
 	}
 
-	unsigned int CBitmap::GetTexel( const Vector2& texCoord )
+	const unsigned int CBitmap::Sample( const Vector2& texCoord, std::shared_ptr<CSampler> sampler ) const
 	{
-		int texX = static_cast<int>(texCoord.GetU() * (m_bitmapInfoHeader.biWidth - 1));
-		int texY = static_cast<int>(texCoord.GetV() * (m_bitmapInfoHeader.biHeight - 1));
+		Vector2 _texCoord( texCoord );
+		
+		sampler->CalcTextureAddress( _texCoord );
 
-		int index = texY * m_bitmapInfoHeader.biWidth + texX;
+		int texX = static_cast<int>(_texCoord.U * (m_bitmapInfoHeader.biWidth - 1));
+		int texY = static_cast<int>(_texCoord.V * (m_bitmapInfoHeader.biHeight - 1));
 
-		index = (index >= m_texture.size()) ? m_texture.size() - 1 : index;
-		index = (index < 0) ? 0 : index;
+		if ( _texCoord.U > 1.0f || _texCoord.V > 1.0f )
+		{
+			return sampler->GetBorderColor( );
+		}
+
+		unsigned int index = texY * m_bitmapInfoHeader.biWidth + texX;
 
 		return PIXEL_COLOR( m_texture[index].m_color[RED],
-			m_texture[index].m_color[GREEN],
-			m_texture[index].m_color[BLUE] );
+							m_texture[index].m_color[GREEN],
+							m_texture[index].m_color[BLUE] );
 	}
 
-	void CBitmap::DrawTexture( void* buffer, int width, int height, int dpp )
+	void CBitmap::DrawTexture( void* buffer, int width, int dpp ) const
 	{
 		size_t size = dpp / 8;
 

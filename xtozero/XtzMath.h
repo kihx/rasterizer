@@ -97,23 +97,14 @@ namespace xtozero
 
 	class Vector2
 	{
-	private:
-		float m_u;
-		float m_v;
-
 	public:
+		float U;
+		float V;
+
 		Vector2();
 		Vector2( float u, float v );
 		~Vector2();
 
-		const float GetU() const
-		{
-			return m_u;
-		}
-		const float GetV() const
-		{
-			return m_v;
-		}
 		const Vector2 operator+(const Vector2& vector2) const;
 		const Vector2 operator+(const float scalar) const;
 
